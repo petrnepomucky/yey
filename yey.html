@@ -474,7 +474,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
       <div class="sub">Hrubý odhad zakázek · orientační ceny</div>
     </div>
     <div class="head-spacer"></div>
-    <a class="yey-ucet" id="odkazLicence" href="index.html#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
+    <a class="yey-ucet" id="odkazLicence" href="uvod.html#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
   </div>
   <div class="metr-pruh" aria-hidden="true"></div>
   <div class="storebar">
@@ -486,7 +486,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
     <button class="btn ghost sm" id="btnBackup">Stáhnout zálohu</button>
     <button class="btn ghost sm" id="btnRestore">Obnovit ze zálohy</button>
   </div>
-  <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="index.html#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
+  <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="uvod.html#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
 </header>
 <nav class="tabs" aria-label="Sekce">
   <button data-tab="kontakty" class="active">Kontakty</button>
@@ -792,7 +792,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
     <div class="panel-head"><h2>Nastavení</h2><div class="head-spacer"></div><button class="btn gold" id="btnNsSave">Uložit nastavení</button></div>
       <div class="card" style="margin-bottom:16px;padding:18px">
         <b style="color:var(--navy);font-size:16px">Licence</b>
-        <div class="small muted" style="margin:2px 0 12px">Licenci koupíte na <a href="index.html#cenik" target="_blank" rel="noopener">stránce YeY Odhad</a> (QR platba, klíč přijde hned po zaplacení). Vložte licenční klíč, který jste obdrželi po zaplacení. Po aktivaci se doplní a uzamkne IČO. Ostatní údaje firmy (název, adresa, DIČ, číslo účtu, IBAN, telefon, logo…) si vyplníte sami v polích níže.</div>
+        <div class="small muted" style="margin:2px 0 12px">Licenci koupíte na <a href="uvod.html#cenik" target="_blank" rel="noopener">stránce YeY Odhad</a> (QR platba, klíč přijde hned po zaplacení). Vložte licenční klíč, který jste obdrželi po zaplacení. Po aktivaci se doplní a uzamkne IČO. Ostatní údaje firmy (název, adresa, DIČ, číslo účtu, IBAN, telefon, logo…) si vyplníte sami v polích níže.</div>
         <div id="licStatus" style="font-weight:600;margin-bottom:10px"></div>
         <div class="field full"><label>Licenční klíč</label><textarea id="ns_licence" rows="3" style="width:100%;font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical" placeholder="Sem vložte licenční klíč…"></textarea></div>
         <div id="licMsg" class="small" style="margin:6px 0"></div>
@@ -5423,7 +5423,7 @@ function normalize(d){
 
 /* ---------- localStorage fallback ---------- */
 const LS_KEY='yey_odhad_data_v1';
-function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); return true; }catch(e){ console.warn('localStorage save failed',e); return false; } }
+function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch(e){} }
 function lsLoad(){ try{ const t=localStorage.getItem(LS_KEY); return t?normalize(JSON.parse(t)):null; }catch(e){ return null; } }
 
 /* ---------- Ukládání (autosave) ---------- */
@@ -5433,7 +5433,7 @@ function markDirty(){
   saveTimer=setTimeout(saveNow, 700);
 }
 async function saveNow(){
-  const lsOk=lsSave(); // vždy záložní kopie do prohlížeče
+  lsSave(); // vždy záložní kopie do prohlížeče
   if(fileHandle){
     try{
       await writeFile(fileHandle, DB);
@@ -5442,8 +5442,7 @@ async function saveNow(){
       setSaveState('Chyba zápisu do souboru — data jsou v prohlížeči', 'warn');
     }
   }else{
-    if(lsOk){ dirty=false; setSaveState('Uloženo v prohlížeči ✓', 'ok'); }
-    else { setSaveState('Neuloženo — paměť prohlížeče je plná nebo blokovaná (zmenšete logo/podpis, nebo připojte datový soubor)', 'warn'); showToast('Uložení do prohlížeče selhalo. Paměť je plná nebo blokovaná – zmenšete logo/podpis nebo připojte datový soubor.', true); }
+    dirty=false; setSaveState('Uloženo v prohlížeči ✓', 'ok');
   }
 }
 function setSaveState(txt, kind){
@@ -5488,7 +5487,7 @@ async function boot(){
   }
   // 2) localStorage?
   const ls=lsLoad();
-  if(ls){ // jakákoli uložená data (i jen nastavení) → načíst
+  if(ls && (ls.kontakty.length||ls.cenik.length||ls.faktury.length||ls.nabidky.length)){
     DB=ls; afterLoad(); return;
   }
   // 3) nic → onboarding
@@ -6583,7 +6582,7 @@ function nsPreview(){
   document.getElementById('prev_nabidka').textContent=formatCislo(val('fmt_nabidka'),parseInt(val('next_nabidka'))||1);
   document.getElementById('prev_protokol').textContent=formatCislo(val('fmt_protokol'),parseInt(val('next_protokol'))||1);
 }
-function nsSave(silent){
+function nsSave(){
   NS_DOD.forEach(k=>{ if(LIC.active && LIC_LOCK.indexOf(k)>=0){ DB.dodavatel[k]=(LIC.payload[k]||''); } else { DB.dodavatel[k]=val('ns_'+k).trim(); } });
   DB.formaty.faktura=val('fmt_faktura').trim()||'{RR}{NNNN}';
   DB.formaty.nabidka=val('fmt_nabidka').trim()||'{RRRR}-{NNN}';
@@ -6594,11 +6593,9 @@ function nsSave(silent){
   DB.nastaveni.autoCenik=document.getElementById('ns_autoCenik').checked;
   DB.nastaveni.hlidatCeny=document.getElementById('ns_hlidatCeny').checked;
   DB.dodavatel.claim=val('ns_claim').trim();
-  markDirty(); updateBrand(); if(!silent) showToast('Nastavení uloženo.');
+  markDirty(); updateBrand(); showToast('Nastavení uloženo.');
 }
-document.getElementById('btnNsSave').onclick=()=>nsSave();
-(function(){ const ids=NS_DOD.map(k=>'ns_'+k).concat(['fmt_faktura','next_faktura','fmt_nabidka','next_nabidka','fmt_protokol','next_protokol','ns_autoCenik','ns_hlidatCeny','ns_claim']);
-  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('change',()=>nsSave(true)); }); })();
+document.getElementById('btnNsSave').onclick=nsSave;
 document.getElementById('btnLicAktiv').onclick=licActivate;
 document.getElementById('btnLicRemove').onclick=licRemove;
 document.getElementById('ns_logoPick').onclick=()=>document.getElementById('ns_logoFile').click();
@@ -6913,8 +6910,7 @@ document.getElementById('impApply').onclick=()=>applyImport('add');
 document.getElementById('impApply2').onclick=()=>applyImport('replace');
 
 // varování při zavření s neuloženými daty
-window.addEventListener('beforeunload',e=>{ if(dirty){ clearTimeout(saveTimer); if(DB) lsSave(); if(fileHandle){ e.preventDefault(); e.returnValue=''; } else { dirty=false; } } });
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden' && dirty && DB) lsSave(); });
+window.addEventListener('beforeunload',e=>{ if(dirty){ e.preventDefault(); e.returnValue=''; } });
 
 
 /* ===== Postranní tipy / nápověda ===== */
