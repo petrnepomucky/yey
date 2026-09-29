@@ -105,6 +105,13 @@
   tbody tr:hover{background:var(--cream)}
   td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
   td.actions{white-space:nowrap;text-align:right}
+  .krok-btn{font-size:13px;padding:6px 11px;margin-right:4px;vertical-align:middle;font-weight:600;white-space:nowrap}
+  .krok-btn.hotovo{background:#eaf1ea;color:#3a6b45;border-color:#cfe0cf}
+  .doc-foot-akce{flex-wrap:wrap;gap:8px}
+  .doc-dalsi{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .doc-dalsi-t{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .krok-mob{display:none}
+  @media (max-width:640px){ .krok-mob{display:block;margin-top:6px} .krok-mob .krok-btn{margin:0} td.actions .krok-btn{display:none} .doc-dalsi{width:100%} .doc-dalsi .btn{flex:1 1 auto} .doc-foot-akce .head-spacer{display:none} }
   .icon-btn{border:0;background:transparent;cursor:pointer;padding:5px 7px;border-radius:6px;font-size:14px}
   .icon-btn:hover{background:var(--line-2)}
   .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;
@@ -467,7 +474,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
       <div class="sub">Hrubý odhad zakázek · orientační ceny</div>
     </div>
     <div class="head-spacer"></div>
-    <a class="yey-ucet" id="odkazLicence" href="https://yey.yey.cz#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
+    <a class="yey-ucet" id="odkazLicence" href="uvod.html#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
   </div>
   <div class="metr-pruh" aria-hidden="true"></div>
   <div class="storebar">
@@ -479,7 +486,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
     <button class="btn ghost sm" id="btnBackup">Stáhnout zálohu</button>
     <button class="btn ghost sm" id="btnRestore">Obnovit ze zálohy</button>
   </div>
-  <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="yey.yey.cz#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
+  <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="uvod.html#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
 </header>
 <nav class="tabs" aria-label="Sekce">
   <button data-tab="kontakty" class="active">Kontakty</button>
@@ -785,7 +792,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
     <div class="panel-head"><h2>Nastavení</h2><div class="head-spacer"></div><button class="btn gold" id="btnNsSave">Uložit nastavení</button></div>
       <div class="card" style="margin-bottom:16px;padding:18px">
         <b style="color:var(--navy);font-size:16px">Licence</b>
-        <div class="small muted" style="margin:2px 0 12px">Licenci koupíte na <a href="https://yey.yey.cz#cenik" target="_blank" rel="noopener">stránce YeY Odhad</a> (QR platba, klíč přijde hned po zaplacení). Vložte licenční klíč, který jste obdrželi po zaplacení. Po aktivaci se doplní a uzamkne IČO. Ostatní údaje firmy (název, adresa, DIČ, číslo účtu, IBAN, telefon, logo…) si vyplníte sami v polích níže.</div>
+        <div class="small muted" style="margin:2px 0 12px">Licenci koupíte na <a href="uvod.html#cenik" target="_blank" rel="noopener">stránce YeY Odhad</a> (QR platba, klíč přijde hned po zaplacení). Vložte licenční klíč, který jste obdrželi po zaplacení. Po aktivaci se doplní a uzamkne IČO. Ostatní údaje firmy (název, adresa, DIČ, číslo účtu, IBAN, telefon, logo…) si vyplníte sami v polích níže.</div>
         <div id="licStatus" style="font-weight:600;margin-bottom:10px"></div>
         <div class="field full"><label>Licenční klíč</label><textarea id="ns_licence" rows="3" style="width:100%;font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical" placeholder="Sem vložte licenční klíč…"></textarea></div>
         <div id="licMsg" class="small" style="margin:6px 0"></div>
@@ -926,7 +933,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
   <div class="modal" style="max-width:920px">
     <div class="modal-head"><h3 id="docModalTitle">Náhled dokumentu</h3><button class="x" data-close>×</button></div>
     <div class="modal-body" style="max-height:72vh;overflow:auto;background:#f1efe9"><div id="docModalBody" style="background:#fff;padding:22px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08)"></div></div>
-    <div class="modal-foot"><span class="msg small">Našli jste chybu? Klikněte na „Upravit".</span><button class="btn" data-close>Zavřít</button><button class="btn" id="docModalPrint" type="button">Tisk / PDF</button><button class="btn gold" id="docModalEdit" type="button">Upravit</button></div>
+    <div class="modal-foot doc-foot-akce"><div id="docModalDalsi" class="doc-dalsi"></div><div class="head-spacer"></div><button class="btn" data-close>Zavřít</button><button class="btn" id="docModalPrint" type="button">Tisk / PDF</button><button class="btn" id="docModalEdit" type="button">✏️ Upravit</button></div>
   </div>
 </div>
 
@@ -5882,14 +5889,14 @@ function renderNabidky(){
   body.innerHTML=list.map(n=>{
     const k=DB.kontakty.find(x=>x.id===n.kontaktId);
     return '<tr style="cursor:pointer" onclick="nbPreview(\''+n.id+'\')">'+
-      '<td><b>'+esc(n.cislo||'—')+'</b></td>'+
+      '<td><b>'+esc(n.cislo||'—')+'</b><div class="krok-mob">'+krokNabidky(n)+'</div></td>'+
       '<td>'+esc(k?k.nazev:'—')+'</td>'+
       '<td class="small">'+esc(n.predmet||'—')+'</td>'+
       '<td class="small">'+czDate(n.datum)+'</td>'+
       '<td>'+stavBadge(n.stav)+'</td>'+
       '<td class="num">'+fmtCena(nabidkaCelkem(n))+'</td>'+
       '<td class="actions">'+
-        '<button class="icon-btn" title="Vytvořit fakturu z nabídky" onclick="event.stopPropagation();fakturaFromNabidka(\''+n.id+'\')">🧾</button>'+
+        krokNabidky(n)+
         '<button class="icon-btn" title="Tisk / PDF" onclick="event.stopPropagation();printNabidkaById(\''+n.id+'\')">🖨️</button>'+
         '<button class="icon-btn" title="Upravit" onclick="event.stopPropagation();nbEdit(\''+n.id+'\')">✏️</button>'+
         '<button class="icon-btn" title="Smazat" onclick="event.stopPropagation();nbDel(\''+n.id+'\')">🗑️</button>'+
@@ -6112,10 +6119,10 @@ function renderFaktury(){
   document.getElementById('fakturyEmpty').style.display=DB.faktury.length?'none':'block';
   body.innerHTML=list.map(f=>{
     const k=DB.kontakty.find(x=>x.id===f.kontaktId); const t=faTotalsOf(f);
-    return '<tr style="cursor:pointer" onclick="faPreview(\''+f.id+'\')"><td><b>'+esc(f.cislo||'—')+'</b></td><td>'+esc(k?k.nazev:'—')+'</td>'+
+    return '<tr style="cursor:pointer" onclick="faPreview(\''+f.id+'\')"><td><b>'+esc(f.cislo||'—')+'</b><div class="krok-mob">'+krokFaktury(f)+'</div></td><td>'+esc(k?k.nazev:'—')+'</td>'+
       '<td class="small">'+czDate(f.datumVystaveni)+'</td><td class="small">'+czDate(f.splatnost)+'</td>'+
       '<td>'+rezimBadge(f.rezim)+'</td><td>'+faStavBadge(f.stav)+'</td><td class="num">'+fmtCena(t.celkem)+'</td>'+
-      '<td class="actions"><button class="icon-btn" title="Předávací protokol" onclick="event.stopPropagation();protokolFromFaktura(\''+f.id+'\')">📋</button><button class="icon-btn" title="Tisk / PDF" onclick="event.stopPropagation();printFakturaById(\''+f.id+'\')">🖨️</button>'+
+      '<td class="actions">'+krokFaktury(f)+'<button class="icon-btn" title="Tisk / PDF" onclick="event.stopPropagation();printFakturaById(\''+f.id+'\')">🖨️</button>'+
       '<button class="icon-btn" title="Upravit" onclick="event.stopPropagation();faEdit(\''+f.id+'\')">✏️</button>'+
       '<button class="icon-btn" title="Smazat" onclick="event.stopPropagation();faDel(\''+f.id+'\')">🗑️</button></td></tr>';
   }).join('');
@@ -6208,9 +6215,11 @@ function faSave(doPrint){
   FA.formaUhrady=val('faForma').trim(); FA.akce=val('faAkce').trim(); FA.pdpText=val('faPdpText').trim(); FA.pozn=val('faPozn').trim();
   const isNew=!DB.faktury.some(x=>x.id===FA.id);
   const rec=JSON.parse(JSON.stringify(FA));
-  if(isNew){ DB.faktury.push(rec); DB.cislaRady.faktura=(DB.cislaRady.faktura||1)+1; }
+  if(isNew){ DB.faktury.push(rec); DB.cislaRady.faktura=(DB.cislaRady.faktura||1)+1;
+    const nb=rec.zNabidky && DB.nabidky.find(x=>x.id===rec.zNabidky);
+    if(nb && (!nb.stav || nb.stav==='Rozpracováno' || nb.stav==='Odesláno')){ nb.stav='Přijato'; renderNabidky(); } }
   else DB.faktury[DB.faktury.findIndex(x=>x.id===FA.id)]=rec;
-  markDirty(); renderFaktury();
+  markDirty(); renderFaktury(); renderNabidky();
   if(doPrint) printFaktura(rec);
   faCloseEditor(); showToast('Faktura uložena.'); autoAddToCenik(rec.polozky);
 }
@@ -6226,7 +6235,7 @@ function fakturaFromNabidka(id){
   document.getElementById('panel-faktury').classList.add('active');
   const rec={ id:uid(), cislo:nextFakturaCislo(), vs:nextFakturaCislo().replace(/\D/g,''), ks:'', kontaktId:n.kontaktId, objednavka:'',
     datumVystaveni:today(), duzp:today(), splatnost:plusDays(today(),14), formaUhrady:'Převodem',
-    rezim:'pdp', pdpText:DEFAULT_PDP, akce:n.predmet||'', pozn:'', stav:'Vystavená',
+    rezim:'pdp', pdpText:DEFAULT_PDP, akce:n.predmet||'', pozn:'', stav:'Vystavená', zNabidky:n.id,
     polozky:(n.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})})) };
   faOpenEditor(rec, true);
   showToast('Faktura vytvořena z nabídky — zkontrolujte a uložte.');
@@ -6384,7 +6393,7 @@ function prSave(doPrint){
   const rec=JSON.parse(JSON.stringify(PR));
   if(isNew){ DB.protokoly.push(rec); DB.cislaRady.protokol=(DB.cislaRady.protokol||1)+1; }
   else DB.protokoly[DB.protokoly.findIndex(x=>x.id===PR.id)]=rec;
-  markDirty(); renderProtokoly();
+  markDirty(); renderProtokoly(); renderFaktury(); renderNabidky();
   if(doPrint) printProtokol(rec);
   prCloseEditor(); showToast('Protokol uložen.');
 }
@@ -6402,9 +6411,43 @@ function protokolFromFaktura(id){
   const misto=[k.ulice||'',[k.psc,k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:f.kontaktId, datumPredani:today(), misto,
     odkaz:'Faktura č. '+(f.cislo||''), predmet:f.akce||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
+    zFaktury:f.id, zNabidky:f.zNabidky||'',
     polozky:(f.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi})) };
   prOpenEditor(rec,true);
   showToast('Protokol vytvořen z faktury — zkontrolujte a uložte.');
+}
+/** Předávací protokol rovnou z nabídky (když se faktura vystaví později nebo vůbec). */
+function protokolFromNabidka(id){
+  const n=DB.nabidky.find(x=>x.id===id); if(!n) return;
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+  const tb=document.querySelector('nav.tabs button[data-tab="protokoly"]'); if(tb) tb.classList.add('active');
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  document.getElementById('panel-protokoly').classList.add('active');
+  const k=DB.kontakty.find(x=>x.id===n.kontaktId)||{};
+  const misto=[k.ulice||'',[k.psc,k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:n.kontaktId, datumPredani:today(), misto,
+    odkaz:'Nabídka č. '+(n.cislo||''), predmet:n.predmet||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
+    zNabidky:n.id,
+    polozky:(n.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi})) };
+  prOpenEditor(rec,true);
+  showToast('Protokol vytvořen z nabídky — zkontrolujte a uložte.');
+}
+/* Návaznost dokladů: nabídka → faktura → předávací protokol */
+function navFaktura(nId){ return nId ? DB.faktury.find(f=>f.zNabidky===nId) : null; }
+function navProtokolFa(fId){ return fId ? DB.protokoly.find(p=>p.zFaktury===fId) : null; }
+function navProtokolNb(nId){ return nId ? DB.protokoly.find(p=>p.zNabidky===nId) : null; }
+function zavriNahled(){ document.getElementById('docModal').classList.remove('show'); }
+/** Tlačítko dalšího kroku v přehledu: vytvořit navazující doklad, nebo otevřít už vytvořený. */
+function krokNabidky(n){
+  const f=navFaktura(n.id);
+  if(f) return '<button class="btn sm krok-btn hotovo" title="Otevřít navazující fakturu" onclick="event.stopPropagation();faPreview(\''+f.id+'\')">✓ Faktura '+esc(f.cislo||'')+'</button>';
+  if(n.stav==='Odmítnuto') return '';
+  return '<button class="btn sm gold krok-btn" title="Vystavit fakturu z této nabídky" onclick="event.stopPropagation();fakturaFromNabidka(\''+n.id+'\')">🧾 Vystavit fakturu</button>';
+}
+function krokFaktury(f){
+  const p=navProtokolFa(f.id);
+  if(p) return '<button class="btn sm krok-btn hotovo" title="Otevřít předávací protokol" onclick="event.stopPropagation();prEdit(\''+p.id+'\')">✓ Protokol '+esc(p.cislo||'')+'</button>';
+  return '<button class="btn sm gold krok-btn" title="Vytvořit předávací protokol k této faktuře" onclick="event.stopPropagation();protokolFromFaktura(\''+f.id+'\')">📋 Předávací protokol</button>';
 }
 
 function printProtokol(rec){
@@ -6683,14 +6726,27 @@ document.getElementById('nbTableAdd').onclick=nbTableAdd;
    NÁHLED DOKUMENTU (klik na řádek)
    ============================================================ */
 let docModalEditFn=null, docModalPrintFn=null;
-function showDocPreview(title,html,editFn,printFn){
+function showDocPreview(title,html,editFn,printFn,dalsi){
   document.getElementById('docModalTitle').textContent=title;
   document.getElementById('docModalBody').innerHTML=html;
+  const dl=document.getElementById('docModalDalsi');
+  dl.innerHTML=dalsi ? '<span class="doc-dalsi-t">Další krok</span>'+dalsi : '';
   docModalEditFn=editFn; docModalPrintFn=printFn;
   document.getElementById('docModal').classList.add('show');
 }
-function nbPreview(id){ const n=DB.nabidky.find(x=>x.id===id); if(!n) return; showDocPreview('Nabídka '+(n.cislo||''), nbDocHtml(n), ()=>{ document.getElementById('docModal').classList.remove('show'); nbEdit(id); }, ()=>printNabidka(n)); }
-function faPreview(id){ const f=DB.faktury.find(x=>x.id===id); if(!f) return; showDocPreview('Faktura '+(f.cislo||''), faDocHtml(f), ()=>{ document.getElementById('docModal').classList.remove('show'); faEdit(id); }, ()=>printFaktura(f)); }
+function nbPreview(id){ const n=DB.nabidky.find(x=>x.id===id); if(!n) return;
+  const f=navFaktura(id), p=navProtokolNb(id)||(f&&navProtokolFa(f.id));
+  const dalsi=(f ? '<button class="btn" type="button" onclick="faPreview(\''+f.id+'\')">✓ Faktura '+esc(f.cislo||'')+'</button>'
+                 : '<button class="btn gold" type="button" onclick="zavriNahled();fakturaFromNabidka(\''+id+'\')">🧾 Vystavit fakturu</button>')+
+              (p ? '<button class="btn" type="button" onclick="zavriNahled();prEdit(\''+p.id+'\')">✓ Protokol '+esc(p.cislo||'')+'</button>'
+                 : '<button class="btn'+(f?' gold':'')+'" type="button" onclick="zavriNahled();'+(f?'protokolFromFaktura(\''+f.id+'\')':'protokolFromNabidka(\''+id+'\')')+'">📋 Předávací protokol</button>');
+  showDocPreview('Nabídka '+(n.cislo||''), nbDocHtml(n), ()=>{ zavriNahled(); nbEdit(id); }, ()=>printNabidka(n), dalsi); }
+function faPreview(id){ const f=DB.faktury.find(x=>x.id===id); if(!f) return;
+  const p=navProtokolFa(id), n=f.zNabidky && DB.nabidky.find(x=>x.id===f.zNabidky);
+  const dalsi=(p ? '<button class="btn" type="button" onclick="zavriNahled();prEdit(\''+p.id+'\')">✓ Protokol '+esc(p.cislo||'')+'</button>'
+                 : '<button class="btn gold" type="button" onclick="zavriNahled();protokolFromFaktura(\''+id+'\')">📋 Předávací protokol</button>')+
+              (n ? '<button class="btn ghost" type="button" onclick="nbPreview(\''+n.id+'\')">↩ Nabídka '+esc(n.cislo||'')+'</button>' : '');
+  showDocPreview('Faktura '+(f.cislo||''), faDocHtml(f), ()=>{ zavriNahled(); faEdit(id); }, ()=>printFaktura(f), dalsi); }
 document.getElementById('docModalEdit').onclick=()=>{ if(docModalEditFn) docModalEditFn(); };
 document.getElementById('docModalPrint').onclick=()=>{ document.getElementById('docModal').classList.remove('show'); if(docModalPrintFn) docModalPrintFn(); };
 
