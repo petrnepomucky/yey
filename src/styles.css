@@ -1,0 +1,76 @@
+:root {
+  --bg: #000070; --bg2: #000090; --fg: #d8d8d8; --dim: #8a8ad0; --hi: #ffff55; --cyan: #00aaaa;
+  --sel-bg: #00aaaa; --sel-fg: #000; --bar: #000; --err: #ff6b6b; --ok: #55ff55;
+  --font: ui-monospace, "Cascadia Mono", "Fira Mono", Consolas, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.4 var(--font); }
+.app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+.body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 4px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+.top { display: flex; align-items: center; gap: 16px; padding: 6px 12px; background: var(--cyan); color: #000; flex-wrap: wrap; }
+.brand { white-space: nowrap; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; }
+.tabs button { background: transparent; border: 0; padding: 4px 10px; color: #000; white-space: nowrap; }
+.tabs button.on { background: var(--bg); color: var(--hi); }
+kbd { font: inherit; opacity: .65; font-size: 12px; }
+
+.screen { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px 0; }
+.toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.search { flex: 1; max-width: 520px; background: var(--bg2); border: 1px solid var(--dim); padding: 6px 10px; }
+.search:focus, .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--hi); }
+.count { color: var(--dim); }
+.tablewrap { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--dim); }
+.grid { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.grid th { position: sticky; top: 0; background: var(--bg2); color: var(--hi); text-align: left; padding: 4px 10px; font-weight: normal; border-bottom: 1px solid var(--dim); }
+.grid td { padding: 3px 10px; }
+.grid .r { text-align: right; }
+.grid tr.sel td { background: var(--sel-bg); color: var(--sel-fg); }
+.grid tr:not(.sel):hover td { background: var(--bg2); }
+.bad { color: var(--err); } tr.sel .bad { color: #800; font-weight: bold; }
+.empty { padding: 24px; color: var(--dim); }
+.detail { padding: 6px 0; color: var(--dim); display: flex; gap: 10px; flex-wrap: wrap; }
+.link { background: none; border: 0; color: var(--hi); text-decoration: underline; padding: 0; }
+.status { background: var(--bar); color: var(--ok); padding: 4px 10px; margin-top: 6px; cursor: pointer; }
+
+.fnbar { display: flex; background: var(--bar); padding-bottom: env(safe-area-inset-bottom); z-index: 50; }
+.fnkey { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; background: var(--bar); border: 0; padding: 0; height: 30px; }
+.fnnum { background: var(--bar); color: #fff; padding: 0 5px; align-self: center; }
+.fnlab { flex: 1; background: var(--cyan); color: #000; padding: 0 4px; line-height: 30px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fnkey:hover:not(.off) .fnlab, .fnkey:focus-visible .fnlab { background: var(--hi); }
+.fnkey.off .fnlab { background: #222; }
+.fnkey.off .fnnum { color: #666; }
+.fnkey:disabled { cursor: default; }
+
+.overlay { position: fixed; inset: 0; background: rgba(0,0,40,.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 12px; }
+.dialog { background: var(--bg); border: 2px solid var(--fg); box-shadow: 8px 8px 0 #000; padding: 14px 18px; width: min(560px, 100%); max-height: 100%; overflow: auto; }
+.dialog h2 { margin: 0 0 10px; color: var(--hi); font-size: 16px; font-weight: normal; }
+.field { display: block; margin-bottom: 8px; }
+.field span { display: block; color: var(--dim); font-size: 13px; }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg2); border: 1px solid var(--dim); padding: 6px 8px; color-scheme: dark; }
+.dlgbtns { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.dlgbtns button { background: var(--cyan); color: #000; border: 0; padding: 6px 14px; }
+.dlgbtns button:disabled { opacity: .5; }
+.err { color: var(--err); }
+.muted { color: var(--dim); font-size: 13px; }
+.helptab th { color: var(--hi); text-align: left; padding-right: 18px; font-weight: normal; white-space: nowrap; vertical-align: top; }
+.login { max-width: 420px; margin: 8vh auto 0; padding: 0 16px; width: 100%; }
+.login h1 { color: var(--hi); font-size: 20px; font-weight: normal; }
+
+/* Mobil: tabulka jako karty, lišta se dá posouvat */
+@media (max-width: 720px) {
+  .grid thead { display: none; }
+  .grid, .grid tbody, .grid tr, .grid td { display: block; width: 100%; }
+  .grid tr { border-bottom: 1px solid var(--dim); padding: 6px 0; }
+  .grid td { padding: 1px 10px; white-space: normal; text-align: left !important; }
+  .grid td:empty { display: none; }
+  .grid td::before { content: attr(data-label) ": "; color: var(--dim); }
+  .grid tr.sel td::before { color: #003; }
+  .fnbar { overflow-x: auto; }
+  .fnkey { flex: 0 0 96px; height: 44px; }
+  .fnlab { line-height: 44px; }
+  .tabs { width: 100%; }
+}
