@@ -212,11 +212,24 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .vysl input[type=checkbox]{width:20px;height:20px;accent-color:var(--inkoust)}
 .vysl .mn{font-family:var(--font-c);font-size:20px;font-weight:700;text-align:right;white-space:nowrap}
 .vysl input.cena{width:96px;height:36px;border:1px solid var(--linka);border-radius:7px;padding:0 8px;text-align:right}
+.kprod{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--ocel);min-height:28px}
+.kprod img,.kprod .kfoto{width:28px;height:28px;border-radius:5px;object-fit:contain;background:#fff;border:1px solid var(--linka-2);flex:none}
+.kprod .knaz{color:var(--inkoust);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.kprod button{border:1px solid var(--linka);background:#fff;border-radius:7px;padding:3px 9px;font-size:12px;cursor:pointer;flex:none;white-space:nowrap}
+.kprod button:hover{border-color:var(--inkoust)}
+.kprod .jine{color:#9a6b00}
+.kat-pozn{font-size:13px;color:var(--ocel);background:#FFF8E1;border:1px solid #F3E2A9;border-radius:8px;padding:8px 12px;margin:0 0 10px}
+.kvyber{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto;margin-top:10px}
+.kvyber button{display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--linka-2);background:#fff;border-radius:9px;padding:8px 10px;cursor:pointer;font:inherit}
+.kvyber button:hover,.kvyber button.akt{border-color:var(--inkoust);box-shadow:inset 3px 0 0 var(--metr)}
+.kvyber img,.kvyber .kfoto{width:44px;height:44px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid var(--linka-2);flex:none}
+.kvyber .kc{margin-left:auto;font-weight:700;white-space:nowrap;padding-left:10px}
 .do-nab{background:var(--metr-bg);border:1px solid #F0DFA0;border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
 
 /* ---------- modaly, toast, paleta ---------- */
 .zavoj{position:fixed;inset:0;background:rgba(29,39,47,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow:auto}
 .okno{background:#fff;border-radius:14px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+.okno.siroke{max-width:760px}
 .okno-h{background:var(--metr);padding:16px 20px 24px;position:relative;display:flex;justify-content:space-between;align-items:center}
 .okno-h::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;opacity:.6;background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 60px) 0 100%/100% 10px no-repeat,repeating-linear-gradient(90deg,var(--inkoust) 0 1px,transparent 1px 12px) 0 100%/100% 5px no-repeat}
 .okno-h h2{font-size:22px}
@@ -307,6 +320,10 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 const SB_URL = 'https://hkzhjoveiqadezmvksdz.supabase.co';
 const SB_KEY = 'sb_publishable_WUy9urfE9n5O2SelitV6FA_mhzCUrM_';
 const sb = window.supabase.createClient(SB_URL, SB_KEY, { db: { schema: 'online_kancelar' }, auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+/* Katalog materiálu (projekt Stavební materiál). Bez licence vrací jen bezplatnou část, s licencí celý katalog. */
+const KAT_URL = 'https://fvrpuddkarujfttoaavb.supabase.co';
+const KAT_KEY = 'sb_publishable_1Y5nEfLwKmJxlnbkLmZgMg_Rzs7WQQG';
+const kat = window.supabase.createClient(KAT_URL, KAT_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'mk-katalog' } });
 
 /* ---------- stav ---------- */
 const S = { user: null, firma: null, kontakty: [], zakazky: [], doklady: [], cenik: [], denik: {}, polozky: {}, nacteno: false };
@@ -1178,11 +1195,17 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
     <div class="mrizka m3"><label class="pole">Telefon<input name="telefon" type="tel" value="${esc(F.telefon)}"></label><label class="pole">E-mail<input name="email" type="email" value="${esc(F.email)}"></label><label class="pole">Web<input name="web" value="${esc(F.web)}"></label></div>
     <div class="mrizka m2"><label class="pole">Číslo účtu<input name="ucet" value="${esc(F.ucet)}" placeholder="123456789/0800"><span class="napoveda">Z čísla účtu vytvoříme QR platbu na fakturách.</span></label><label class="pole">IBAN <span class="napoveda">(nepovinné)</span><input name="iban" value="${esc(F.iban)}"></label></div>
     <div class="mrizka m2"><label class="pole">Splatnost faktur (dní)<input name="splatnost_dni" type="number" min="0" value="${esc(F.splatnost_dni)}"></label><label class="pole">Zápis v rejstříku<input name="zapis" value="${esc(F.zapis)}" placeholder="např. Fyzická osoba zapsaná v živnostenském rejstříku"></label></div>
+    <label class="pole">Licenční klíč YeY <span class="napoveda">(odemkne celý katalog materiálu v kalkulačkách)</span><textarea name="licence" rows="2" style="font-family:monospace;font-size:12px" placeholder="Vložte licenční klíč">${esc(F.licence)}</textarea><span class="napoveda" id="licStav"></span></label>
     <div class="radek"><button class="btn zl" type="submit">Uložit údaje</button><span class="ulozeno skryt" id="nastOk">✓ Uloženo</span></div>
   </form>
   <aside class="bok karta"><h3>Účet</h3><p class="tlumene" style="margin:6px 0 12px">${esc(S.user.email)}</p><button class="btn" data-a="zmena-hesla">Změnit heslo</button> <button class="btn cerv" data-a="odhlasit" style="margin-top:8px">${ik('odhl', 16)}Odhlásit</button></aside></div>`,
   po: () => { $('#fNast').onsubmit = async e => { e.preventDefault(); const f = formData(e.target); f.platce_dph = f.platce_dph === 'true'; f.splatnost_dni = parseInt(f.splatnost_dni) || 14; for (const k in f) if (f[k] === '') f[k] = null; if (!f.nazev) return toast('Vyplňte název', { chyba: true });
-    S.firma = await q(sb.from('firmy').update(f).eq('id', S.firma.id).select().single()); $('#nastOk').classList.remove('skryt'); toast('Údaje firmy uloženy ✓'); $('.firma-jm').firstChild.textContent = S.firma.nazev; }; } }; };
+    S.firma = await q(sb.from('firmy').update(f).eq('id', S.firma.id).select().single()); $('#nastOk').classList.remove('skryt'); toast('Údaje firmy uloženy ✓'); $('.firma-jm').firstChild.textContent = S.firma.nazev; katTokenZrus(); licStav(); };
+    licStav(); } }; };
+async function licStav() { const el = $('#licStav'); if (!el) return;
+  if (!S.firma?.licence) { el.textContent = 'Bez licence vidíte v kalkulačkách jen bezplatnou část katalogu.'; return; }
+  el.textContent = 'Ověřuji licenci…'; const t = await katToken();
+  el.textContent = t ? `✓ Licence platná${KATT.exp ? ' – katalog odemčen do ' + new Date(KATT.exp * 1000).toLocaleDateString('cs-CZ') : ''}` : '✗ ' + (KATT.chyba || 'Licenci se nepodařilo ověřit.'); }
 
 /* =================== PALETA (Ctrl+K) =================== */
 AKCE.paleta = () => {
@@ -1320,6 +1343,7 @@ POHLEDY.kalkulacky = async t => {
           ${(K.volby || []).map(([k, l, o]) => `<div class="pole">${esc(l)}<div class="volby" role="group" aria-label="${esc(l)}">${o.map(([h, n]) => `<button type="button" class="${String(v[k]) === h ? 'akt' : ''}" data-a="kalk-volba" data-k="${k}" data-v="${h}">${esc(n)}</button>`).join('')}</div></div>`).join('')}
         </form></section>
         <section class="karta hl" style="flex:999 1 420px"><div class="karta-h"><h3>Potřebný materiál</h3><span class="tlumene" id="kalkPl"></span></div>
+          <p class="kat-pozn skryt" id="katPozn">Bez licence vidíte jen bezplatnou část katalogu. Licenční klíč zadáte v <a href="#firma">Moje firma</a>.</p>
           <div class="obal-tab"><table class="vysl" style="width:100%;border-collapse:collapse"><thead><tr><th style="width:30px"></th><th style="text-align:left;font-size:12px;color:var(--ocel)">POLOŽKA</th><th class="r" style="font-size:12px;color:var(--ocel)">MNOŽSTVÍ</th><th class="r" style="font-size:12px;color:var(--ocel)">CENA/MJ</th></tr></thead><tbody id="kalkVys"></tbody></table></div>
           <div class="tlumene mal" style="margin:8px 0 14px">Hodnoty jsou orientační a zahrnují běžný prořez. Zaškrtnuté položky vložíte do dokladu; cenu můžete doplnit hned, nebo až v dokladu.</div>
           <div class="do-nab">
@@ -1333,6 +1357,92 @@ POHLEDY.kalkulacky = async t => {
       </div>
     </section></div>`, po: () => { kalkPrepocet(); $('#fKalk').addEventListener('input', e => { v[e.target.name] = cislo(e.target.value); kalkPrepocet(); }); } };
 };
+/* ---------- napojení kalkulaček na katalog ---------- */
+const KATT = { token: null, exp: 0, chyba: '', p: null };
+function katTokenZrus() { KATT.token = null; KATT.exp = 0; KATT.p = null; KAT.kand = {}; try { localStorage.removeItem('mk-kat-token'); } catch { } }
+async function katToken() {
+  const lic = (S.firma?.licence || '').trim(); if (!lic) return null;
+  const now = Date.now() / 1000;
+  if (KATT.token && KATT.exp > now + 60) return KATT.token;
+  try { const u = JSON.parse(localStorage.getItem('mk-kat-token') || 'null'); if (u && u.lic === lic.slice(-24) && u.exp > now + 60) { Object.assign(KATT, { token: u.token, exp: u.exp }); return u.token; } } catch { }
+  if (KATT.p) return KATT.p;
+  KATT.p = (async () => {
+    try {
+      const r = await fetch(KAT_URL + '/functions/v1/katalog-pristup', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KAT_KEY }, body: JSON.stringify({ licence: lic }) });
+      const j = await r.json().catch(() => ({}));
+      if (!j.ok) { KATT.chyba = j.chyba || 'Licenci se nepodařilo ověřit.'; return null; }
+      Object.assign(KATT, { token: j.token, exp: j.exp, chyba: '' });
+      try { localStorage.setItem('mk-kat-token', JSON.stringify({ token: j.token, exp: j.exp, lic: lic.slice(-24) })); } catch { }
+      return j.token;
+    } catch { KATT.chyba = 'Server licencí je nedostupný.'; return null; } finally { KATT.p = null; }
+  })();
+  return KATT.p;
+}
+const KAT = { mapa: null, kand: {}, poKodu: {} };
+const bezDia = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const mjNorm = u => { u = bezDia(u).replace('²', '2').replace('³', '3').replace(/\.$/, '').trim(); return ({ pytel: 'ks', kbelik: 'ks', role: 'ks', doza: 'ks', kus: 'ks', bm: 'm', m2: 'm2', 'm²': 'm2' })[u] || u; };
+async function katMapa() {
+  if (KAT.mapa) return KAT.mapa;
+  const { data, error } = await kat.from('kancelar_kalk').select('*');
+  KAT.mapa = error ? [] : data; return KAT.mapa;
+}
+function katRadek(kalk, n) { let best = null; for (const m of KAT.mapa || []) if (m.kalk === kalk && n.startsWith(m.radek) && (!best || m.radek.length > best.radek.length)) best = m; return best; }
+async function katHledej({ skupina = null, slova = null, bez = null, pocet = 40 } = {}) {
+  const { data, error } = await kat.rpc('katalog_dotaz', { p_token: await katToken(), p_skupina: skupina || null, p_slova: slova?.length ? slova : null, p_bez: bez?.length ? bez : null, p_pocet: pocet });
+  return error ? [] : data || [];
+}
+async function katKandidati(m) {
+  if (KAT.kand[m.id]) return KAT.kand[m.id];
+  return (KAT.kand[m.id] = katHledej({ skupina: m.skupina, slova: m.slova ? m.slova.split(' ') : null, bez: m.bez ? m.bez.split('|') : null, pocet: 40 }));
+}
+async function katProduktKodem(kod) {
+  if (kod in KAT.poKodu) return KAT.poKodu[kod];
+  const { data } = await kat.rpc('katalog_podle_kodu_vse', { kody: [kod], eany: [], p_token: await katToken() });
+  return (KAT.poKodu[kod] = data?.[0] || null);
+}
+async function katVychozi(m) {
+  if (m.vychozi_kod) { const p = await katProduktKodem(m.vychozi_kod); if (p) return p; }
+  const k = await katKandidati(m); return k[0] || null;
+}
+const fotoP = p => p?.foto_url ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy">` : `<span class="kfoto"></span>`;
+async function kalkProdukty() {
+  const kalk = UI.kalk; await katMapa(); if (UI.kalk !== kalk || !KV) return;
+  const prod = (UI.kalkProd ||= {})[kalk] ||= {}; const ceny = UI.kalkCeny[kalk] ||= {};
+  await Promise.all(KV.r.map(async ([n, , j]) => {
+    const m = katRadek(kalk, n); const bunka = $(`#kalkVys .kprod[data-n="${CSS.escape(n)}"]`); if (!bunka) return;
+    if (!m) { bunka.remove(); return; }
+    if (!(n in prod)) prod[n] = await katVychozi(m);
+    if (UI.kalk !== kalk) return;
+    const p = prod[n]; const shoda = p && mjNorm(p.mj) === mjNorm(j);
+    bunka.innerHTML = p ? `${fotoP(p)}<span class="knaz" title="${esc(p.nazev)}">${esc(p.nazev)} · <b>${kc(p.cena_bez_dph)}</b>/${esc(p.mj)}${shoda ? '' : ` <span class="jine" title="Produkt se prodává v jiné jednotce než výpočet – cenu za ${esc(j)} doplňte ručně.">(jiná jednotka)</span>`}</span><button type="button" data-a="kalk-produkt" data-n="${esc(n)}">Změnit</button>`
+      : `<span class="knaz">Produkt nevybrán</span><button type="button" data-a="kalk-produkt" data-n="${esc(n)}">Vybrat z katalogu</button>`;
+    const inp = $(`#kalkVys input.cena[data-n="${CSS.escape(n)}"]`);
+    if (p && shoda && !(n in ceny) && inp && !inp.value) { inp.value = String(p.cena_bez_dph ?? '').replace('.', ','); inp.dataset.auto = '1'; }
+  }));
+  const pozn = $('#katPozn'); if (pozn) pozn.classList.toggle('skryt', !!(await katToken()));
+}
+AKCE['kalk-produkt'] = async el => {
+  const kalk = UI.kalk, n = el.dataset.n; await katMapa(); const m = katRadek(kalk, n) || {};
+  const prod = (UI.kalkProd ||= {})[kalk] ||= {}; const ceny = UI.kalkCeny[kalk] ||= {};
+  const radek = KV.r.find(r => r[0] === n); const mj = radek?.[2] || '';
+  okno('Vybrat produkt – ' + n, `<div class="radek"><input id="kvHledat" class="vstup" style="flex:1" placeholder="Hledat v katalogu (např. knauf 12,5)" autocomplete="off">
+      ${m.skupina ? `<label class="radek" style="font-size:14px;white-space:nowrap"><input type="checkbox" id="kvSk" checked style="width:18px;height:18px"> jen ${esc(m.skupina)}</label>` : ''}</div>
+    ${(await katToken()) ? '' : '<p class="kat-pozn" style="margin-top:10px">Bez licence vidíte jen bezplatnou část katalogu. Licenční klíč zadáte v Moje firma.</p>'}
+    <div class="kvyber" id="kvVys"><p class="tlumene">Načítám…</p></div>`,
+    `<button class="btn" data-a="kalk-produkt-zadny" data-n="${esc(n)}">Bez produktu</button><button class="btn" data-a="zavrit">Zavřít</button>`, { trida: 'siroke' });
+  let posl = [];
+  const vypis = list => { posl = list; $('#kvVys').innerHTML = list.length ? list.map((p, i) => `<button type="button" data-i="${i}" class="${prod[n]?.kod === p.kod ? 'akt' : ''}">${fotoP(p)}<span>${esc(p.nazev)}<br><span class="tlumene" style="font-size:12px">${esc(p.znacka || '')}${p.stavimex_priorita > 0 ? ' · skladem u Stavimexu' : ''}</span></span><span class="kc">${kc(p.cena_bez_dph)}/${esc(p.mj)}</span></button>`).join('') : '<p class="tlumene">Nic nenalezeno. Zkuste jiná slova nebo vypněte omezení na skupinu.</p>'; };
+  const hledej = async () => { const t = bezDia($('#kvHledat').value).split(/\s+/).filter(w => w.length >= 2); const sk = $('#kvSk')?.checked ? m.skupina : null;
+    if (!t.length && !sk) return vypis(await katKandidati(m));
+    vypis(await katHledej({ skupina: sk, slova: t.length ? t : (sk === m.skupina && m.slova ? m.slova.split(' ') : null), bez: sk === m.skupina && m.bez ? m.bez.split('|') : null, pocet: 60 })); };
+  let tm; $('#kvHledat').oninput = () => { clearTimeout(tm); tm = setTimeout(hledej, 300); }; if ($('#kvSk')) $('#kvSk').onchange = hledej;
+  $('#kvVys').onclick = e => { const b = e.target.closest('button[data-i]'); if (!b) return; const p = posl[+b.dataset.i]; prod[n] = p;
+    if (mjNorm(p.mj) === mjNorm(mj)) ceny[n] = String(p.cena_bez_dph ?? '').replace('.', ','); else delete ceny[n];
+    zavriOkno(); kalkPrepocet(); toast('Produkt vybrán'); };
+  vypis(m.id ? await katKandidati(m) : []);
+};
+AKCE['kalk-produkt-zadny'] = el => { const prod = (UI.kalkProd ||= {})[UI.kalk] ||= {}; prod[el.dataset.n] = null; delete (UI.kalkCeny[UI.kalk] || {})[el.dataset.n]; zavriOkno(); kalkPrepocet(); };
+
 let KV = null;
 function kalkPrepocet() {
   const K = KALK[UI.kalk]; const v = UI.kalkVals[UI.kalk];
@@ -1340,16 +1450,17 @@ function kalkPrepocet() {
   const vyb = UI.kalkVyber[UI.kalk] ||= {}; const ceny = UI.kalkCeny[UI.kalk] ||= {};
   $('#kalkPl').innerHTML = KV.plocha != null ? `plocha <b style="color:var(--inkoust)">${fmtN(KV.plocha)} m²</b>` : '';
   $('#kalkVys').innerHTML = KV.r.map(([n, m, j], i) => { const info = n.startsWith('…') || ['Objem', 'Plocha', 'Plocha stěn', 'Objem zdiva'].includes(n);
-    return `<tr><td>${info ? '' : `<input type="checkbox" data-i="${i}" ${vyb[n] !== false ? 'checked' : ''} aria-label="Vložit ${esc(n)}">`}</td><td class="${info ? 'tlumene' : ''}">${esc(n)}</td><td class="mn">${fmtN(m)} <span style="font-size:14px;color:var(--ocel);font-family:var(--font)">${esc(j)}</span></td><td class="r">${info ? '' : `<input class="cena" data-n="${esc(n)}" inputmode="decimal" placeholder="—" value="${esc(ceny[n] || '')}" aria-label="Cena za MJ">`}</td></tr>`; }).join('');
+    return `<tr><td>${info ? '' : `<input type="checkbox" data-i="${i}" ${vyb[n] !== false ? 'checked' : ''} aria-label="Vložit ${esc(n)}">`}</td><td class="${info ? 'tlumene' : ''}">${esc(n)}${info ? '' : `<div class="kprod" data-n="${esc(n)}"><span class="kfoto"></span><span class="tlumene">Hledám v katalogu…</span></div>`}</td><td class="mn">${fmtN(m)} <span style="font-size:14px;color:var(--ocel);font-family:var(--font)">${esc(j)}</span></td><td class="r">${info ? '' : `<input class="cena" data-n="${esc(n)}" inputmode="decimal" placeholder="—" value="${esc(ceny[n] || '')}" aria-label="Cena za MJ">`}</td></tr>`; }).join('');
   $$('#kalkVys input[type=checkbox]').forEach(c => c.onchange = () => { vyb[KV.r[+c.dataset.i][0]] = c.checked; });
-  $$('#kalkVys input.cena').forEach(c => c.oninput = () => { ceny[c.dataset.n] = c.value; });
+  $$('#kalkVys input.cena').forEach(c => c.oninput = () => { ceny[c.dataset.n] = c.value; delete c.dataset.auto; });
   $('#kalkPraceTxt').textContent = `${KV.prace[0]} – ${fmtN(KV.prace[1])} ${KV.prace[2]}`;
   $('#kalkPrace').onchange = e => UI.kalkPrace = e.target.checked; $('#kalkPraceCena').oninput = e => UI.kalkPraceCena = e.target.value;
   const s = $('#kalkCil'); if (s) s.onchange = () => UI.kalkCil = s.value.startsWith('__') ? null : s.value;
+  kalkProdukty();
 }
 AKCE.kalk = el => { UI.kalk = el.dataset.id; render(); };
 AKCE['kalk-volba'] = el => { UI.kalkVals[UI.kalk][el.dataset.k] = el.dataset.v; $$(`[data-a=kalk-volba][data-k="${el.dataset.k}"]`).forEach(b => b.classList.toggle('akt', b === el)); kalkPrepocet(); };
-AKCE['kalk-reset'] = () => { delete UI.kalkVals[UI.kalk]; delete UI.kalkCeny[UI.kalk]; delete UI.kalkVyber[UI.kalk]; render(); };
+AKCE['kalk-reset'] = () => { delete UI.kalkVals[UI.kalk]; delete UI.kalkCeny[UI.kalk]; delete UI.kalkVyber[UI.kalk]; if (UI.kalkProd) delete UI.kalkProd[UI.kalk]; render(); };
 AKCE['kalk-kopie'] = async () => { const K = KALK[UI.kalk]; const t = K.n + '\n' + KV.r.map(([n, m, j]) => `${n}: ${fmtN(m)} ${j}`).join('\n'); try { await navigator.clipboard.writeText(t); toast('Zkopírováno do schránky'); } catch { toast('Kopírování se nepovedlo', { chyba: true }); } };
 AKCE['kalk-vlozit'] = async () => {
   const sel = $('#kalkCil').value; if (!sel) { $('#kalkCil').focus(); return toast('Vyberte, do kterého dokladu vložit', { chyba: true }); }
@@ -1357,7 +1468,10 @@ AKCE['kalk-vlozit'] = async () => {
   const pol = await nactiPolozky(d.id, true); const K = KALK[UI.kalk]; const vyb = UI.kalkVyber[UI.kalk] || {}; const ceny = UI.kalkCeny[UI.kalk] || {};
   const nove = [];
   if (UI.kalkPrace !== false) nove.push({ nazev: KV.prace[0], mnozstvi: Math.round(KV.prace[1] * 100) / 100, mj: KV.prace[2], cena: cislo(UI.kalkPraceCena) });
-  KV.r.forEach(([n, m, j]) => { if (n.startsWith('…') || ['Objem', 'Plocha', 'Plocha stěn', 'Objem zdiva'].includes(n) || vyb[n] === false) return; nove.push({ nazev: n, mnozstvi: m, mj: j, cena: cislo(ceny[n]) }); });
+  const prod = UI.kalkProd?.[UI.kalk] || {};
+  KV.r.forEach(([n, m, j]) => { if (n.startsWith('…') || ['Objem', 'Plocha', 'Plocha stěn', 'Objem zdiva'].includes(n) || vyb[n] === false) return;
+    const p = prod[n]; const inp = $(`#kalkVys input.cena[data-n="${CSS.escape(n)}"]`); const cena = cislo(ceny[n] ?? inp?.value);
+    nove.push({ nazev: p ? p.nazev : n, mnozstvi: m, mj: j, cena }); });
   const rows = nove.map((p, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: pol.length + i, dph: S.firma.platce_dph ? 21 : 0, ...p }));
   await q(sb.from('polozky').insert(rows)); await nactiPolozky(d.id, true); await obnovDoklad(d.id);
   UI.kalkCil = null; toast(`${rows.length} položek vloženo do ${d.cislo}`, { akce: 'Otevřít doklad', fn: () => jdi('doklad/' + d.id) });
