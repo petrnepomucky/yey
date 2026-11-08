@@ -1,8 +1,9 @@
-# Napojení kalkulaček na katalog
+# Kalkulačky a katalog
 
-- Přiřazení řádků kalkulaček k produktům je v projektu **Stavební materiál**, tabulka `public.kancelar_kalk`
-  (kalk, radek = začátek názvu řádku, skupina = skupina/podskupina katalogu, slova, bez = vyloučená slova oddělená |, vychozi_kod).
-- Aplikace volá `katalog_dotaz` a `katalog_podle_kodu_vse`. Bez licence vrací jen bezplatnou část katalogu.
-- Licenční klíč je ve sloupci `online_kancelar.firmy.licence`. Aplikace ho pošle funkci `katalog-pristup`
-  (projekt Stavební materiál) a dostane token na plný katalog (max. 7 dní, uloží se v prohlížeči).
-- Cena/MJ se předvyplní jen tehdy, když jednotka produktu odpovídá jednotce výpočtu (pytel/kbelík/role = ks).
+- Kalkulačky jsou modul `web/kalk.js`, převzatý **beze změny** z yey.cz (repo YeY-WEB, `yey.html`, `<script id="yey-kalk">`).
+  Při úpravě kalkulaček na yey.cz stačí modul znovu zkopírovat sem – Moje kancelář mu jen předává adaptér (`kalkAdapter` v `web/index.html`).
+- Katalog, hledané výrazy (`yey_kalk_hledani`), schválené produkty (`yey_kalk_vyber`) a přepočty jednotek (`prevody_schvalene`, `prevod_navrh`)
+  jsou v projektu **Stavební materiál** – stejné jako pro yey.cz, takže Správa databáze (dbadmin) ladí obě aplikace najednou.
+- Licenční klíč je ve sloupci `online_kancelar.firmy.licence`; aplikace ho pošle funkci `katalog-pristup` a dostane token na plný katalog.
+  Bez licence kalkulačky počítají množství a cenu bere z vlastního ceníku (stejně jako yey.cz bez licence).
+- Tabulka `kancelar_kalk` (dřívější vlastní přiřazení) se už nepoužívá.

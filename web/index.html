@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="kalk.js"></script>
 <style>
 :root{
   --inkoust:#1D272F;--inkoust-2:#2E3B45;--inkoust-3:#3F4D58;--ocel:#5D6B76;
@@ -639,7 +640,7 @@ function renderPrihlaseni(zprava) {
         <h1>Celá zakázka<br><em>na jednom místě.</em></h1>
         <p>Od poptávky přes výpočet materiálu a nabídku až po fakturu a předávací protokol. Data máte bezpečně v cloudu – v telefonu na stavbě i v kanceláři.</p>
       </div>
-      <div class="vyhody"><div><i>✓</i>Nabídky, faktury s QR platbou, protokoly</div><div><i>✓</i>14 kalkulaček výměr a spotřeby materiálu</div><div><i>✓</i>Přehled, co je po splatnosti a co dnes řešit</div></div>
+      <div class="vyhody"><div><i>✓</i>Nabídky, faktury s QR platbou, protokoly</div><div><i>✓</i>19 kalkulaček výměr a spotřeby materiálu</div><div><i>✓</i>Přehled, co je po splatnosti a co dnes řešit</div></div>
       <div class="metr-pruh" aria-hidden="true">${metrCisla()}</div>
     </section>
     <section class="prav">
@@ -1259,6 +1260,7 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
 async function licStav() { const el = $('#licStav'); if (!el) return;
   if (!S.firma?.licence) { el.textContent = 'Bez licence vidíte v kalkulačkách jen bezplatnou část katalogu.'; return; }
   el.textContent = 'Ověřuji licenci…'; const t = await katToken();
+  if (t) try { YeyKalk.katalogZmena(); } catch { }
   el.textContent = t ? `✓ Licence platná${KATT.exp ? ' – katalog odemčen do ' + new Date(KATT.exp * 1000).toLocaleDateString('cs-CZ') : ''}` : '✗ ' + (KATT.chyba || 'Licenci se nepodařilo ověřit.'); }
 
 /* =================== PALETA (Ctrl+K) =================== */
@@ -1272,7 +1274,7 @@ AKCE.paleta = () => {
     S.zakazky.filter(z => h && (z.nazev + ' ' + (z.adresa || '')).toLowerCase().includes(h)).slice(0, 6).forEach(z => v.push({ typ: 'Zakázka', t: z.nazev, s: FAZE_N[z.faze], fn: () => jdi('zakazky/' + z.id) }));
     S.kontakty.filter(k => h && [k.nazev, k.osoba, k.telefon, k.ico].join(' ').toLowerCase().includes(h)).slice(0, 6).forEach(k => v.push({ typ: 'Kontakt', t: k.nazev, s: k.mesto, fn: () => jdi('kontakty/' + k.id) }));
     S.doklady.filter(d => h && [d.cislo, d.predmet, kontakt(d.kontakt_id)?.nazev].join(' ').toLowerCase().includes(h)).slice(0, 8).forEach(d => v.push({ typ: TYP[d.typ].split(' ')[0], t: d.cislo + ' · ' + (kontakt(d.kontakt_id)?.nazev || d.predmet || ''), s: d.typ === 'protokol' ? '' : kc0(celkem(d)), fn: () => jdi('doklad/' + d.id) }));
-    Object.entries(KALK).filter(([, k]) => h && k.n.toLowerCase().includes(h)).forEach(([id, k]) => v.push({ typ: 'Kalkulačka', t: k.n, fn: () => { UI.kalk = id; jdi('kalkulacky'); } }));
+    Object.entries(window.YeyKalk?._test?.KALK || {}).filter(([, k]) => h && String(k.nazev || '').toLowerCase().includes(h)).forEach(([id, k]) => v.push({ typ: 'Kalkulačka', t: k.nazev, fn: () => { try { YeyKalk._test.S.druh = id; } catch { } jdi('kalkulacky'); } }));
     akt = Math.min(akt, v.length - 1); if (akt < 0) akt = 0;
     $('#palVys').innerHTML = v.map((x, i) => `<button type="button" class="${i === akt ? 'akt' : ''}" data-i="${i}"><span class="typ">${esc(x.typ)}</span><span style="flex:1">${esc(x.t)}</span><span class="tlumene mal">${esc(x.s || '')}</span></button>`).join('') || '<div class="prazdno">Nic nenalezeno</div>';
     $$('#palVys button').forEach(b => b.onclick = () => { zavriOkno(); v[+b.dataset.i].fn(); });
@@ -1286,134 +1288,11 @@ AKCE.paleta = () => {
     if (e.key === 'Enter' && vys[akt]) { e.preventDefault(); zavriOkno(); vys[akt].fn(); }
   };
 };
-/* =================== KALKULAČKY (obecná množství, bez katalogu) =================== */
-const ceil = Math.ceil;
-const r1 = x => Math.round(x * 10) / 10;
-const pyt = (kg, vel) => ceil(kg / vel);
-const KALK = {
-  zdivo: { n: 'Zdivo z tvárnic', sk: 'Hrubá stavba', mj: 'm²',
-    pole: [['delka', 'Délka stěn', 'm', 6], ['vyska', 'Výška', 'm', 2.6], ['otvory', 'Odečíst otvory', 'm²', 1.6], ['td', 'Délka tvárnice', 'cm', 50], ['tv', 'Výška tvárnice', 'cm', 25], ['tl', 'Tloušťka zdi', 'cm', 15]],
-    volby: [['malta', 'Pojivo', [['tenka', 'Tenkovrstvá malta'], ['pena', 'Zdicí pěna'], ['klasicka', 'Klasická malta']]]],
-    calc: v => { const A = Math.max(0, v.delka * v.vyska - v.otvory); const V = A * v.tl / 100; const ks = ceil(A / (v.td * v.tv / 1e4) * 1.05);
-      const r = [['Tvárnice', ks, 'ks'], ['Objem zdiva', r1(V), 'm³']];
-      if (v.malta === 'tenka') r.push(['Tenkovrstvá malta (pytel 25 kg)', pyt(V * 20, 25), 'pytel']);
-      if (v.malta === 'pena') r.push(['Zdicí pěna (dóza 750 ml ≈ 7 m²)', ceil(A / 7), 'ks']);
-      if (v.malta === 'klasicka') r.push(['Malta zdicí MC (pytel 25 kg)', pyt(V * 300, 25), 'pytel']);
-      r.push(['Hydroizolace pod 1. řadu (pás)', r1(v.delka * 1.1), 'm'], ['Cementová malta pod 1. řadu (25 kg)', pyt(v.delka * v.tl / 100 * 0.03 * 2000, 25), 'pytel']);
-      return { plocha: A, r, prace: ['Vyzdění stěny', A, 'm²'] }; } },
-  sdk_pricka: { n: 'SDK příčka', sk: 'Suchá výstavba', mj: 'm²',
-    pole: [['delka', 'Délka příčky', 'm', 4], ['vyska', 'Výška', 'm', 2.6], ['otvory', 'Odečíst dveře', 'm²', 0]],
-    volby: [['vrstvy', 'Opláštění', [['1', '1× deska z každé strany'], ['2', '2× deska (vyšší odolnost)']]], ['rozteč', 'Rozteč profilů CW', [['0.625', '62,5 cm'], ['0.4', '40 cm']]], ['izol', 'Izolace', [['ano', 'Ano'], ['ne', 'Ne']]]],
-    calc: v => { const A = Math.max(0, v.delka * v.vyska - v.otvory); const n = +v.vrstvy; const k = 1.1;
-      const r = [['Sádrokartonové desky', r1(A * 2 * n * k), 'm²'], ['Profil CW (svislý)', r1((ceil(v.delka / +v.rozteč) + 1) * v.vyska * 1.05), 'm'], ['Profil UW (obvodový)', r1(v.delka * 2 * 1.05), 'm'],
-        ['Šrouby TN 25' + (n === 2 ? ' + TN 35' : ''), ceil(A * 2 * n * 25 * k), 'ks'], ['Hmoždinky do UW', ceil(v.delka * 2 / 0.6) + 4, 'ks'], ['Těsnicí páska pod profily', r1((v.delka * 2 + v.vyska * 2) * 1.05), 'm'],
-        ['Spárovací tmel', r1(A * 2 * 0.3 * k), 'kg'], ['Výztužná páska do spár', r1(A * 2 * 1.5), 'm']];
-      if (v.izol === 'ano') r.push(['Izolace do dutiny', r1(A * 1.05), 'm²']);
-      return { plocha: A, r, prace: ['Montáž SDK příčky', A, 'm²'] }; } },
-  sdk_podhled: { n: 'SDK podhled', sk: 'Suchá výstavba', mj: 'm²',
-    pole: [['delka', 'Délka místnosti', 'm', 4], ['sirka', 'Šířka místnosti', 'm', 3.5]],
-    volby: [['izol', 'Izolace nad podhled', [['ne', 'Ne'], ['ano', 'Ano']]]],
-    calc: v => { const A = v.delka * v.sirka; const O = 2 * (v.delka + v.sirka);
-      const r = [['Sádrokartonové desky', r1(A * 1.1), 'm²'], ['Profil CD 60/27', r1(A * 3.2), 'm'], ['Profil UD 28/27', r1(O * 1.05), 'm'], ['Přímý závěs / kotva', ceil(A * 1.3), 'ks'],
-        ['Spojka CD (podélná)', ceil(A * 0.6), 'ks'], ['Křížová spojka CD', ceil(A * 1.7), 'ks'], ['Šrouby TN 25', ceil(A * 20), 'ks'], ['Natloukací hmoždinky', ceil(A * 1.3 + O / 0.6), 'ks'], ['Spárovací tmel', r1(A * 0.35), 'kg'], ['Výztužná páska', r1(A * 1.6), 'm']];
-      if (v.izol === 'ano') r.push(['Izolace', r1(A * 1.05), 'm²']);
-      return { plocha: A, r, prace: ['Montáž SDK podhledu', A, 'm²'] }; } },
-  omitka: { n: 'Omítky', sk: 'Povrchy', mj: 'm²',
-    pole: [['plocha', 'Plocha stěn', 'm²', 40], ['tl', 'Tloušťka jádra', 'mm', 10]],
-    volby: [['druh', 'Systém', [['jadro', 'Jádrová + štuk'], ['jednovrstva', 'Jednovrstvá (sádrová)']]]],
-    calc: v => { const A = v.plocha; const r = [['Penetrace', r1(A * 0.2), 'l']];
-      if (v.druh === 'jadro') r.push(['Cementový postřik (25 kg)', pyt(A * 4, 25), 'pytel'], ['Jádrová omítka (30 kg)', pyt(A * v.tl * 1.4, 30), 'pytel'], ['Štuková omítka (25 kg)', pyt(A * 3, 25), 'pytel']);
-      else r.push(['Sádrová omítka (30 kg)', pyt(A * v.tl * 0.9, 30), 'pytel']);
-      r.push(['Omítníky', r1(A * 0.6), 'm'], ['Rohové profily', r1(A * 0.15), 'm']);
-      return { plocha: A, r, prace: ['Omítání stěn', A, 'm²'] }; } },
-  malba: { n: 'Malba místnosti', sk: 'Povrchy', mj: 'm²',
-    pole: [['delka', 'Délka místnosti', 'm', 4], ['sirka', 'Šířka místnosti', 'm', 3.5], ['vyska', 'Výška', 'm', 2.6], ['otvory', 'Odečíst okna a dveře', 'm²', 4]],
-    volby: [['strop', 'Malovat i strop', [['ano', 'Ano'], ['ne', 'Ne']]], ['vrstvy', 'Počet nátěrů', [['2', '2×'], ['1', '1×'], ['3', '3×']]]],
-    calc: v => { const st = Math.max(0, 2 * (v.delka + v.sirka) * v.vyska - v.otvory); const A = st + (v.strop === 'ano' ? v.delka * v.sirka : 0);
-      return { plocha: A, r: [['Plocha stěn', r1(st), 'm²'], ['Malířská barva', r1(A * +v.vrstvy * 0.15), 'l'], ['Penetrace', r1(A * 0.1), 'l'], ['Malířská páska', ceil(2 * (v.delka + v.sirka) * 2 / 50), 'role'], ['Zakrývací fólie', r1(v.delka * v.sirka * 1.2), 'm²']], prace: ['Malba ' + v.vrstvy + '×', A, 'm²'] }; } },
-  dlazba: { n: 'Dlažba a obklad', sk: 'Povrchy', mj: 'm²',
-    pole: [['plocha', 'Plocha', 'm²', 12], ['fd', 'Formát – délka', 'cm', 60], ['fs', 'Formát – šířka', 'cm', 60], ['obvod', 'Obvod (lišty, sokly)', 'm', 14]],
-    volby: [['prorez', 'Prořez', [['10', '10 % (rovně)'], ['15', '15 % (diagonála, velký formát)'], ['5', '5 %']]], ['kde', 'Typ', [['podlaha', 'Podlaha'], ['stena', 'Stěna']]]],
-    calc: v => { const A = v.plocha, p = 1 + v.prorez / 100; const m2 = A * p; const ks = ceil(m2 / (v.fd * v.fs / 1e4));
-      const lep = v.fd >= 60 || v.fs >= 60 ? 5 : 3.5;
-      return { plocha: A, r: [['Dlažba / obklad', r1(m2), 'm²'], ['… to je kusů', ks, 'ks'], ['Flexibilní lepidlo (25 kg)', pyt(A * lep, 25), 'pytel'], ['Spárovací hmota', r1(A * 0.4), 'kg'], ['Penetrace', r1(A * 0.15), 'l'], [v.kde === 'podlaha' ? 'Soklové lišty / dlaždice' : 'Ukončovací lišty', r1(v.obvod * 1.05), 'm'], ['Silikon (sanitární)', ceil(v.obvod / 8), 'ks']],
-        prace: [v.kde === 'podlaha' ? 'Pokládka dlažby' : 'Obklad stěn', A, 'm²'] }; } },
-  hydro: { n: 'Hydroizolace', sk: 'Povrchy', mj: 'm²',
-    pole: [['plocha', 'Plocha', 'm²', 8], ['obvod', 'Obvod / kouty', 'm', 12], ['prostupy', 'Prostupy (odpady, trubky)', 'ks', 3]],
-    calc: v => ({ plocha: v.plocha, r: [['Hydroizolační stěrka (2 vrstvy)', r1(v.plocha * 2.8), 'kg'], ['Penetrace', r1(v.plocha * 0.2), 'l'], ['Těsnicí páska do koutů', r1(v.obvod * 1.1), 'm'], ['Vnitřní / vnější roh', ceil(v.obvod / 3), 'ks'], ['Manžeta na prostup', v.prostupy, 'ks']], prace: ['Hydroizolace stěrkou', v.plocha, 'm²'] }) },
-  nivelace: { n: 'Nivelace podlahy', sk: 'Podlahy', mj: 'm²',
-    pole: [['plocha', 'Plocha', 'm²', 20], ['tl', 'Průměrná tloušťka', 'mm', 5], ['obvod', 'Obvod místnosti', 'm', 18]],
-    calc: v => ({ plocha: v.plocha, r: [['Samonivelační stěrka (25 kg)', pyt(v.plocha * v.tl * 1.6, 25), 'pytel'], ['… celkem hmoty', r1(v.plocha * v.tl * 1.6), 'kg'], ['Penetrace', r1(v.plocha * 0.15), 'l'], ['Dilatační páska', r1(v.obvod * 1.05), 'm']], prace: ['Nivelace podlahy', v.plocha, 'm²'] }) },
-  plovouci: { n: 'Plovoucí podlaha', sk: 'Podlahy', mj: 'm²',
-    pole: [['plocha', 'Plocha', 'm²', 20], ['bal', 'm² v balení', 'm²', 2.2], ['obvod', 'Obvod (lišty)', 'm', 18], ['dvere', 'Počet dveří (přechody)', 'ks', 1]],
-    calc: v => { const m2 = v.plocha * 1.08;
-      return { plocha: v.plocha, r: [['Podlaha (+8 % prořez)', r1(m2), 'm²'], ['… balení', ceil(m2 / v.bal), 'bal'], ['Podložka', r1(v.plocha * 1.05), 'm²'], ['Parozábrana (fólie)', r1(v.plocha * 1.15), 'm²'], ['Soklové lišty', r1((v.obvod - v.dvere * 0.9) * 1.1), 'm'], ['Přechodové lišty', v.dvere, 'ks']], prace: ['Pokládka plovoucí podlahy', v.plocha, 'm²'] }; } },
-  beton: { n: 'Beton a potěr', sk: 'Podlahy', mj: 'm³',
-    pole: [['delka', 'Délka', 'm', 5], ['sirka', 'Šířka', 'm', 4], ['tl', 'Tloušťka', 'cm', 6]],
-    volby: [['druh', 'Co děláte', [['poter', 'Potěr / mazanina'], ['beton', 'Beton míchaný'], ['hotovy', 'Hotový beton (mix)']]]],
-    calc: v => { const A = v.delka * v.sirka, V = A * v.tl / 100;
-      const r = [['Plocha', r1(A), 'm²'], ['Objem', Math.round(V * 100) / 100, 'm³']];
-      if (v.druh === 'poter') r.push(['Potěrová směs (25 kg)', pyt(V * 2000, 25), 'pytel'], ['Dilatační páska', r1(2 * (v.delka + v.sirka) * 1.05), 'm'], ['Separační fólie', r1(A * 1.15), 'm²']);
-      if (v.druh === 'beton') r.push(['Cement (25 kg)', pyt(V * 320, 25), 'pytel'], ['Štěrkopísek', r1(V * 1.9), 't'], ['Voda', Math.round(V * 180), 'l'], ['KARI síť 150/150 (2×3 m)', ceil(A * 1.15 / 6), 'ks']);
-      if (v.druh === 'hotovy') r.push(['Beton (s rezervou 5 %)', Math.round(V * 1.05 * 4) / 4, 'm³'], ['KARI síť 150/150 (2×3 m)', ceil(A * 1.15 / 6), 'ks']);
-      return { plocha: A, r, prace: [v.druh === 'poter' ? 'Zhotovení potěru' : 'Betonáž', v.druh === 'poter' ? A : V, v.druh === 'poter' ? 'm²' : 'm³'] }; } },
-  zatepleni: { n: 'Zateplení fasády', sk: 'Hrubá stavba', mj: 'm²',
-    pole: [['plocha', 'Plocha fasády (bez oken)', 'm²', 120], ['tl', 'Tloušťka izolantu', 'cm', 16], ['ostění', 'Délka ostění oken', 'm', 40], ['sokl', 'Délka soklu', 'm', 40]],
-    volby: [['izolant', 'Izolant', [['eps', 'EPS (polystyren)'], ['mw', 'Minerální vata']]]],
-    calc: v => { const A = v.plocha;
-      return { plocha: A, r: [[v.izolant === 'eps' ? 'Fasádní polystyren EPS' : 'Fasádní minerální vata', r1(A * 1.05), 'm²'], ['… objem izolantu', r1(A * 1.05 * v.tl / 100), 'm³'], ['Lepidlo na izolant (25 kg)', pyt(A * 4.5, 25), 'pytel'], ['Stěrka – armovací (25 kg)', pyt(A * 4.5, 25), 'pytel'], ['Sklotextilní síťovina', r1(A * 1.15), 'm²'], ['Talířové hmoždinky', ceil(A * (v.izolant === 'eps' ? 6 : 8)), 'ks'], ['Rohové lišty se síťovinou', r1(v.ostění * 1.05), 'm'], ['Zakládací (soklová) lišta', r1(v.sokl * 1.05), 'm'], ['Penetrace pod omítku', r1(A * 0.25), 'l'], ['Tenkovrstvá omítka (25 kg)', pyt(A * 2.6, 25), 'kbelík']],
-        prace: ['Zateplení fasády ETICS', A, 'm²'] }; } },
-  zamkova: { n: 'Zámková dlažba', sk: 'Venkovní úpravy', mj: 'm²',
-    pole: [['plocha', 'Plocha', 'm²', 30], ['obrub', 'Délka obrubníků', 'm', 22], ['podklad', 'Tloušťka podkladu', 'cm', 20]],
-    calc: v => ({ plocha: v.plocha, r: [['Zámková dlažba (+5 %)', r1(v.plocha * 1.05), 'm²'], ['Podkladní štěrk 0–32', r1(v.plocha * v.podklad / 100 * 1.8 * 1.15), 't'], ['Lože – drť 4–8 (4 cm)', r1(v.plocha * 0.04 * 1.6), 't'], ['Zásyp spár – písek', r1(v.plocha * 5), 'kg'], ['Obrubníky (1 m)', ceil(v.obrub * 1.03), 'ks'], ['Beton pod obrubníky', r1(v.obrub * 0.06), 'm³'], ['Geotextilie', r1(v.plocha * 1.1), 'm²']], prace: ['Pokládka zámkové dlažby', v.plocha, 'm²'] }) },
-  strecha: { n: 'Střecha – krytina', sk: 'Hrubá stavba', mj: 'm²',
-    pole: [['plocha', 'Plocha střechy', 'm²', 140], ['tasek', 'Tašek na m²', 'ks', 10], ['hreben', 'Délka hřebene a nároží', 'm', 12], ['okap', 'Délka okapu', 'm', 24]],
-    calc: v => ({ plocha: v.plocha, r: [['Tašky / krytina', ceil(v.plocha * v.tasek * 1.05), 'ks'], ['Hřebenáče', ceil(v.hreben * 2.6), 'ks'], ['Střešní latě', r1(v.plocha * 3.1 * 1.05), 'm'], ['Kontralatě', r1(v.plocha * 1.2), 'm'], ['Pojistná hydroizolace (fólie)', r1(v.plocha * 1.15), 'm²'], ['Větrací pás okapu', r1(v.okap * 1.05), 'm'], ['Hřebenový větrací pás', r1(v.hreben * 1.05), 'm'], ['Příchytky / vruty', ceil(v.plocha * 2), 'ks']], prace: ['Pokládka krytiny', v.plocha, 'm²'] }) },
-  bourani: { n: 'Bourání a suť', sk: 'Ostatní', mj: 'm³',
-    pole: [['plocha', 'Plocha bouraných konstrukcí', 'm²', 20], ['tl', 'Průměrná tloušťka', 'cm', 15]],
-    volby: [['kont', 'Velikost kontejneru', [['3', '3 m³'], ['6', '6 m³'], ['9', '9 m³']]]],
-    calc: v => { const V = v.plocha * v.tl / 100, nak = V * 1.5;
-      return { plocha: v.plocha, r: [['Objem zdiva', r1(V), 'm³'], ['Suť nakypřená (×1,5)', r1(nak), 'm³'], ['Hmotnost suti', r1(V * 1.8), 't'], [`Kontejner ${v.kont} m³`, ceil(nak / +v.kont), 'ks'], ['Pytle na suť', ceil(nak / 0.025 / 4), 'ks']], prace: ['Bourání konstrukcí', V, 'm³'] }; } }
-};
-
-POHLEDY.kalkulacky = async t => {
-  const cil = t.p.get('doklad'); if (cil) UI.kalkCil = cil;
-  if (!KALK[UI.kalk]) UI.kalk = 'sdk_pricka';
-  const K = KALK[UI.kalk];
-  const v = UI.kalkVals[UI.kalk] ||= Object.fromEntries([...K.pole.map(p => [p[0], p[3]]), ...(K.volby || []).map(o => [o[0], o[2][0][0]])]);
-  const skupiny = [...new Set(Object.values(KALK).map(k => k.sk))];
-  const cilDok = UI.kalkCil ? doklad(UI.kalkCil) : null;
-  const nabidky = S.doklady.filter(d => ['nabidka', 'faktura', 'zalohova'].includes(d.typ) && d.stav === 'koncept' || d.typ === 'nabidka' && d.stav !== 'odmitnuto');
-  return { plna: true, html: `<div class="kalk">
-    <nav class="kalk-menu" aria-label="Výběr kalkulačky">
-      ${skupiny.map(s => `<div class="odd">${esc(s)}</div>${Object.entries(KALK).filter(([, k]) => k.sk === s).map(([id, k]) => `<button type="button" class="${id === UI.kalk ? 'akt' : ''}" data-a="kalk" data-id="${id}">${esc(k.n)}</button>`).join('')}`).join('')}
-    </nav>
-    <section class="kalk-telo">
-      <div class="uvitani"><div><h1>${esc(K.n)}</h1><div class="tlumene">Zadejte rozměry – množství se přepočítá hned. Výsledek je obecné množství materiálu, bez konkrétních výrobků.</div></div>
-        <button class="btn" data-a="kalk-reset">↺ Výchozí hodnoty</button></div>
-      <div class="dva-sl">
-        <section class="karta bok" style="flex:1 1 320px"><h3 style="margin-bottom:12px">Zadání</h3><form id="fKalk" class="mrizka">
-          ${K.pole.map(([k, l, j]) => `<label class="pole">${esc(l)}<span class="vstup-j"><input name="${k}" inputmode="decimal" value="${esc(String(v[k]).replace('.', ','))}" aria-label="${esc(l)}"><span>${esc(j)}</span></span></label>`).join('')}
-          ${(K.volby || []).map(([k, l, o]) => `<div class="pole">${esc(l)}<div class="volby" role="group" aria-label="${esc(l)}">${o.map(([h, n]) => `<button type="button" class="${String(v[k]) === h ? 'akt' : ''}" data-a="kalk-volba" data-k="${k}" data-v="${h}">${esc(n)}</button>`).join('')}</div></div>`).join('')}
-        </form></section>
-        <section class="karta hl" style="flex:999 1 420px"><div class="karta-h"><h3>Potřebný materiál</h3><span class="tlumene" id="kalkPl"></span></div>
-          <p class="kat-pozn skryt" id="katPozn">Bez licence vidíte jen bezplatnou část katalogu. Licenční klíč zadáte v <a href="#firma">Moje firma</a>.</p>
-          <div class="obal-tab"><table class="vysl" style="width:100%;border-collapse:collapse"><thead><tr><th style="width:30px"></th><th style="text-align:left;font-size:12px;color:var(--ocel)">POLOŽKA</th><th class="r" style="font-size:12px;color:var(--ocel)">MNOŽSTVÍ</th><th class="r" style="font-size:12px;color:var(--ocel)">CENA/MJ</th></tr></thead><tbody id="kalkVys"></tbody></table></div>
-          <div class="tlumene mal" style="margin:8px 0 14px">Hodnoty jsou orientační a zahrnují běžný prořez. Zaškrtnuté položky vložíte do dokladu; cenu můžete doplnit hned, nebo až v dokladu.</div>
-          <div class="do-nab">
-            <label class="radek tuc"><input type="checkbox" id="kalkPrace" ${UI.kalkPrace !== false ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--inkoust)"> Přidat i práci: <span id="kalkPraceTxt"></span>
-              <span class="mezera"></span>cena <input id="kalkPraceCena" class="vstup" style="width:110px;height:38px" inputmode="decimal" placeholder="Kč/MJ" value="${esc(UI.kalkPraceCena || '')}"></label>
-            <label class="pole">Vložit do dokladu<select id="kalkCil"><option value="">— vyberte nabídku nebo fakturu —</option><option value="__nova">+ Nová nabídka</option>
-              ${nabidky.map(d => `<option value="${d.id}" ${d.id === cilDok?.id ? 'selected' : ''}>${TYP[d.typ]} ${esc(d.cislo)} – ${esc(zakazka(d.zakazka_id)?.nazev || kontakt(d.kontakt_id)?.nazev || d.predmet || '')}</option>`).join('')}</select></label>
-            <div class="radek"><button class="btn zl" data-a="kalk-vlozit" style="flex:1;height:48px">Vložit do dokladu</button><button class="btn" data-a="kalk-kopie">${ik('kopie', 16)}Kopírovat</button></div>
-          </div>
-        </section>
-      </div>
-    </section></div>`, po: () => { kalkPrepocet(); $('#fKalk').addEventListener('input', e => { v[e.target.name] = cislo(e.target.value); kalkPrepocet(); }); } };
-};
-/* ---------- napojení kalkulaček na katalog ---------- */
+/* =================== KALKULAČKY – modul YeY (kalk.js, stejný jako na yey.cz) =================== */
+/* Přístup ke katalogu: s licencí vydá server (katalog-pristup) token na max. 7 dní. */
 const KATT = { token: null, exp: 0, chyba: '', p: null };
-function katTokenZrus() { KATT.token = null; KATT.exp = 0; KATT.p = null; KAT.kand = {}; try { localStorage.removeItem('mk-kat-token'); } catch { } }
+const bezDia = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function katTokenZrus() { KATT.token = null; KATT.exp = 0; KATT.p = null; KAT_TEMATA = null; Object.keys(KALK_SCH).forEach(k => delete KALK_SCH[k]); try { localStorage.removeItem('mk-kat-token'); } catch { } }
 async function katToken() {
   const lic = (S.firma?.licence || '').trim(); if (!lic) return null;
   const now = Date.now() / 1000;
@@ -1432,104 +1311,198 @@ async function katToken() {
   })();
   return KATT.p;
 }
-const KAT = { mapa: null, kand: {}, poKodu: {} };
-const bezDia = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const mjNorm = u => { u = bezDia(u).replace('²', '2').replace('³', '3').replace(/\.$/, '').trim(); return ({ pytel: 'ks', kbelik: 'ks', role: 'ks', doza: 'ks', kus: 'ks', bm: 'm', m2: 'm2', 'm²': 'm2' })[u] || u; };
-async function katMapa() {
-  if (KAT.mapa) return KAT.mapa;
-  const { data, error } = await kat.from('kancelar_kalk').select('*');
-  KAT.mapa = error ? [] : data; return KAT.mapa;
+/* ---- katalogové funkce převzaté z yey.cz ---- */
+function katCfg() { return { url: KAT_URL, key: KAT_KEY }; }
+function katOn() { return true; }
+function katPristup() { return !!(KATT.token && KATT.exp > Date.now() / 1000 + 60); }
+function norm(t) { return (t == null ? '' : ('' + t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
+/** Hledané výrazy a kategorie kalkulaček z tabulky yey_kalk_hledani – když se nenačtou, platí hodnoty z kódu. */
+async function nactiKalkHledani() {
+  const c = katCfg();
+  try {
+    const r = await fetch(c.url.replace(/\/+$/, '') + '/rest/v1/yey_kalk_hledani?aktivni=eq.true&select=druh,klic,dotaz,vyloucit,sort_nazev,sort_slova,tema,skupina', { headers: { apikey: c.key } });
+    if (!r.ok) return;
+    const m = {}; (await r.json()).forEach(x => { m[x.druh + '/' + x.klic] = x; });
+    window.YEY_KH = m;
+    if (window.YeyKalk && YeyKalk.prekresli) try { YeyKalk.prekresli(); } catch (e) { }
+  } catch (e) { }
 }
-function katRadek(kalk, n) { let best = null; for (const m of KAT.mapa || []) if (m.kalk === kalk && n.startsWith(m.radek) && (!best || m.radek.length > best.radek.length)) best = m; return best; }
-async function katHledej({ skupina = null, slova = null, bez = null, pocet = 40 } = {}) {
-  const { data, error } = await kat.rpc('katalog_dotaz', { p_token: await katToken(), p_skupina: skupina || null, p_slova: slova?.length ? slova : null, p_bez: bez?.length ? bez : null, p_pocet: pocet });
-  return error ? [] : data || [];
+function kodHash(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }
+function upravCenu(kod, c) {
+  const x = Number(c); if (c == null || !(x > 0) || !kod) return c;
+  const v = x * (1 - 0.03 * kodHash(kod + '|velikost'));
+  return Math.max(Math.floor(v * 100 + 1e-6), Math.ceil(x * 97 - 1e-6)) / 100;
 }
-async function katKandidati(m) {
-  if (KAT.kand[m.id]) return KAT.kand[m.id];
-  return (KAT.kand[m.id] = katHledej({ skupina: m.skupina, slova: m.slova ? m.slova.split(' ') : null, bez: m.bez ? m.bez.split('|') : null, pocet: 40 }));
+function upravRadky(res) {
+  const f = r => { if (r && typeof r === 'object' && r.kod && !r._upr) {
+    if (r.cena_bez_dph != null) r.cena_bez_dph = upravCenu(r.kod, r.cena_bez_dph);
+    if (r.pc_s_dph != null) r.pc_s_dph = upravCenu(r.kod, r.pc_s_dph);
+    if (r.cena_s_dph != null) r.cena_s_dph = upravCenu(r.kod, r.cena_s_dph);
+    r._upr = 1; } return r; };
+  if (Array.isArray(res)) res.forEach(f); else f(res);
+  return res;
 }
-async function katProduktKodem(kod) {
-  if (kod in KAT.poKodu) return KAT.poKodu[kod];
-  const { data } = await kat.rpc('katalog_podle_kodu_vse', { kody: [kod], eany: [], p_token: await katToken() });
-  return (KAT.poKodu[kod] = data?.[0] || null);
+async function katRpc(fn, body) { return upravRadky(await katRpcSurove(fn, body)); }
+const KAT_S_TOKENEM = ['katalog_hledat_vse', 'katalog_hledat_bez', 'katalog_podle_kodu_vse', 'katalog_temata_vse', 'katalog_dotaz'];
+async function katRpcSurove(fn, body) {
+  const c = katCfg();
+  if (KAT_S_TOKENEM.includes(fn)) { const t = await katToken(); if (t) body = { ...body, p_token: t }; }
+  const r = await fetch(c.url.replace(/\/+$/, '') + '/rest/v1/rpc/' + fn, { method: 'POST', headers: { apikey: c.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) { let t = ''; try { t = (await r.text()).slice(0, 160); } catch (e) { } throw new Error('HTTP ' + r.status + (t ? ' – ' + t : '')); }
+  return r.json();
 }
-async function katVychozi(m) {
-  if (m.vychozi_kod) { const p = await katProduktKodem(m.vychozi_kod); if (p) return p; }
-  const k = await katKandidati(m); return k[0] || null;
+const KAT_MJ = { ks: 'ks', kus: 'ks', m: 'm', bm: 'bm', m2: 'm²', 'm²': 'm²', m3: 'm³', 'm³': 'm³', kg: 'kg', t: 't', l: 'l', bal: 'bal', pal: 'pal', kpl: 'kpl', sada: 'sada', par: 'pár', 'pár': 'pár', role: 'role', hod: 'hod' };
+function katMj(m) { const k = (m == null ? '' : '' + m).trim().toLowerCase(); return k ? (KAT_MJ[k] || k) : 'ks'; }
+let KAT_TEMATA = null;
+async function katTemata() {
+  if (KAT_TEMATA) return KAT_TEMATA;
+  try { const r = await katRpc('katalog_temata_vse', {}); KAT_TEMATA = (Array.isArray(r) ? r : []).map(x => x.tema_nazev || x.tema).filter(Boolean); }
+  catch (e) { KAT_TEMATA = []; }
+  return KAT_TEMATA;
 }
-const fotoP = p => p?.foto_url ? `<img src="${esc(p.foto_url)}" alt="" loading="lazy">` : `<span class="kfoto"></span>`;
-async function kalkProdukty() {
-  const kalk = UI.kalk; await katMapa(); if (UI.kalk !== kalk || !KV) return;
-  const prod = (UI.kalkProd ||= {})[kalk] ||= {}; const ceny = UI.kalkCeny[kalk] ||= {};
-  await Promise.all(KV.r.map(async ([n, , j]) => {
-    const m = katRadek(kalk, n); const bunka = $(`#kalkVys .kprod[data-n="${CSS.escape(n)}"]`); if (!bunka) return;
-    if (!m) { bunka.remove(); return; }
-    if (!(n in prod)) prod[n] = await katVychozi(m);
-    if (UI.kalk !== kalk) return;
-    const p = prod[n]; const shoda = p && mjNorm(p.mj) === mjNorm(j);
-    bunka.innerHTML = p ? `${fotoP(p)}<span class="knaz" title="${esc(p.nazev)}">${esc(p.nazev)} · <b>${kc(p.cena_bez_dph)}</b>/${esc(p.mj)}${shoda ? '' : ` <span class="jine" title="Produkt se prodává v jiné jednotce než výpočet – cenu za ${esc(j)} doplňte ručně.">(jiná jednotka)</span>`}</span><button type="button" data-a="kalk-produkt" data-n="${esc(n)}">Změnit</button>`
-      : `<span class="knaz">Produkt nevybrán</span><button type="button" data-a="kalk-produkt" data-n="${esc(n)}">Vybrat z katalogu</button>`;
-    const inp = $(`#kalkVys input.cena[data-n="${CSS.escape(n)}"]`);
-    if (p && shoda && !(n in ceny) && inp && !inp.value) { inp.value = String(p.cena_bez_dph ?? '').replace('.', ','); inp.dataset.auto = '1'; }
-  }));
-  const pozn = $('#katPozn'); if (pozn) pozn.classList.toggle('skryt', !!(await katToken()));
+const KAT_TAB_SLOUPCE = 'kod,nazev,ean,foto_url,mj,mj_v_bal,jednotek_v_baleni,mj_v_pal,hmotnost_zmj,velikost,tloustka_mm,sazba_dph,pc_s_dph,cena_bez_dph,tema,skupina,podskupina_nazev';
+async function katTabulka(o) { return upravRadky(await katTabulkaSurove(o)); }
+async function katTabulkaSurove(o) {
+  const { slova, temata, skupina, pocet, stavimex, kody, bez } = o;
+  try {
+    const sl = norm(slova || '').replace(/[%()*,"\\]/g, ' ').split(' ').filter(w => w.length >= 2).slice(0, 6);
+    const bz = (bez || []).map(w => norm(w).replace(/[%()*,"\\\s]/g, '')).filter(w => w.length >= 2).slice(0, 10);
+    return await katRpcSurove('katalog_dotaz', { p_kody: kody && kody.length ? kody : null, p_temata: temata && temata.length ? temata : null, p_skupina: skupina || null,
+      p_slova: sl.length ? sl : null, p_bez: bz.length ? bz : null, p_stavimex: !!stavimex, p_pocet: pocet || 80 });
+  } catch (e) { if (!/HTTP 404/.test(e.message)) throw e; }
+  return katTabulkaPrimo(o);
 }
-AKCE['kalk-produkt'] = async el => {
-  const kalk = UI.kalk, n = el.dataset.n; await katMapa(); const m = katRadek(kalk, n) || {};
-  const prod = (UI.kalkProd ||= {})[kalk] ||= {}; const ceny = UI.kalkCeny[kalk] ||= {};
-  const radek = KV.r.find(r => r[0] === n); const mj = radek?.[2] || '';
-  okno('Vybrat produkt – ' + n, `<div class="radek"><input id="kvHledat" class="vstup" style="flex:1" placeholder="Hledat v katalogu (např. knauf 12,5)" autocomplete="off">
-      ${m.skupina ? `<label class="radek" style="font-size:14px;white-space:nowrap"><input type="checkbox" id="kvSk" checked style="width:18px;height:18px"> jen ${esc(m.skupina)}</label>` : ''}</div>
-    ${(await katToken()) ? '' : '<p class="kat-pozn" style="margin-top:10px">Bez licence vidíte jen bezplatnou část katalogu. Licenční klíč zadáte v Moje firma.</p>'}
-    <div class="kvyber" id="kvVys"><p class="tlumene">Načítám…</p></div>`,
-    `<button class="btn" data-a="kalk-produkt-zadny" data-n="${esc(n)}">Bez produktu</button><button class="btn" data-a="zavrit">Zavřít</button>`, { trida: 'siroke' });
-  let posl = [];
-  const vypis = list => { posl = list; $('#kvVys').innerHTML = list.length ? list.map((p, i) => `<button type="button" data-i="${i}" class="${prod[n]?.kod === p.kod ? 'akt' : ''}">${fotoP(p)}<span>${esc(p.nazev)}<br><span class="tlumene" style="font-size:12px">${esc(p.znacka || '')}${p.stavimex_priorita > 0 ? ' · skladem u Stavimexu' : ''}</span></span><span class="kc">${kc(p.cena_bez_dph)}/${esc(p.mj)}</span></button>`).join('') : '<p class="tlumene">Nic nenalezeno. Zkuste jiná slova nebo vypněte omezení na skupinu.</p>'; };
-  const hledej = async () => { const t = bezDia($('#kvHledat').value).split(/\s+/).filter(w => w.length >= 2); const sk = $('#kvSk')?.checked ? m.skupina : null;
-    if (!t.length && !sk) return vypis(await katKandidati(m));
-    vypis(await katHledej({ skupina: sk, slova: t.length ? t : (sk === m.skupina && m.slova ? m.slova.split(' ') : null), bez: sk === m.skupina && m.bez ? m.bez.split('|') : null, pocet: 60 })); };
-  let tm; $('#kvHledat').oninput = () => { clearTimeout(tm); tm = setTimeout(hledej, 300); }; if ($('#kvSk')) $('#kvSk').onchange = hledej;
-  $('#kvVys').onclick = e => { const b = e.target.closest('button[data-i]'); if (!b) return; const p = posl[+b.dataset.i]; prod[n] = p;
-    if (mjNorm(p.mj) === mjNorm(mj)) ceny[n] = String(p.cena_bez_dph ?? '').replace('.', ','); else delete ceny[n];
-    zavriOkno(); kalkPrepocet(); toast('Produkt vybrán'); };
-  vypis(m.id ? await katKandidati(m) : []);
+async function katTabulkaPrimo({ slova, temata, skupina, pocet, stavimex, kody, bez }) {
+  const c = katCfg(); const u = new URLSearchParams();
+  u.append('select', KAT_TAB_SLOUPCE);
+  const qs = v => '"' + String(v).replace(/"/g, '') + '"';
+  if (kody && kody.length) u.append('kod', 'in.(' + kody.map(qs).join(',') + ')');
+  if (temata && temata.length) u.append('tema', 'in.(' + temata.map(qs).join(',') + ')');
+  if (skupina) u.append('or', '(skupina.eq.' + qs(skupina) + ',podskupina_nazev.eq.' + qs(skupina) + ')');
+  norm(slova || '').replace(/[%()*,"\\]/g, ' ').split(' ').filter(w => w.length >= 2).slice(0, 6).forEach(w => u.append('hledat', 'ilike.*' + w + '*'));
+  (bez || []).map(w => norm(w).replace(/[%()*,"\\\s]/g, '')).filter(w => w.length >= 2).slice(0, 10).forEach(w => u.append('hledat', 'not.ilike.*' + w + '*'));
+  if (stavimex) u.append('stavimex_priorita', 'gt.0');
+  u.append('order', 'stavimex_priorita.desc,nazev.asc'); u.append('limit', String(pocet || 80));
+  const h = { apikey: c.key, Authorization: 'Bearer ' + c.key };
+  let r = await fetch(c.url.replace(/\/+$/, '') + '/rest/v1/katalog_vse?' + u.toString(), { headers: h });
+  if (!r.ok) { u.delete('order'); r = await fetch(c.url.replace(/\/+$/, '') + '/rest/v1/katalog_vse?' + u.toString(), { headers: h }); }
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+/** Výsledky fulltextu nemají údaje o balení a hmotnosti – doplní je z katalogu. */
+async function katDoplnBaleni(rows) {
+  const kody = rows.filter(r => r && r.kod && !('mj_v_bal' in r)).map(r => r.kod);
+  if (!kody.length) return rows;
+  const mapa = {};
+  try {
+    for (let i = 0; i < kody.length; i += 80) {
+      let data = null;
+      try { data = await katRpcSurove('katalog_dotaz', { p_kody: kody.slice(i, i + 80), p_pocet: 80 }); } catch (e) { break; }
+      (data || []).forEach(d => { mapa[d.kod] = { kod: d.kod, mj_v_bal: d.mj_v_bal, jednotek_v_baleni: d.jednotek_v_baleni, mj_v_pal: d.mj_v_pal, hmotnost_zmj: d.hmotnost_zmj, velikost: d.velikost, tloustka_mm: d.tloustka_mm, podskupina_nazev: d.podskupina_nazev }; });
+    }
+  } catch (e) { }
+  return rows.map(r => mapa[r.kod] ? { ...mapa[r.kod], ...r } : r);
+}
+function katProKalk(r) {
+  const sazba = Number(r.sazba_dph ?? 21);
+  const cena = r.cena_bez_dph != null ? Number(r.cena_bez_dph) : (r.pc_s_dph != null ? Math.round(Number(r.pc_s_dph) / (1 + sazba / 100) * 100) / 100 : null);
+  return { kod: r.kod, nazev: r.nazev, mj: katMj(r.mj), cena,
+    hmotnost: Number(r.hmotnost_zmj || r.hmotnost_mj) || null, naPalete: Number(r.mj_v_pal || r.pocet_na_palete) || null,
+    vBaleni: Number(r.mj_v_bal || r.jednotek_v_baleni) || null, rozmer: r.velikost || r.rozmer || (r.tloustka_mm ? r.tloustka_mm + ' mm' : ''),
+    foto: r.foto_url || '', ean: r.ean || '', tema: r.tema || '', skupina: r.skupina || '', podskupina: r.podskupina || r.podskupina_nazev || '' };
+}
+/* ---- adaptér pro modul kalkulaček ---- */
+const KALK_SCH = {};
+const kalkAdapter = {
+  katalogDostupny: () => katPristup(),
+  katalogZamceny: () => !katPristup(),
+  katalogOmezeny: () => false,
+  prevodyNacti: () => katRpcSurove('prevody_schvalene', {}),
+  prevodNavrh(o) {
+    let kl = ''; try { kl = localStorage.getItem('yey-klient') || ''; if (!kl) { kl = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); localStorage.setItem('yey-klient', kl); } } catch (e) { }
+    katRpcSurove('prevod_navrh', { p_zbozi: o.zbozi, p_nazev: o.nazev || null, p_mj_vypoctu: o.mjVypoctu, p_mj_prodej: o.mjProdej, p_faktor: o.faktor, p_klient: kl }).catch(() => { });
+  },
+  /** Schválené produkty z Ladění kalkulaček (tabulka yey_kalk_vyber): { klic: [{kod, vychozi, poradi}] } */
+  async schvalene(druh) {
+    if (!katPristup()) return {};
+    KALK_SCH[druh] = KALK_SCH[druh] || (async () => {
+      try {
+        const c = katCfg();
+        const r = await fetch(c.url.replace(/\/+$/, '') + '/rest/v1/yey_kalk_vyber?select=klic,kod,vychozi,poradi&order=poradi&druh=eq.' + encodeURIComponent(druh), { headers: { apikey: c.key } });
+        if (!r.ok) return {};
+        const o = {}; (await r.json()).forEach(x => { (o[x.klic] = o[x.klic] || []).push(x); });
+        return o;
+      } catch (e) { return {}; }
+    })();
+    return KALK_SCH[druh];
+  },
+  async podleKodu(kody) {
+    kody = [...new Set((kody || []).filter(Boolean))];
+    if (!kody.length || !katPristup()) return [];
+    let rows = [];
+    try { rows = await katRpc('katalog_podle_kodu_vse', { kody, eany: [] }) || []; } catch (e) { rows = []; }
+    const maji = new Set(rows.map(r => r && r.kod)), chybi = kody.filter(k => !maji.has(k));
+    if (chybi.length) { try { rows = rows.concat(await katTabulka({ kody: chybi, pocet: chybi.length }) || []); } catch (e) { } }
+    rows = await katDoplnBaleni(rows.filter(Boolean));
+    return rows.filter(r => !r.neaktivni).map(katProKalk);
+  },
+  vychoziPrirazka: 15,
+  pamet: { cti: (k, v) => { try { const x = localStorage.getItem('yeyodhad:' + k); return x == null ? v : x; } catch (e) { return v; } },
+           pis: (k, v) => { try { localStorage.setItem('yeyodhad:' + k, v); } catch (e) { } } },
+  toast: (t, err) => toast(t, { chyba: !!err }),
+  jenStavimex: false,
+  bezStavimexu: true,
+  svZKatalogu: true,
+  cenaPopis: 'orientační cena',
+  stxDostupne: () => false,
+  /** Hledání v katalogu. Se sortimentem se přidá dotaz omezený na jeho témata, bez hledaného slova se vrátí zboží sortimentu. */
+  async hledej(q0, pocet, sort) {
+    if (!katPristup()) return [];
+    const temata = YeyKalk.sortiment.temata(await katTemata(), sort);
+    const slova = String(q0 || '').split(/\s+/).filter(Boolean), bez = slova.filter(w => w[0] === '-' && w.length > 2).map(w => w.slice(1));
+    const q = slova.filter(w => w[0] !== '-').join(' ');
+    let rows = [];
+    if (q && q.trim().length >= 2) {
+      const [a, b] = await Promise.allSettled([
+        bez.length ? katRpc('katalog_hledat_bez', { dotaz: q, pocet: Math.max(pocet, 60), bez }) : katRpc('katalog_hledat_vse', { dotaz: q, pocet: Math.max(pocet, 60) }),
+        temata.length ? katTabulka({ slova: q, temata, pocet, bez }) : Promise.resolve([])
+      ]);
+      if (a.status === 'fulfilled' && Array.isArray(a.value)) rows = rows.concat(a.value);
+      if (b.status === 'fulfilled' && Array.isArray(b.value)) rows = rows.concat(b.value);
+      const vid = new Set(); rows = rows.filter(r => r && r.kod && !vid.has(r.kod) && vid.add(r.kod));
+      rows = await katDoplnBaleni(rows);
+    } else if (temata.length || (sort && sort.skupina)) {
+      try { rows = await katTabulka({ temata, skupina: sort.skupina, pocet: Math.max(pocet, 120) }); } catch (e) { rows = []; }
+    }
+    return rows.filter(r => !r.neaktivni).map(katProKalk);
+  },
+  zasoby: null,
+  cenik: () => (S.cenik || []).map(c => ({ id: c.id, kod: null, nazev: c.nazev, mj: c.mj, cena: Number(c.cena) || 0, typ: c.kategorie })),
+  cilDokladu: () => { const d = UI.kalkCil ? doklad(UI.kalkCil) : null; return d ? (d.typ === 'nabidka' ? 'nabídky ' : d.typ === 'protokol' ? 'protokolu ' : 'faktury ') + d.cislo : null; },
+  async doDokladu(radky, meta) {
+    let d = UI.kalkCil ? doklad(UI.kalkCil) : null;
+    if (!d) d = await novyDoklad('nabidka', { predmet: meta?.kalkulacka || '' });
+    const pol = await nactiPolozky(d.id, true);
+    const platce = !!S.firma.platce_dph;
+    const rows = radky.map((r, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: pol.length + i, nazev: r.nazev || '', mnozstvi: Math.round((Number(r.mnozstvi) || 0) * 1000) / 1000, mj: r.mj || null,
+      cena: Math.round((Number(r.cena) || 0) * 100) / 100, dph: platce ? ((r.sazba_dph != null && r.sazba_dph !== '') ? Number(r.sazba_dph) : 21) : 0 }));
+    if (rows.length) await q(sb.from('polozky').insert(rows));
+    await nactiPolozky(d.id, true); await obnovDoklad(d.id);
+    UI.kalkCil = null;
+    toast(`Do ${TYP[d.typ].toLowerCase()} ${d.cislo} vloženo ${rows.length} položek. Zkontrolujte odběratele a ceny.`);
+    jdi('doklad/' + d.id);
+  }
 };
-AKCE['kalk-produkt-zadny'] = el => { const prod = (UI.kalkProd ||= {})[UI.kalk] ||= {}; prod[el.dataset.n] = null; delete (UI.kalkCeny[UI.kalk] || {})[el.dataset.n]; zavriOkno(); kalkPrepocet(); };
-
-let KV = null;
-function kalkPrepocet() {
-  const K = KALK[UI.kalk]; const v = UI.kalkVals[UI.kalk];
-  KV = K.calc(Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'number' ? x : (isNaN(+x) ? x : +x)])));
-  const vyb = UI.kalkVyber[UI.kalk] ||= {}; const ceny = UI.kalkCeny[UI.kalk] ||= {};
-  $('#kalkPl').innerHTML = KV.plocha != null ? `plocha <b style="color:var(--inkoust)">${fmtN(KV.plocha)} m²</b>` : '';
-  $('#kalkVys').innerHTML = KV.r.map(([n, m, j], i) => { const info = n.startsWith('…') || ['Objem', 'Plocha', 'Plocha stěn', 'Objem zdiva'].includes(n);
-    return `<tr><td>${info ? '' : `<input type="checkbox" data-i="${i}" ${vyb[n] !== false ? 'checked' : ''} aria-label="Vložit ${esc(n)}">`}</td><td class="${info ? 'tlumene' : ''}">${esc(n)}${info ? '' : `<div class="kprod" data-n="${esc(n)}"><span class="kfoto"></span><span class="tlumene">Hledám v katalogu…</span></div>`}</td><td class="mn">${fmtN(m)} <span style="font-size:14px;color:var(--ocel);font-family:var(--font)">${esc(j)}</span></td><td class="r">${info ? '' : `<input class="cena" data-n="${esc(n)}" inputmode="decimal" placeholder="—" value="${esc(ceny[n] || '')}" aria-label="Cena za MJ">`}</td></tr>`; }).join('');
-  $$('#kalkVys input[type=checkbox]').forEach(c => c.onchange = () => { vyb[KV.r[+c.dataset.i][0]] = c.checked; });
-  $$('#kalkVys input.cena').forEach(c => c.oninput = () => { ceny[c.dataset.n] = c.value; delete c.dataset.auto; });
-  $('#kalkPraceTxt').textContent = `${KV.prace[0]} – ${fmtN(KV.prace[1])} ${KV.prace[2]}`;
-  $('#kalkPrace').onchange = e => UI.kalkPrace = e.target.checked; $('#kalkPraceCena').oninput = e => UI.kalkPraceCena = e.target.value;
-  const s = $('#kalkCil'); if (s) s.onchange = () => UI.kalkCil = s.value.startsWith('__') ? null : s.value;
-  kalkProdukty();
-}
-AKCE.kalk = el => { UI.kalk = el.dataset.id; render(); };
-AKCE['kalk-volba'] = el => { UI.kalkVals[UI.kalk][el.dataset.k] = el.dataset.v; $$(`[data-a=kalk-volba][data-k="${el.dataset.k}"]`).forEach(b => b.classList.toggle('akt', b === el)); kalkPrepocet(); };
-AKCE['kalk-reset'] = () => { delete UI.kalkVals[UI.kalk]; delete UI.kalkCeny[UI.kalk]; delete UI.kalkVyber[UI.kalk]; if (UI.kalkProd) delete UI.kalkProd[UI.kalk]; render(); };
-AKCE['kalk-kopie'] = async () => { const K = KALK[UI.kalk]; const t = K.n + '\n' + KV.r.map(([n, m, j]) => `${n}: ${fmtN(m)} ${j}`).join('\n'); try { await navigator.clipboard.writeText(t); toast('Zkopírováno do schránky'); } catch { toast('Kopírování se nepovedlo', { chyba: true }); } };
-AKCE['kalk-vlozit'] = async () => {
-  const sel = $('#kalkCil').value; if (!sel) { $('#kalkCil').focus(); return toast('Vyberte, do kterého dokladu vložit', { chyba: true }); }
-  const d = sel === '__nova' ? await novyDoklad('nabidka') : doklad(sel);
-  const pol = await nactiPolozky(d.id, true); const K = KALK[UI.kalk]; const vyb = UI.kalkVyber[UI.kalk] || {}; const ceny = UI.kalkCeny[UI.kalk] || {};
-  const nove = [];
-  if (UI.kalkPrace !== false) nove.push({ nazev: KV.prace[0], mnozstvi: Math.round(KV.prace[1] * 100) / 100, mj: KV.prace[2], cena: cislo(UI.kalkPraceCena) });
-  const prod = UI.kalkProd?.[UI.kalk] || {};
-  KV.r.forEach(([n, m, j]) => { if (n.startsWith('…') || ['Objem', 'Plocha', 'Plocha stěn', 'Objem zdiva'].includes(n) || vyb[n] === false) return;
-    const p = prod[n]; const inp = $(`#kalkVys input.cena[data-n="${CSS.escape(n)}"]`); const cena = cislo(ceny[n] ?? inp?.value);
-    nove.push({ nazev: p ? p.nazev : n, mnozstvi: m, mj: j, cena }); });
-  const rows = nove.map((p, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: pol.length + i, dph: S.firma.platce_dph ? 21 : 0, ...p }));
-  await q(sb.from('polozky').insert(rows)); await nactiPolozky(d.id, true); await obnovDoklad(d.id);
-  UI.kalkCil = null; toast(`${rows.length} položek vloženo do ${d.cislo}`, { akce: 'Otevřít doklad', fn: () => jdi('doklad/' + d.id) });
-  jdi('doklad/' + d.id);
+let KK_ROOT = null;
+POHLEDY.kalkulacky = t => {
+  const cil = t.p.get('doklad'); if (cil) UI.kalkCil = cil;
+  return { plna: true, html: `<div id="kk-misto" style="padding:18px 22px 60px;min-width:0"></div>`, po: () => {
+    const m = $('#kk-misto'); if (!m || !window.YeyKalk) return;
+    if (!KK_ROOT) { KK_ROOT = document.createElement('div'); KK_ROOT.id = 'kk-root'; m.appendChild(KK_ROOT); YeyKalk.init(kalkAdapter, KK_ROOT); }
+    else m.appendChild(KK_ROOT);
+    YeyKalk.ukazano();
+    if (!katPristup() && S.firma?.licence) katToken().then(t => { if (t) try { YeyKalk.katalogZmena(); } catch { } });
+  } };
 };
 
 /* =================== START =================== */
@@ -1539,6 +1512,7 @@ async function start() {
   const { data: { session } } = await sb.auth.getSession();
   S.user = session?.user || null; S.nacteno = false;
   if (S.user) { try { await nactiFirmu(); } catch { } }
+  nactiKalkHledani(); if (S.firma?.licence) katToken().then(t => { if (t) try { YeyKalk.katalogZmena(); } catch { } });
   startBezi = false; render();
 }
 sb.auth.onAuthStateChange((ev, session) => {
