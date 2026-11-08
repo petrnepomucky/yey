@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moje kancelář – YeY</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --tma: #1f2328; --zluta: #f0b429; --pozadi: #f6f5f1; --karta: #fff; --text: #1f2328; --sedy: #6b6f76; --linka: #e3e1da; --chyba: #b42318; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Barlow, Arial, sans-serif; background: var(--pozadi); color: var(--text); }
+  header { background: var(--tma); color: #fff; display: flex; align-items: center; gap: 16px; padding: 14px 24px; }
+  .logo { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 34px; color: var(--zluta); letter-spacing: .5px; }
+  .podtitul { font-size: 12px; letter-spacing: 3px; opacity: .8; text-transform: uppercase; }
+  .metr { height: 16px; background: var(--zluta) repeating-linear-gradient(90deg, rgba(0,0,0,.45) 0 1px, transparent 1px 10px); }
+  main { max-width: 420px; margin: 56px auto; padding: 0 16px; }
+  .karta { background: var(--karta); border: 1px solid var(--linka); border-radius: 12px; padding: 28px; }
+  h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 30px; margin: 0 0 6px; }
+  p { color: var(--sedy); margin: 0 0 20px; line-height: 1.45; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 6px; }
+  input { width: 100%; padding: 12px 14px; font: inherit; font-size: 16px; border: 1px solid var(--linka); border-radius: 8px; }
+  input:focus { outline: 2px solid var(--zluta); border-color: transparent; }
+  button { margin-top: 20px; width: 100%; padding: 13px; font: inherit; font-weight: 600; font-size: 16px; background: var(--zluta); color: var(--tma); border: 0; border-radius: 8px; cursor: pointer; }
+  button.vedlejsi { background: transparent; border: 1px solid var(--linka); margin-top: 10px; }
+  .zprava { margin-top: 14px; font-size: 14px; }
+  .zprava.chyba { color: var(--chyba); }
+  .skryt { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">YeY</div>
+  <div><div style="font-weight:600">Moje kancelář</div><div class="podtitul">Kancelář pro řemeslníky</div></div>
+</header>
+<div class="metr" aria-hidden="true"></div>
+
+<main>
+  <section class="karta" id="prihlaseni">
+    <h1>Přihlášení</h1>
+    <p>Přihlaste se stejným e-mailem a heslem jako do původního YeY.</p>
+    <form id="formular">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="heslo">Heslo</label>
+      <input id="heslo" type="password" autocomplete="current-password" required minlength="6">
+      <button type="submit">Přihlásit</button>
+    </form>
+    <div class="zprava" id="zprava" role="status"></div>
+  </section>
+
+  <section class="karta skryt" id="uvitani">
+    <h1>Vítejte</h1>
+    <p id="kdo"></p>
+    <p>Moje kancelář se právě stěhuje na nový systém. Doklady, zakázky, kalkulačky a ceník přibudou v dalších krocích, zatím pracujte v původním YeY.</p>
+    <button type="button" onclick="location.href='https://yey.cz/yey.html'">Otevřít původní YeY</button>
+    <button type="button" class="vedlejsi" id="odhlasit">Odhlásit</button>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+  const cfg = window.MK_CONFIG;
+  const sb = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { db: { schema: cfg.schema } });
+  const $ = (id) => document.getElementById(id);
+
+  function ukaz(session) {
+    const prihlasen = !!session;
+    $('prihlaseni').classList.toggle('skryt', prihlasen);
+    $('uvitani').classList.toggle('skryt', !prihlasen);
+    if (prihlasen) $('kdo').textContent = 'Přihlášen: ' + session.user.email;
+  }
+
+  $('formular').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('zprava').className = 'zprava';
+    $('zprava').textContent = 'Přihlašuji…';
+    const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('heslo').value });
+    if (error) {
+      $('zprava').className = 'zprava chyba';
+      $('zprava').textContent = error.message === 'Invalid login credentials' ? 'Nesprávný e-mail nebo heslo.' : 'Chyba: ' + error.message;
+    } else {
+      $('zprava').textContent = '';
+    }
+  });
+  $('odhlasit').addEventListener('click', () => sb.auth.signOut());
+
+  sb.auth.getSession().then(({ data }) => ukaz(data.session));
+  sb.auth.onAuthStateChange((_e, session) => ukaz(session));
+</script>
+</body>
+</html>

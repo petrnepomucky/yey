@@ -1,12 +1,26 @@
-# Kancelář řemeslníků online
+# Moje kancelář – YeY
 
-Webová aplikace (React + Vite + Supabase) pro evidenci dokladů, kontaktů a zakázek řemeslníků.
-Ovládání z klávesnice, dole lišta funkčních kláves F1–F10 jako v MS-DOS aplikacích.
+Nová online verze YeY – Kancelář pro řemeslníky. Nahradí původní YeY (repo `YeY-WEB`, yey.cz), včetně převodu firem a licencí.
 
-## Spuštění
+## Struktura
 
-    cp .env.example .env   # doplňte VITE_SUPABASE_PUBLISHABLE_KEY (Supabase → Project Settings → API)
-    npm install
-    npm run dev
+| Složka | Obsah |
+|---|---|
+| `web/` | Aplikace. Jediná složka, kterou zveřejňuje Cloudflare Pages (kancelar.yey.cz). Statické soubory, bez build kroku. |
+| `supabase/migrations/` | SQL migrace schématu `online_kancelar`. |
+| `archiv/` | Dřívější obsah repa (React prototyp z 4. 11. 2026). Nezveřejňuje se. |
 
-Databázové schéma (migrace) je nasazené v Supabase projektu `vgpnrlgisqcdkrzhhfsy`.
+## Databáze
+
+- Supabase projekt **YeY - Online Office** (`hkzhjoveiqadezmvksdz`), schéma **`online_kancelar`**.
+- Tabulky původního YeY v `public` zůstávají beze změny, dokud neproběhne převod.
+- Přihlašovací účty (Supabase Auth) jsou společné, uživatelé původního YeY se přihlásí stejným e-mailem a heslem.
+- Katalog materiálu je v projektu **Stavební materiál** (`fvrpuddkarujfttoaavb`), vazba přes kód položky.
+- Schéma je potřeba povolit v Supabase → Project Settings → Data API → **Exposed schemas** (přidat `online_kancelar`).
+
+## Nasazení (Cloudflare Pages)
+
+- Repo: `petrnepomucky/yey`, větev `main`
+- Framework preset: **None**, Build command: *(prázdné)*, Build output directory: **`web`**
+- Vlastní doména: **kancelar.yey.cz**
+- Supabase → Authentication → URL Configuration: přidat `https://kancelar.yey.cz` do Redirect URLs.
