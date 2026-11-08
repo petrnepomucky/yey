@@ -191,7 +191,22 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .papir .qr img,.papir .qr svg{width:18cqw;height:18cqw}
 .papir .pata{margin-top:auto;padding-top:3cqw;font-size:1.5cqw;color:var(--ocel);display:flex;justify-content:space-between;gap:2cqw}
 .papir .podpisy{display:grid;grid-template-columns:1fr 1fr;gap:8cqw;margin-top:8cqw}
-.papir .podpisy div{border-top:.2cqw solid #1D272F;padding-top:1cqw;text-align:center;color:var(--ocel)}
+.papir .podpisy div{border-top:.2cqw solid #1D272F;padding-top:1cqw;text-align:center;color:var(--ocel);position:relative}
+.papir .podpisy img{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);max-height:9cqw;max-width:30cqw;margin-bottom:-1.5cqw}
+.papir .pl-logo{display:flex;align-items:center;gap:2.2cqw;margin-bottom:2.5cqw}
+.papir .pl-logo img{max-height:10cqw;max-width:34cqw;object-fit:contain}
+.papir .pl-logo span{font-size:2cqw;color:#5D6B76;line-height:1.3}
+.papir .pl-podpis{margin-left:auto;margin-top:5cqw;width:38cqw;text-align:center;color:#5D6B76;font-size:1.6cqw}
+.papir .pl-podpis .misto{height:9cqw;display:flex;align-items:flex-end;justify-content:center}
+.papir .pl-podpis img{max-height:10cqw;max-width:36cqw;margin-bottom:-1.5cqw}
+.papir .pl-podpis .cara{border-top:.2cqw solid #1D272F;padding-top:.8cqw}
+.obr-nahled{min-height:84px;border:1px dashed var(--linka);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:8px;margin:6px 0 8px;
+  background-color:#fff;background-image:linear-gradient(45deg,#eef0ec 25%,transparent 25%),linear-gradient(-45deg,#eef0ec 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eef0ec 75%),linear-gradient(-45deg,transparent 75%,#eef0ec 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+.obr-nahled img{max-width:100%;max-height:110px;object-fit:contain}
+.cis-tab{width:100%;border-collapse:collapse;font-size:14px}.cis-tab td,.cis-tab th{padding:5px 4px;text-align:left}.cis-tab th{font-size:12px;color:var(--ocel);font-weight:600}
+.cis-tab input{width:100%;height:36px;border:1px solid var(--linka);border-radius:7px;padding:0 8px;font-family:monospace}
+.cis-tab .nahl{font-family:monospace;font-weight:700;white-space:nowrap}
+.edpol input.cena-nizka{border-color:#D92D20!important;background:#FEF3F2}
 #tisk{display:none}
 
 /* ---------- kalkulačky ---------- */
@@ -1054,7 +1069,7 @@ function papir(d, pol) {
     : [['Datum vystavení', datum(d.datum)], ...(F.platce_dph && d.typ === 'faktura' ? [['Datum usk. zdanitelného plnění', datum(d.duzp || d.datum)]] : []), ['Datum splatnosti', '<b>' + datum(d.splatnost) + '</b>'], ['Variabilní symbol', esc(d.vs || d.cislo.replace(/\D/g, ''))], ['Forma úhrady', esc(d.forma_uhrady || 'převodem')]];
   const qr = jeFakt(d.typ) ? qrPlatba(d) : '';
   return `<div class="papir-obal"><div class="papir">
-    <div class="ph"><div><h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
+    <div class="ph"><div>${F.logo || F.logo_text ? `<div class="pl-logo">${F.logo ? `<img src="${F.logo}" alt="">` : ''}${F.logo_text ? `<span>${esc(F.logo_text)}</span>` : ''}</div>` : ''}<h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
     <div class="strany"><div><small>${d.typ === 'protokol' ? 'Zhotovitel' : 'Dodavatel'}</small><b>${esc(F.nazev)}</b><br>${adr(F)}<br>${ids(F)}${F.platce_dph ? '' : '<br>Není plátce DPH.'}${F.zapis ? `<br><span style="color:#5D6B76">${esc(F.zapis)}</span>` : ''}</div>
       <div><small>${d.typ === 'protokol' ? 'Objednatel' : 'Odběratel'}</small><b>${esc(k.nazev || '—')}</b>${k.osoba ? '<br>' + esc(k.osoba) : ''}<br>${adr(k)}<br>${ids(k)}</div></div>
     <div class="info">${info.map(([a, b]) => `<div><small>${a}</small>${b}</div>`).join('')}</div>
@@ -1063,7 +1078,7 @@ function papir(d, pol) {
       ${pol.length ? pol.map(p => `<tr><td>${esc(p.nazev)}</td><td class="r">${fmtN(p.mnozstvi, 3)} ${esc(p.mj || '')}</td>${d.typ === 'protokol' ? '' : `<td class="r">${fmtN(p.cena)}</td>${dph ? `<td class="r">${fmtN(p.dph, 0)} %</td>` : ''}<td class="r">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>`}</tr>`).join('') : `<tr><td colspan="5" style="color:#5D6B76;text-align:center;padding:4cqw">Zatím žádné položky</td></tr>`}
     </tbody></table>
     ${d.typ === 'protokol' ? `<p style="margin-top:3cqw">Práce byly provedeny v dohodnutém rozsahu a kvalitě. ${d.poznamka ? '<br>Výhrady / poznámky: ' + esc(d.poznamka) : 'Objednatel nemá výhrady.'}</p>
-      <div class="podpisy"><div>Za zhotovitele</div><div>Za objednatele</div></div>`
+      <div class="podpisy"><div>${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}Za zhotovitele</div><div>Za objednatele</div></div>`
     : `<div class="celkem"><div class="qr">${qr ? qr + '<div>QR platba</div>' : ''}</div><table>
         ${dph ? Object.entries(sazby).map(([s2, z2]) => `<tr><td>Základ daně ${s2} %</td><td class="r">${fmtN(z2)}</td></tr><tr><td>DPH ${s2} %</td><td class="r">${pdp ? 'odvede odběratel' : fmtN(z2 * s2 / 100)}</td></tr>`).join('') : ''}
         ${dph ? `<tr><td>Celkem bez DPH</td><td class="r">${kc(bez)}</td></tr><tr><td>DPH celkem</td><td class="r">${kc(sDph)}</td></tr>` : ''}
@@ -1071,7 +1086,8 @@ function papir(d, pol) {
       ${pdp ? `<div style="margin-top:2cqw;font-weight:700">Daň odvede zákazník. Přenesená daňová povinnost podle § 92e zákona č. 235/2004 Sb., o dani z přidané hodnoty.</div>${k.dic ? '' : '<div class="netisk" style="margin-top:1cqw;color:#B42318">Pozor: u odběratele chybí DIČ – při přenesené daňové povinnosti je povinné. (Netiskne se.)</div>'}` : ''}
 
       ${jeFakt(d.typ) ? `<div style="margin-top:2cqw">Platba: ${esc(d.forma_uhrady || 'převodem')}${F.ucet ? ` · účet <b>${esc(F.ucet)}</b>` : ''}${F.iban ? ` · IBAN ${esc(F.iban)}` : ''} · VS <b>${esc(d.vs || d.cislo.replace(/\D/g, ''))}</b></div>` : ''}
-      ${d.poznamka ? `<div style="margin-top:2cqw;white-space:pre-line">${esc(d.poznamka)}</div>` : ''}`}
+      ${d.poznamka ? `<div style="margin-top:2cqw;white-space:pre-line">${esc(d.poznamka)}</div>` : ''}
+      <div class="pl-podpis"><div class="misto">${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}</div><div class="cara">${d.typ === 'nabidka' ? 'Za dodavatele' : 'Vystavil'}: ${esc(F.nazev)}</div></div>`}
     <div class="pata"><span>${esc([F.telefon, F.email, F.web].filter(Boolean).join(' · '))}</span><span>Vystaveno v YeY</span></div>
   </div></div>`;
 }
@@ -1144,6 +1160,35 @@ POHLEDY.doklad = async t => {
     <aside class="nahled" aria-label="Živý náhled dokladu"><div class="tlumene mal tuc" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Živý náhled</div><div id="edNahled"></div></aside>
   </div>`, po: poEditor };
 };
+/* Hlídání cen: řádek nesmí být levněji než v ceníku ani než naposledy u téhož zákazníka – nižší cena jen po odsouhlasení. */
+const normN = t => bezDia(t).replace(/\s+/g, ' ').trim();
+async function cenyHistorie() {
+  ED.hist = {}; const kid = ED.d.kontakt_id; if (!kid) return;
+  const docs = S.doklady.filter(x => x.kontakt_id === kid && x.id !== ED.d.id && x.typ !== 'protokol' && x.stav !== 'storno').sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || '')));
+  if (!docs.length) return;
+  const { data } = await sb.from('polozky').select('doklad_id,nazev,cena').in('doklad_id', docs.slice(0, 200).map(x => x.id));
+  const poradi = Object.fromEntries(docs.map((x, i) => [x.id, i]));
+  (data || []).sort((a, b) => poradi[a.doklad_id] - poradi[b.doklad_id]).forEach(p => { const k = normN(p.nazev); if (k && !(k in ED.hist) && Number(p.cena) > 0) ED.hist[k] = { cena: Number(p.cena), cislo: doklad(p.doklad_id)?.cislo || '' }; });
+}
+function cenaMinimum(p) {
+  if (S.firma.hlidat_ceny === false || ED.d.typ === 'protokol' || !p) return null;
+  const n = normN(p.nazev); if (!n) return null; let ref = null;
+  const c = S.cenik.find(x => normN(x.nazev) === n); if (c && Number(c.cena) > 0) ref = { cena: Number(c.cena), text: 'v ceníku' };
+  const h = ED.hist?.[n]; if (h && (!ref || h.cena > ref.cena)) ref = { cena: h.cena, text: 'naposledy u tohoto zákazníka' + (h.cislo ? ' (' + h.cislo + ')' : '') };
+  return ref;
+}
+const cenaNizka = p => { const ref = cenaMinimum(p); return ref && cislo(p.cena) < ref.cena - 0.005 && ED.ok[p.id] !== cislo(p.cena) ? ref : null; };
+function oznacCeny() { $$('#edPol tr[data-i]').forEach(tr => { const p = ED.pol[+tr.dataset.i]; const el = tr.querySelector('input[data-k=cena]'); if (!el || !p) return; const ref = cenaNizka(p);
+  el.classList.toggle('cena-nizka', !!ref); el.title = ref ? `Nižší cena než ${ref.text} (${kc(ref.cena)}) – po opuštění pole se zeptám` : ''; }); }
+async function hlidejCenu(i) {
+  const p = ED.pol[i]; const ref = cenaNizka(p); if (!ref) return;
+  const ano = await new Promise(ok => { okno('Nižší cena', `<p>Položka <b>${esc(p.nazev)}</b> má cenu <b>${kc(cislo(p.cena))}</b>, což je méně než ${esc(ref.text)}: <b>${kc(ref.cena)}</b>.</p><p class="tlumene">Bez odsouhlasení se uloží cena ${kc(ref.cena)}.</p>`,
+    `<button class="btn" id="cnVratit">Vrátit na ${kc(ref.cena)}</button><button class="btn zl" id="cnOk">Odsouhlasit nižší cenu</button>`);
+    $('#cnVratit').onclick = () => { zavriOkno(); ok(false); }; $('#cnOk').onclick = () => { zavriOkno(); ok(true); };
+    $('#okno').addEventListener('mousedown', e => { if (e.target.id === 'okno') ok(false); }); });
+  if (ano) ED.ok[p.id] = cislo(p.cena); else p.cena = ref.cena;
+  edRadky(); edNahled(); edUlozit();
+}
 function edRadky() {
   const d = ED.d; const dph = S.firma.platce_dph && d.typ !== 'protokol';
   $('#edPol').innerHTML = ED.pol.map((p, i) => `<tr data-i="${i}">
@@ -1155,6 +1200,7 @@ function edRadky() {
     <td class="c num tuc" style="padding-right:10px">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>`}
     <td><button type="button" class="btn prazdne mal ikona" data-a="smaz-pol" data-i="${i}" aria-label="Odebrat řádek">${ik('smaz', 16)}</button></td></tr>`).join('')
     || `<tr><td colspan="7" class="tlumene" style="padding:14px 6px">Zatím žádné položky – přidejte řádek, vyberte z ceníku nebo vložte výměru z kalkulačky.</td></tr>`;
+  $('#edPol').classList.add('edpol'); oznacCeny();
   if (!$('#mjList')) document.body.insertAdjacentHTML('beforeend', `<datalist id="mjList">${['ks', 'm', 'm²', 'm³', 'hod', 'kg', 't', 'bm', 'kpl', 'bal', 'l', 'den', 'km'].map(x => `<option value="${x}">`).join('')}</datalist><datalist id="dphList"><option value="21"><option value="12"><option value="0"></datalist>`);
 }
 function edNahled() {
@@ -1169,7 +1215,7 @@ const edUlozit = debounce(async () => {
   try {
     const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
     await q(sb.from('doklady').update(hl).eq('id', d.id));
-    const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: cislo(p.cena), dph: S.firma.platce_dph ? cislo(p.dph) : 0 }));
+    const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: (() => { const ref = cenaNizka(p); return ref ? ref.cena : cislo(p.cena); })(), dph: S.firma.platce_dph ? cislo(p.dph) : 0 }));
     const smazane = [...ED.puvodniIds].filter(id => !ED.pol.some(p => p.id === id));
     if (smazane.length) await q(sb.from('polozky').delete().in('id', smazane));
     if (rows.length) await q(sb.from('polozky').upsert(rows));
@@ -1180,11 +1226,13 @@ const edUlozit = debounce(async () => {
   } catch (e) { if (st) { st.textContent = '⚠ Neuloženo'; st.style.color = 'var(--pozor)'; } }
 }, 700);
 function poEditor() {
+  ED.ok = {}; ED.hist = {}; ED.pol.forEach(p => { ED.ok[p.id] = cislo(p.cena); });   // už uložené ceny se berou jako odsouhlasené
   edRadky(); edNahled();
+  cenyHistorie().then(oznacCeny).catch(() => { });
   const f = $('#fDok');
   const hod = t => t.type === 'checkbox' ? t.checked : t.value;
   f.addEventListener('input', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
-  f.addEventListener('change', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
+  f.addEventListener('change', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
   tb.addEventListener('input', e => {
@@ -1193,6 +1241,8 @@ function poEditor() {
     const celk = e.target.closest('tr').querySelector('td.num'); if (celk) celk.textContent = fmtN(cislo(ED.pol[i].mnozstvi) * cislo(ED.pol[i].cena));
     edNahled(); edUlozit();
   });
+  tb.addEventListener('input', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') oznacCeny(); });
+  tb.addEventListener('change', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') hlidejCenu(+e.target.closest('tr').dataset.i); });
   tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); const tr = e.target.closest('tr'); if (!tr.nextElementSibling) AKCE['pridat-pol'](); else tr.nextElementSibling.querySelector('input').focus(); } });
   if (!ED.pol.length && ED.d.stav === 'koncept') { /* prázdný doklad – rovnou připravit řádek */ AKCE['pridat-pol'](true); }
 }
@@ -1243,6 +1293,7 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
   <div class="dva-sl"><form id="fNast" class="karta hl mrizka">
     <label class="pole">IČO<div class="radek"><input name="ico" class="vstup" style="flex:1" value="${esc(F.ico)}" inputmode="numeric" maxlength="8"><button type="button" class="btn" data-a="ares">Načíst z ARES</button></div></label>
     <label class="pole">Název firmy / jméno<input name="nazev" value="${esc(F.nazev)}" required></label>
+    <label class="pole">Text u loga <span class="napoveda">(obor nebo claim, tiskne se vedle loga v hlavičce dokladů)</span><input name="logo_text" value="${esc(F.logo_text)}" placeholder="např. Instalatérské práce · Praha"></label>
     <div class="mrizka m2"><label class="pole">DIČ<input name="dic" value="${esc(F.dic)}"></label>
       <label class="pole">Plátce DPH<select name="platce_dph"><option value="false" ${!F.platce_dph ? 'selected' : ''}>Ne – nejsem plátce</option><option value="true" ${F.platce_dph ? 'selected' : ''}>Ano – jsem plátce DPH</option></select></label></div>
     <label class="pole">Ulice a číslo<input name="ulice" value="${esc(F.ulice)}"></label>
@@ -1250,11 +1301,28 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
     <div class="mrizka m3"><label class="pole">Telefon<input name="telefon" type="tel" value="${esc(F.telefon)}"></label><label class="pole">E-mail<input name="email" type="email" value="${esc(F.email)}"></label><label class="pole">Web<input name="web" value="${esc(F.web)}"></label></div>
     <div class="mrizka m2"><label class="pole">Číslo účtu<input name="ucet" value="${esc(F.ucet)}" placeholder="123456789/0800"><span class="napoveda">Z čísla účtu vytvoříme QR platbu na fakturách.</span></label><label class="pole">IBAN <span class="napoveda">(nepovinné)</span><input name="iban" value="${esc(F.iban)}"></label></div>
     <div class="mrizka m2"><label class="pole">Splatnost faktur (dní)<input name="splatnost_dni" type="number" min="0" value="${esc(F.splatnost_dni)}"></label><label class="pole">Zápis v rejstříku <span class="napoveda">(§ 435 OZ, tiskne se na doklady)</span><input name="zapis" value="${esc(F.zapis)}" placeholder="doplní se z ARES tlačítkem u IČO"></label></div>
+    <div class="pole">Číselné řady dokladů <span class="napoveda">Značky: {RRRR} rok (2026), {RR} rok (26), {MM} měsíc, {NNN} pořadí (počet N = počet míst). „Další číslo“ prázdné = pokračuje za posledním dokladem. Při změně roku začne řada od 1.</span>
+      <table class="cis-tab"><thead><tr><th>Doklad</th><th>Tvar čísla</th><th style="width:110px">Další číslo</th><th style="width:120px">Náhled</th></tr></thead><tbody>
+      ${CIS_TYPY.map(([t, n]) => { const c = (F.cisla || {})[t] || {}; return `<tr><td>${n}</td><td><input data-cis-fmt="${t}" value="${esc(c.fmt || CIS_VYCHOZI[t])}"></td><td><input data-cis-n="${t}" inputmode="numeric" value="${esc(c.dalsi ?? '')}" placeholder="auto"></td><td class="nahl" data-cis-nahl="${t}"></td></tr>`; }).join('')}
+      </tbody></table></div>
+    <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" name="hlidat_ceny" ${F.hlidat_ceny !== false ? 'checked' : ''} style="width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--inkoust)"> <span><b>Hlídat ceny</b> – cena položky nesmí být nižší než v ceníku ani než naposledy u stejného zákazníka. Nižší cenu je potřeba odsouhlasit.</span></label>
     <label class="pole">Licenční klíč YeY <span class="napoveda">(odemkne celý katalog materiálu v kalkulačkách)</span><textarea name="licence" rows="2" style="font-family:monospace;font-size:12px" placeholder="Vložte licenční klíč">${esc(F.licence)}</textarea><span class="napoveda" id="licStav"></span></label>
     <div class="radek"><button class="btn zl" type="submit">Uložit údaje</button><span class="ulozeno skryt" id="nastOk">✓ Uloženo</span></div>
   </form>
-  <aside class="bok karta"><h3>Účet</h3><p class="tlumene" style="margin:6px 0 12px">${esc(S.user.email)}</p><button class="btn" data-a="zmena-hesla">Změnit heslo</button> <button class="btn cerv" data-a="odhlasit" style="margin-top:8px">${ik('odhl', 16)}Odhlásit</button></aside></div>`,
-  po: () => { $('#fNast').onsubmit = async e => { e.preventDefault(); const f = formData(e.target); f.platce_dph = f.platce_dph === 'true'; f.splatnost_dni = parseInt(f.splatnost_dni) || 14; for (const k in f) if (f[k] === '') f[k] = null; if (!f.nazev) return toast('Vyplňte název', { chyba: true });
+  <aside class="bok" style="display:flex;flex-direction:column;gap:18px">
+  <section class="karta"><h3>Logo</h3>
+    <div class="obr-nahled" id="logoNahled">${F.logo ? `<img src="${F.logo}" alt="Logo">` : '<span class="tlumene">Bez loga</span>'}</div>
+    <div class="radek" style="flex-wrap:wrap;gap:6px"><button class="btn mal" data-a="obr-nahrat" data-co="logo">Nahrát logo</button>${F.logo ? `<button class="btn mal" data-a="obr-pozadi" data-co="logo">Odebrat pozadí</button>` : ''}${OBR_PUV.logo ? `<button class="btn mal" data-a="obr-vratit" data-co="logo">Vrátit původní</button>` : ''}${F.logo ? `<button class="btn mal cerv" data-a="obr-smaz" data-co="logo">Odebrat</button>` : ''}</div>
+    <p class="napoveda" style="margin-top:8px">Pozadí se při nahrání odebere samo, pokud je jednobarevné (typicky bílé). Tiskne se v hlavičce nabídek, faktur a protokolů.</p>
+  </section>
+  <section class="karta"><h3>Podpis</h3>
+    <div class="obr-nahled" id="podpisNahled">${F.podpis ? `<img src="${F.podpis}" alt="Podpis">` : '<span class="tlumene">Bez podpisu</span>'}</div>
+    <div class="radek" style="flex-wrap:wrap;gap:6px"><button class="btn mal zl" data-a="podpis-kreslit">✍ Nakreslit</button><button class="btn mal" data-a="obr-nahrat" data-co="podpis">Nahrát foto</button>${F.podpis ? `<button class="btn mal" data-a="obr-pozadi" data-co="podpis">Odebrat pozadí</button>` : ''}${OBR_PUV.podpis ? `<button class="btn mal" data-a="obr-vratit" data-co="podpis">Vrátit původní</button>` : ''}${F.podpis ? `<button class="btn mal cerv" data-a="obr-smaz" data-co="podpis">Odebrat</button>` : ''}</div>
+    <p class="napoveda" style="margin-top:8px">Podepište se myší, prstem nebo perem, případně nahrajte fotku podpisu na bílém papíře. Tiskne se na doklady.</p>
+  </section>
+  <section class="karta"><h3>Účet</h3><p class="tlumene" style="margin:6px 0 12px">${esc(S.user.email)}</p><button class="btn" data-a="zmena-hesla">Změnit heslo</button> <button class="btn cerv" data-a="odhlasit" style="margin-top:8px">${ik('odhl', 16)}Odhlásit</button></section></aside></div>`,
+  po: () => { cisNahled(); $('#fNast').addEventListener('input', e => { if (e.target.closest('.cis-tab')) cisNahled(); });
+    $('#fNast').onsubmit = async e => { e.preventDefault(); const f = formData(e.target); f.platce_dph = f.platce_dph === 'true'; f.hlidat_ceny = !!e.target.elements.hlidat_ceny.checked; f.cisla = cisZFormulare(); f.splatnost_dni = parseInt(f.splatnost_dni) || 14; for (const k in f) if (f[k] === '') f[k] = null; if (!f.nazev) return toast('Vyplňte název', { chyba: true });
     S.firma = await q(sb.from('firmy').update(f).eq('id', S.firma.id).select().single()); $('#nastOk').classList.remove('skryt'); toast('Údaje firmy uloženy ✓'); $('.firma-jm').firstChild.textContent = S.firma.nazev; katTokenZrus(); licStav(); };
     licStav(); } }; };
 async function licStav() { const el = $('#licStav'); if (!el) return;
@@ -1262,6 +1330,77 @@ async function licStav() { const el = $('#licStav'); if (!el) return;
   el.textContent = 'Ověřuji licenci…'; const t = await katToken();
   if (t) try { YeyKalk.katalogZmena(); } catch { }
   el.textContent = t ? `✓ Licence platná${KATT.exp ? ' – katalog odemčen do ' + new Date(KATT.exp * 1000).toLocaleDateString('cs-CZ') : ''}` : '✗ ' + (KATT.chyba || 'Licenci se nepodařilo ověřit.'); }
+
+/* ---------- číselné řady ---------- */
+const CIS_TYPY = [['faktura', 'Faktura'], ['zalohova', 'Zálohová faktura'], ['nabidka', 'Nabídka'], ['protokol', 'Protokol']];
+const CIS_VYCHOZI = { faktura: 'F{RRRR}{NNN}', zalohova: 'Z{RRRR}{NNN}', nabidka: 'N{RRRR}{NNN}', protokol: 'P{RRRR}{NNN}' };
+function formatCislo(mask, n) { const d = new Date(), rrrr = String(d.getFullYear()), mm = String(d.getMonth() + 1).padStart(2, '0');
+  return (mask || '{NNN}').replace(/\{RRRR\}/g, rrrr).replace(/\{RR\}/g, rrrr.slice(2)).replace(/\{MM\}/g, mm).replace(/\{(N+)\}/g, (m, g) => String(n).padStart(g.length, '0')); }
+function cisZFormulare() { const puv = S.firma.cisla || {}, o = {};
+  CIS_TYPY.forEach(([t]) => { const fmt = ($(`[data-cis-fmt="${t}"]`)?.value || '').trim() || CIS_VYCHOZI[t]; const n = parseInt($(`[data-cis-n="${t}"]`)?.value, 10);
+    o[t] = { ...(puv[t] || {}), fmt }; if (n > 0) { o[t].dalsi = n; o[t].rok = new Date().getFullYear(); } else delete o[t].dalsi; if (!/\{N+\}/.test(fmt)) o[t].fmt = fmt + '{NNN}'; });
+  return o; }
+function cisNahled() { CIS_TYPY.forEach(([t]) => { const el = $(`[data-cis-nahl="${t}"]`); if (!el) return; const fmt = $(`[data-cis-fmt="${t}"]`).value.trim() || CIS_VYCHOZI[t]; const n = parseInt($(`[data-cis-n="${t}"]`).value, 10);
+  el.textContent = /\{N+\}/.test(fmt) ? formatCislo(fmt, n > 0 ? n : 1) + (n > 0 ? '' : ' …') : 'chybí {NNN}'; }); }
+
+/* ---------- logo a podpis: zmenšení, odebrání pozadí, kreslení ---------- */
+const OBR_PUV = {};
+const OBR_MAX = { logo: [900, 450], podpis: [800, 260] };
+function nactiObr(src) { return new Promise((ok, chyba) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => chyba(new Error('Obrázek se nepodařilo načíst')); i.src = src; }); }
+function platno(img, maxW, maxH) { const k = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight); const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k)); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c; }
+function orizni(c, okraj = 6) { const x = c.getContext('2d'), d = x.getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) if (d[(y * c.width + xx) * 4 + 3] > 12) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null; x0 = Math.max(0, x0 - okraj); y0 = Math.max(0, y0 - okraj); x1 = Math.min(c.width - 1, x1 + okraj); y1 = Math.min(c.height - 1, y1 + okraj);
+  const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1; o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height); return o; }
+/** Barva pozadí = medián okrajových pixelů. Pixely podobné pozadí zprůhlední (s měkkým přechodem). Vrací null, když pozadí není jednolité. */
+function odeberPozadi(c, tol = 42, vynutit = false) {
+  const x = c.getContext('2d'), im = x.getImageData(0, 0, c.width, c.height), d = im.data, w = c.width, h = c.height, kraj = [];
+  const vez = (xx, y) => { const i = (y * w + xx) * 4; if (d[i + 3] > 200) kraj.push([d[i], d[i + 1], d[i + 2]]); };
+  const krok = Math.max(1, Math.floor((w + h) / 400));
+  for (let xx = 0; xx < w; xx += krok) { vez(xx, 0); vez(xx, h - 1); } for (let y = 0; y < h; y += krok) { vez(0, y); vez(w - 1, y); }
+  if (kraj.length < 8) return null;
+  const med = k => { const a = kraj.map(p => p[k]).sort((m, n) => m - n); return a[a.length >> 1]; }; const bg = [med(0), med(1), med(2)];
+  const vzd = (r, g, b) => Math.sqrt((r - bg[0]) ** 2 + (g - bg[1]) ** 2 + (b - bg[2]) ** 2);
+  const podobne = kraj.filter(p => vzd(...p) < tol).length / kraj.length; if (!vynutit && podobne < 0.7) return null;
+  for (let i = 0; i < d.length; i += 4) { if (!d[i + 3]) continue; const v = vzd(d[i], d[i + 1], d[i + 2]);
+    if (v < tol) d[i + 3] = 0; else if (v < tol * 1.8) d[i + 3] = Math.round(d[i + 3] * (v - tol) / (tol * 0.8)); }
+  x.putImageData(im, 0, 0); return orizni(c) || c;
+}
+async function ulozObr(co, url) { S.firma = await q(sb.from('firmy').update({ [co]: url }).eq('id', S.firma.id).select().single()); render(); }
+AKCE['obr-nahrat'] = el => { const co = el.dataset.co; const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => { const f = inp.files[0]; if (!f) return;
+    try { const src = await new Promise((ok, ch) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = ch; r.readAsDataURL(f); });
+      const c = platno(await nactiObr(src), ...OBR_MAX[co]); OBR_PUV[co] = c.toDataURL('image/png');
+      const bez = odeberPozadi(c, co === 'podpis' ? 60 : 42);
+      await ulozObr(co, (bez || c).toDataURL('image/png'));
+      toast(bez ? (co === 'logo' ? 'Logo nahráno, pozadí odebráno ✓' : 'Podpis nahrán, pozadí odebráno ✓') : (co === 'logo' ? 'Logo nahráno ✓ (pozadí není jednobarevné – nechal jsem ho)' : 'Podpis nahrán ✓'));
+    } catch (e) { toast(e.message || 'Obrázek se nepodařilo zpracovat', { chyba: true }); } };
+  inp.click(); };
+AKCE['obr-pozadi'] = async el => { const co = el.dataset.co; const src = S.firma[co]; if (!src) return; OBR_PUV[co] ||= src;
+  const c = platno(await nactiObr(src), ...OBR_MAX[co]); const bez = odeberPozadi(c, co === 'podpis' ? 60 : 48, true);
+  if (!bez) return toast('Pozadí se nepodařilo rozpoznat', { chyba: true }); await ulozObr(co, bez.toDataURL('image/png')); toast('Pozadí odebráno ✓'); };
+AKCE['obr-vratit'] = async el => { const co = el.dataset.co; if (!OBR_PUV[co]) return; await ulozObr(co, OBR_PUV[co]); delete OBR_PUV[co]; toast('Vráceno původní'); };
+AKCE['obr-smaz'] = async el => { const co = el.dataset.co; if (!confirm(co === 'logo' ? 'Odebrat logo z dokladů?' : 'Odebrat podpis z dokladů?')) return; delete OBR_PUV[co]; await ulozObr(co, null); toast('Odebráno'); };
+AKCE['podpis-kreslit'] = () => {
+  okno('Nakreslit podpis', `<p class="tlumene" style="margin:0 0 8px">Podepište se myší, prstem nebo perem do bílého pole.</p>
+    <canvas id="podpisPlatno" style="width:100%;height:230px;touch-action:none;background:#fff;border:1px dashed var(--linka);border-radius:10px;cursor:crosshair;display:block"></canvas>
+    <div class="radek" style="margin-top:8px;gap:8px;font-size:14px"><span class="tlumene">Barva:</span>${[['#1D2B7A', 'modrá'], ['#111111', 'černá']].map(([b, n], i) => `<label style="cursor:pointer"><input type="radio" name="ppBarva" value="${b}" ${i ? '' : 'checked'}> ${n}</label>`).join(' ')}</div>`,
+    `<button class="btn" data-a="podpis-vymazat" style="margin-right:auto">Vymazat</button><button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="podpis-ulozit">Uložit podpis</button>`, { trida: 'siroke' });
+  const c = $('#podpisPlatno'), dpr = Math.max(1, window.devicePixelRatio || 1); c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr;
+  const x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round'; let kres = false, body = []; c._prazdne = true;
+  const bod = e => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, e.pressure > 0 && e.pointerType === 'pen' ? e.pressure : 0.5]; };
+  c.onpointerdown = e => { e.preventDefault(); c.setPointerCapture(e.pointerId); kres = true; body = [bod(e)]; x.strokeStyle = document.querySelector('[name=ppBarva]:checked').value; x.fillStyle = x.strokeStyle;
+    x.beginPath(); x.arc(body[0][0], body[0][1], 1.4 * dpr, 0, 7); x.fill(); c._prazdne = false; };
+  c.onpointermove = e => { if (!kres) return; const p = bod(e); body.push(p); if (body.length < 3) return; const [a, b, cc] = body.slice(-3);
+    x.lineWidth = (2 + cc[2] * 1.8) * dpr; x.beginPath(); x.moveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); x.quadraticCurveTo(b[0], b[1], (b[0] + cc[0]) / 2, (b[1] + cc[1]) / 2); x.stroke(); };
+  c.onpointerup = c.onpointercancel = () => { kres = false; body = []; };
+};
+AKCE['podpis-vymazat'] = () => { const c = $('#podpisPlatno'); c.getContext('2d').clearRect(0, 0, c.width, c.height); c._prazdne = true; };
+AKCE['podpis-ulozit'] = async () => { const c = $('#podpisPlatno'); if (!c || c._prazdne) return toast('Nejdřív se podepište', { chyba: true });
+  let o = orizni(c, 10); if (!o) return toast('Nejdřív se podepište', { chyba: true });
+  if (o.width > OBR_MAX.podpis[0] || o.height > OBR_MAX.podpis[1]) { const i = await nactiObr(o.toDataURL('image/png')); o = platno(i, ...OBR_MAX.podpis); }
+  zavriOkno(); await ulozObr('podpis', o.toDataURL('image/png')); toast('Podpis uložen ✓'); };
 
 /* =================== PALETA (Ctrl+K) =================== */
 AKCE.paleta = () => {
