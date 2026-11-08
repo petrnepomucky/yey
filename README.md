@@ -12,7 +12,6 @@ Nová online verze YeY – Kancelář pro řemeslníky. Nahradí původní YeY (
 
 ## Databáze
 
-- **Přechodně** je aplikace napojená na projekt **Kancelář řemeslníků online** (`vgpnrlgisqcdkrzhhfsy`, druhý účet). Po přenesení tabulek se přepne `SB_URL`/`SB_KEY` v `web/index.html` a doplní `db: { schema: 'online_kancelar' }`.
 
 - Supabase projekt **YeY - Online Office** (`hkzhjoveiqadezmvksdz`), schéma **`online_kancelar`**.
 - Tabulky původního YeY v `public` zůstávají beze změny, dokud neproběhne převod.

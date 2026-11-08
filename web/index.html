@@ -302,11 +302,11 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 'use strict';
 /* =====================================================================
    YeY Online – Kancelář pro řemeslníky
-   Jednosouborová aplikace · data v Supabase (projekt vgpnrlgisqcdkrzhhfsy)
+   Jednosouborová aplikace · data v Supabase (projekt hkzhjoveiqadezmvksdz, schéma online_kancelar)
    ===================================================================== */
-const SB_URL = 'https://vgpnrlgisqcdkrzhhfsy.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZncG5ybGdpc3FjZGtyemhoZnN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3NTk4MzAsImV4cCI6MjEwOTMzNTgzMH0.Fuu07dhnmeIFBsc97d6LQEclNwi-34JdxzKCFo1L6Ck';
-const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+const SB_URL = 'https://hkzhjoveiqadezmvksdz.supabase.co';
+const SB_KEY = 'sb_publishable_WUy9urfE9n5O2SelitV6FA_mhzCUrM_';
+const sb = window.supabase.createClient(SB_URL, SB_KEY, { db: { schema: 'online_kancelar' }, auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
 /* ---------- stav ---------- */
 const S = { user: null, firma: null, kontakty: [], zakazky: [], doklady: [], cenik: [], denik: {}, polozky: {}, nacteno: false };
