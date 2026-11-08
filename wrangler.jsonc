@@ -1,0 +1,10 @@
+// Nasazení Moje kanceláře na Cloudflare Workers (statické soubory ze složky web/).
+// Název musí odpovídat názvu projektu v Cloudflare („yey“).
+{
+  "name": "yey",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./web",
+    "not_found_handling": "single-page-application"
+  }
+}
