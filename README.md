@@ -6,11 +6,13 @@ Nová online verze YeY – Kancelář pro řemeslníky. Nahradí původní YeY (
 
 | Složka | Obsah |
 |---|---|
-| `web/` | Aplikace. Jediná složka, kterou zveřejňuje Cloudflare (kancelar.yey.cz). Statické soubory, bez build kroku. |
+| `web/` | Aplikace (jeden soubor `index.html`, převzatý z repa `live`). Jediná složka, kterou zveřejňuje Cloudflare (kancelar.yey.cz). Bez build kroku. |
 | `supabase/migrations/` | SQL migrace schématu `online_kancelar`. |
 | `archiv/` | Dřívější obsah repa (React prototyp z 4. 11. 2026). Nezveřejňuje se. |
 
 ## Databáze
+
+- **Přechodně** je aplikace napojená na projekt **Kancelář řemeslníků online** (`vgpnrlgisqcdkrzhhfsy`, druhý účet). Po přenesení tabulek se přepne `SB_URL`/`SB_KEY` v `web/index.html` a doplní `db: { schema: 'online_kancelar' }`.
 
 - Supabase projekt **YeY - Online Office** (`hkzhjoveiqadezmvksdz`), schéma **`online_kancelar`**.
 - Tabulky původního YeY v `public` zůstávají beze změny, dokud neproběhne převod.
