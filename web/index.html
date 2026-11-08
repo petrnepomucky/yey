@@ -1632,11 +1632,27 @@ const kalkAdapter = {
     jdi('doklad/' + d.id);
   }
 };
+/* Funkce, které modul čeká od yey.cz (licenční brána). V Moje kanceláři je vkládání do dokladů dostupné všem. */
+function zamceno() { return false; }
+function licBrana() { return false; }
+/* Kam se vkládá: doklad, ze kterého byla kalkulačka otevřena, jiný rozpracovaný doklad, nebo nová nabídka. */
+function kalkCilHtml() {
+  const moznosti = S.doklady.filter(d => d.typ !== 'protokol' && ['koncept', 'odeslano'].includes(d.stav) || d.id === UI.kalkCil).slice(0, 60);
+  return `<div class="karta" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;margin-bottom:14px">
+    <span class="tuc">Výsledek vložit do:</span>
+    <select id="kalkCilSel" class="vstup" style="flex:1;min-width:240px;height:42px">
+      <option value="">+ Nové nabídky (založí se při vložení)</option>
+      ${moznosti.map(d => `<option value="${d.id}" ${d.id === UI.kalkCil ? 'selected' : ''}>${TYP[d.typ]} ${esc(d.cislo)} – ${esc(kontakt(d.kontakt_id)?.nazev || zakazka(d.zakazka_id)?.nazev || d.predmet || 'bez odběratele')}</option>`).join('')}
+    </select>
+    ${UI.kalkCil ? `<a class="btn mal" href="#doklad/${UI.kalkCil}">← Zpět do dokladu</a>` : ''}</div>`;
+}
 let KK_ROOT = null;
 POHLEDY.kalkulacky = t => {
   const cil = t.p.get('doklad'); if (cil) UI.kalkCil = cil;
-  return { plna: true, html: `<div id="kk-misto" style="padding:18px 22px 60px;min-width:0"></div>`, po: () => {
+  if (UI.kalkCil && !doklad(UI.kalkCil)) UI.kalkCil = null;
+  return { plna: true, html: `<div id="kk-misto" style="padding:18px 22px 60px;min-width:0">${kalkCilHtml()}</div>`, po: () => {
     const m = $('#kk-misto'); if (!m || !window.YeyKalk) return;
+    $('#kalkCilSel').onchange = e => { UI.kalkCil = e.target.value || null; try { YeyKalk.prekresli(); } catch { } };
     if (!KK_ROOT) { KK_ROOT = document.createElement('div'); KK_ROOT.id = 'kk-root'; m.appendChild(KK_ROOT); YeyKalk.init(kalkAdapter, KK_ROOT); }
     else m.appendChild(KK_ROOT);
     YeyKalk.ukazano();
