@@ -177,7 +177,7 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .papir{font-size:1.85cqw}
 .papir .strany{display:grid;grid-template-columns:1fr 1fr;gap:4cqw;margin-bottom:3cqw}
 .papir .strany small{display:block;font-size:1.5cqw;text-transform:uppercase;letter-spacing:.15cqw;color:var(--ocel);font-weight:700;margin-bottom:.6cqw}
-.papir .info{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5cqw;background:#F4F5F2;padding:2cqw;border-radius:1cqw;margin-bottom:3cqw}
+.papir .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(18cqw,1fr));gap:1.5cqw;background:#F4F5F2;padding:2cqw;border-radius:1cqw;margin-bottom:3cqw}
 .papir .info small{display:block;color:var(--ocel);font-size:1.5cqw}
 .papir table{width:100%;border-collapse:collapse}
 .papir th{text-align:left;font-size:1.5cqw;text-transform:uppercase;color:var(--ocel);border-bottom:.3cqw solid #1D272F;padding:1cqw .8cqw}
@@ -230,6 +230,12 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .zavoj{position:fixed;inset:0;background:rgba(29,39,47,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow:auto}
 .okno{background:#fff;border-radius:14px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
 .okno.siroke{max-width:760px}
+@media print{.netisk{display:none!important}}
+.ares-vys{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;margin-top:8px}
+.ares-vys button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--linka-2);background:#fff;border-radius:9px;padding:8px 10px;cursor:pointer;font:inherit}
+.ares-vys button:hover{border-color:var(--inkoust);box-shadow:inset 3px 0 0 var(--metr)}
+.ares-vys button span{font-size:12px;color:var(--ocel)}
+.ares-hl{background:#FAFBF8;border:1px dashed var(--linka);border-radius:10px;padding:10px 12px}
 .okno-h{background:var(--metr);padding:16px 20px 24px;position:relative;display:flex;justify-content:space-between;align-items:center}
 .okno-h::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;opacity:.6;background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 60px) 0 100%/100% 10px no-repeat,repeating-linear-gradient(90deg,var(--inkoust) 0 1px,transparent 1px 12px) 0 100%/100% 5px no-repeat}
 .okno-h h2{font-size:22px}
@@ -557,14 +563,54 @@ async function ares(ico) {
   if (!r.ok) throw new Error('IČO v ARES nenalezeno');
   const j = await r.json(); const a = j.sidlo || {};
   const ulice = a.nazevUlice ? `${a.nazevUlice} ${a.cisloDomovni || ''}${a.cisloOrientacni ? '/' + a.cisloOrientacni : ''}` : (a.nazevCastiObce ? `${a.nazevCastiObce} ${a.cisloDomovni || ''}` : '');
-  return { nazev: j.obchodniJmeno, ico: j.ico, dic: j.dic || '', ulice: ulice.trim(), mesto: a.nazevObce || '', psc: a.psc ? String(a.psc).replace(/(\d{3})(\d{2})/, '$1 $2') : '' };
+  return { nazev: j.obchodniJmeno, ico: j.ico, dic: j.dic || '', ulice: ulice.trim(), mesto: a.nazevObce || '', psc: a.psc ? String(a.psc).replace(/(\d{3})(\d{2})/, '$1 $2') : '', _ares: j };
+}
+/* Zápis v rejstříku (§ 435 OZ) z ARES – návrh, uživatel ho zkontroluje */
+const SOUDY = { MSPH: 'Městským soudem v Praze', KSPH: 'Krajským soudem v Praze', KSCB: 'Krajským soudem v Českých Budějovicích', KSPL: 'Krajským soudem v Plzni', KSUL: 'Krajským soudem v Ústí nad Labem', KSHK: 'Krajským soudem v Hradci Králové', KSBR: 'Krajským soudem v Brně', KSOS: 'Krajským soudem v Ostravě' };
+async function aresZapis(ico, j) {
+  ico = String(ico || '').replace(/\D/g, '').padStart(8, '0');
+  let sz = ''; (j?.dalsiUdaje || []).forEach(x => { if (!sz && x?.spisovaZnacka) sz = String(x.spisovaZnacka); });
+  if (sz) { const m = sz.match(/^\s*([A-Za-z]+)\s+(\d+)\s*\/\s*([A-Z]+)/);
+    return m && SOUDY[m[3]] ? `Zapsáno v obchodním rejstříku vedeném ${SOUDY[m[3]]}, oddíl ${m[1]}, vložka ${m[2]}` : 'Zapsáno ve veřejném rejstříku, spisová značka ' + sz; }
+  const pf = String(j?.pravniForma || '');
+  if (pf && !['101', '105', '107', '424', '425'].includes(pf)) return '';
+  let urad = '';
+  try { const z = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-rzp/' + ico);
+    if (z.ok) { const zj = await z.json(); const u = (zj.zaznamy || [])[0]?.zivnostenskyUrad || {}; urad = u.nazevUradu || u.nazev || (typeof u === 'string' ? u : ''); } } catch { }
+  return 'Fyzická osoba zapsaná v živnostenském rejstříku' + (urad ? ', ' + urad : '');
+}
+async function aresVyhledat(nazev, obec) {
+  const r = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ obchodniJmeno: nazev, start: 0, pocet: obec ? 100 : 30 }) });
+  if (!r.ok && r.status !== 400) throw new Error('ARES se teď nepodařilo prohledat – zkuste to později.');
+  const d = r.ok ? await r.json() : {}; let list = d.ekonomickeSubjekty || [];
+  if (obec) { const o = bezDia(obec); list = list.filter(x => bezDia((x.sidlo?.nazevObce || '') + ' ' + (x.sidlo?.textovaAdresa || '')).includes(o)); }
+  return { list: list.slice(0, 30), celkem: obec ? list.length : (d.pocetCelkem || list.length), moc: r.status === 400 || (d.pocetCelkem || 0) > 1000 };
 }
 async function aresDoFormulare(form) {
   const ico = form.elements.ico?.value; if (!ico) { toast('Nejdřív napište IČO'); return; }
-  try { const d = await ares(ico); for (const [k, v] of Object.entries(d)) if (form.elements[k] && v) form.elements[k].value = v; toast('Doplněno z ARES ✓'); }
+  try { const d = await ares(ico); for (const [k, v] of Object.entries(d)) if (k !== '_ares' && form.elements[k] && v) form.elements[k].value = v;
+    if (form.elements.zapis) { const z = await aresZapis(ico, d._ares); if (z) form.elements.zapis.value = z; }
+    if (form.elements.platce_dph && d.dic) form.elements.platce_dph.value = 'true';
+    toast(form.elements.zapis ? 'Doplněno z ARES včetně zápisu v rejstříku ✓ – zkontrolujte a uložte.' : 'Doplněno z ARES ✓'); }
   catch (e) { toast(e.message, { chyba: true }); }
 }
 AKCE.ares = el => aresDoFormulare(el.closest('form'));
+AKCE['ares-hledat'] = async el => {
+  const form = el.closest('form'); const q = form.querySelector('[data-ares=q]').value.trim(), obec = form.querySelector('[data-ares=obec]').value.trim(), out = form.querySelector('.ares-vys'), info = form.querySelector('.ares-info');
+  out.innerHTML = '';
+  if (/^\d{6,8}$/.test(q.replace(/\s/g, ''))) { form.elements.ico.value = q.replace(/\s/g, ''); return aresDoFormulare(form); }
+  if (q.length < 3) { info.textContent = 'Zadejte aspoň 3 znaky názvu.'; return; }
+  info.textContent = 'Hledám v ARES…';
+  try { const { list, celkem, moc } = await aresVyhledat(q, obec);
+    if (!list.length) { info.textContent = moc ? 'Příliš mnoho výsledků – upřesněte název nebo doplňte obec.' : 'Nic nenalezeno – zkuste jiný tvar názvu nebo vynechte obec.'; return; }
+    info.textContent = celkem > list.length ? 'Výsledků je hodně – upřesněte název nebo obec. Klikněte na správnou firmu:' : 'Klikněte na správnou firmu:';
+    out.innerHTML = list.map((x, i) => `<button type="button" data-i="${i}"><b>${esc(x.obchodniJmeno || '')}</b><span>IČO ${esc(x.ico || '')}${x.sidlo?.textovaAdresa ? ' · ' + esc(x.sidlo.textovaAdresa) : ''}</span></button>`).join('');
+    out.onclick = e => { const b = e.target.closest('button[data-i]'); if (!b) return; form.elements.ico.value = list[+b.dataset.i].ico || ''; out.innerHTML = ''; info.textContent = ''; aresDoFormulare(form); };
+  } catch (e) { info.textContent = e.message; }
+};
+const aresHledaniHtml = () => `<div class="ares-hl"><div class="tuc" style="font-size:14px;margin-bottom:6px">Najít firmu v ARES podle názvu</div>
+  <div class="radek"><input data-ares="q" class="vstup" style="flex:2;min-width:160px" placeholder="Název firmy nebo IČO" autocomplete="off"><input data-ares="obec" class="vstup" style="flex:1;min-width:110px" placeholder="Obec (nepovinné)" autocomplete="off"><button type="button" class="btn" data-a="ares-hledat">Hledat</button></div>
+  <div class="ares-info napoveda" style="margin-top:6px"></div><div class="ares-vys"></div></div>`;
 
 /* ---------- QR platba (SPAYD) ---------- */
 function ibanZUctu(u) {
@@ -950,6 +996,7 @@ AKCE['otevrit-dok'] = el => jdi('doklad/' + el.dataset.id);
 function formKontaktu(k = {}) {
   return `<form id="fKon" class="mrizka">
     <div class="filtry" role="group" aria-label="Typ">${[['klient', 'Klient'], ['dodavatel', 'Dodavatel'], ['jiny', 'Jiný']].map(([v, n]) => `<label style="cursor:pointer"><input type="radio" name="typ" value="${v}" ${(k.typ || 'klient') === v ? 'checked' : ''} style="accent-color:var(--inkoust)"> ${n}</label>`).join(' &nbsp; ')}</div>
+    ${aresHledaniHtml()}
     <label class="pole">IČO <span class="napoveda">firmu doplníme z ARES</span><div class="radek"><input name="ico" class="vstup" style="flex:1" inputmode="numeric" maxlength="8" value="${esc(k.ico)}"><button type="button" class="btn" data-a="ares">Načíst z ARES</button></div></label>
     <label class="pole">Jméno / název firmy<input name="nazev" required value="${esc(k.nazev)}" autofocus></label>
     <div class="mrizka m2"><label class="pole">Kontaktní osoba<input name="osoba" value="${esc(k.osoba)}"></label><label class="pole">DIČ<input name="dic" value="${esc(k.dic)}"></label>
@@ -959,9 +1006,10 @@ function formKontaktu(k = {}) {
     <label class="pole">Poznámka<textarea name="poznamka">${esc(k.poznamka)}</textarea></label></form>`;
 }
 const dataKontaktu = () => { const f = formData($('#fKon')); if (!f.nazev) { toast('Vyplňte jméno', { chyba: true }); return null; } for (const k in f) if (f[k] === '') f[k] = null; return f; };
-AKCE['novy-kontakt'] = () => { okno('Nový kontakt', formKontaktu(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-kontakt">Uložit kontakt</button>`); $('#fKon').onsubmit = e => { e.preventDefault(); AKCE['ulozit-kontakt'](); }; };
+AKCE['novy-kontakt'] = () => { okno('Nový kontakt', formKontaktu(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-kontakt">Uložit kontakt</button>`); $('#fKon').onsubmit = e => { e.preventDefault(); AKCE['ulozit-kontakt'](); }; aresEnter($('#fKon')); };
+function aresEnter(form) { form?.querySelectorAll('[data-ares]').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); AKCE['ares-hledat'](form.querySelector('[data-a=ares-hledat]')); } })); }
 AKCE['ulozit-kontakt'] = async () => { const o = dataKontaktu(); if (!o) return; const k = await db.ins('kontakty', o); S.kontakty.push(k); S.kontakty.sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs')); zavriOkno(); toast('Kontakt uložen ✓'); jdi('kontakty/' + k.id); };
-AKCE['upravit-kontakt'] = el => { const k = kontakt(el.dataset.id); okno('Upravit kontakt', formKontaktu(k), `<button class="btn cerv" data-a="smazat-kontakt" data-id="${k.id}" style="margin-right:auto">${ik('smaz', 16)}Smazat</button><button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-upr-kontakt" data-id="${k.id}">Uložit</button>`); };
+AKCE['upravit-kontakt'] = el => { const k = kontakt(el.dataset.id); okno('Upravit kontakt', formKontaktu(k), `<button class="btn cerv" data-a="smazat-kontakt" data-id="${k.id}" style="margin-right:auto">${ik('smaz', 16)}Smazat</button><button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-upr-kontakt" data-id="${k.id}">Uložit</button>`); aresEnter($('#fKon')); };
 AKCE['ulozit-upr-kontakt'] = async el => { const o = dataKontaktu(); if (!o) return; Object.assign(kontakt(el.dataset.id), await db.upd('kontakty', el.dataset.id, o)); zavriOkno(); toast('Uloženo ✓'); render(); };
 AKCE['smazat-kontakt'] = async el => { const k = kontakt(el.dataset.id); if (!confirm(`Smazat kontakt „${k.nazev}“? Zakázky a doklady zůstanou.`)) return; await db.del('kontakty', k.id); S.kontakty = S.kontakty.filter(x => x.id !== k.id); zavriOkno(); toast('Kontakt smazán'); jdi('kontakty'); };
 /* =================== SEZNAM DOKLADŮ =================== */
@@ -992,32 +1040,36 @@ AKCE['novy-doklad'] = async el => { const d = await novyDoklad(el.dataset.typ, {
 /* =================== PAPÍR (náhled = tisk) =================== */
 function papir(d, pol) {
   const F = S.firma, k = kontakt(d.kontakt_id) || {}, z = zakazka(d.zakazka_id);
-  const dph = F.platce_dph && d.typ !== 'protokol';
+  const dph = F.platce_dph && d.typ !== 'protokol'; const pdp = dph && jeFakt(d.typ) && !!d.pdp;
   const adr = o => esc([o.ulice, [o.psc, o.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', '));
   const ids = o => [o.ico ? 'IČO: ' + esc(o.ico) : '', o.dic ? 'DIČ: ' + esc(o.dic) : ''].filter(Boolean).join(' · ');
   const bez = pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena), 0);
-  const sDph = pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena) * (dph ? cislo(p.dph) : 0) / 100, 0);
+  const sDph = pdp ? 0 : pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena) * (dph ? cislo(p.dph) : 0) / 100, 0);
   const sazby = {}; if (dph) pol.forEach(p => { const k2 = cislo(p.dph); sazby[k2] = (sazby[k2] || 0) + cislo(p.mnozstvi) * cislo(p.cena); });
   const nazev = d.typ === 'faktura' ? (F.platce_dph ? 'Faktura – daňový doklad' : 'Faktura') : TYP[d.typ];
+  const podtitul = d.typ === 'zalohova' ? 'Není daňovým dokladem' : '';
   const info = d.typ === 'nabidka' ? [['Datum', datum(d.datum)], ['Platnost do', datum(d.splatnost)], ['Zakázka', esc(z?.nazev || d.predmet || '—')]]
     : d.typ === 'protokol' ? [['Datum předání', datum(d.datum)], ['Místo', esc(z?.adresa || '—')], ['Zakázka', esc(z?.nazev || d.predmet || '—')]]
-    : [['Vystaveno', datum(d.datum)], ['Splatnost', '<b>' + datum(d.splatnost) + '</b>'], [F.platce_dph ? 'DUZP' : 'Var. symbol', F.platce_dph ? datum(d.duzp) : esc(d.vs || '')]];
+    : [['Datum vystavení', datum(d.datum)], ...(F.platce_dph && d.typ === 'faktura' ? [['Datum usk. zdanitelného plnění', datum(d.duzp || d.datum)]] : []), ['Datum splatnosti', '<b>' + datum(d.splatnost) + '</b>'], ['Variabilní symbol', esc(d.vs || d.cislo.replace(/\D/g, ''))], ['Forma úhrady', esc(d.forma_uhrady || 'převodem')]];
   const qr = jeFakt(d.typ) ? qrPlatba(d) : '';
   return `<div class="papir-obal"><div class="papir">
-    <div class="ph"><div><h2>${nazev}</h2>${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
+    <div class="ph"><div><h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
     <div class="strany"><div><small>${d.typ === 'protokol' ? 'Zhotovitel' : 'Dodavatel'}</small><b>${esc(F.nazev)}</b><br>${adr(F)}<br>${ids(F)}${F.platce_dph ? '' : '<br>Není plátce DPH.'}${F.zapis ? `<br><span style="color:#5D6B76">${esc(F.zapis)}</span>` : ''}</div>
       <div><small>${d.typ === 'protokol' ? 'Objednatel' : 'Odběratel'}</small><b>${esc(k.nazev || '—')}</b>${k.osoba ? '<br>' + esc(k.osoba) : ''}<br>${adr(k)}<br>${ids(k)}</div></div>
     <div class="info">${info.map(([a, b]) => `<div><small>${a}</small>${b}</div>`).join('')}</div>
     ${d.typ === 'protokol' ? `<p style="margin:0 0 2cqw">Zhotovitel předává a objednatel přebírá níže uvedené dokončené práce${z?.adresa ? ' na adrese ' + esc(z.adresa) : ''}.</p>` : ''}
-    <table><thead><tr><th>Položka</th><th class="r">Množství</th>${d.typ === 'protokol' ? '' : `<th class="r">Cena/MJ</th>${dph ? '<th class="r">DPH</th>' : ''}<th class="r">Celkem</th>`}</tr></thead><tbody>
+    <table><thead><tr><th>Položka</th><th class="r">Množství</th>${d.typ === 'protokol' ? '' : `<th class="r">Cena/MJ${dph ? ' bez DPH' : ''}</th>${dph ? '<th class="r">Sazba</th>' : ''}<th class="r">${dph ? 'Základ' : 'Celkem'}</th>`}</tr></thead><tbody>
       ${pol.length ? pol.map(p => `<tr><td>${esc(p.nazev)}</td><td class="r">${fmtN(p.mnozstvi, 3)} ${esc(p.mj || '')}</td>${d.typ === 'protokol' ? '' : `<td class="r">${fmtN(p.cena)}</td>${dph ? `<td class="r">${fmtN(p.dph, 0)} %</td>` : ''}<td class="r">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>`}</tr>`).join('') : `<tr><td colspan="5" style="color:#5D6B76;text-align:center;padding:4cqw">Zatím žádné položky</td></tr>`}
     </tbody></table>
     ${d.typ === 'protokol' ? `<p style="margin-top:3cqw">Práce byly provedeny v dohodnutém rozsahu a kvalitě. ${d.poznamka ? '<br>Výhrady / poznámky: ' + esc(d.poznamka) : 'Objednatel nemá výhrady.'}</p>
       <div class="podpisy"><div>Za zhotovitele</div><div>Za objednatele</div></div>`
     : `<div class="celkem"><div class="qr">${qr ? qr + '<div>QR platba</div>' : ''}</div><table>
-        ${dph ? Object.entries(sazby).map(([s2, z2]) => `<tr><td>Základ ${s2} %</td><td class="r">${fmtN(z2)}</td></tr><tr><td>DPH ${s2} %</td><td class="r">${fmtN(z2 * s2 / 100)}</td></tr>`).join('') : ''}
-        <tr class="zap"><td>${jeFakt(d.typ) ? 'K úhradě' : 'Celkem'}</td><td class="r">${kc(bez + sDph)}</td></tr></table></div>
-      ${jeFakt(d.typ) ? `<div style="margin-top:2cqw">Platba: ${esc(d.forma_uhrady || 'převodem')}${F.ucet ? ` · účet <b>${esc(F.ucet)}</b>` : ''}${d.vs ? ` · VS <b>${esc(d.vs)}</b>` : ''}</div>` : ''}
+        ${dph ? Object.entries(sazby).map(([s2, z2]) => `<tr><td>Základ daně ${s2} %</td><td class="r">${fmtN(z2)}</td></tr><tr><td>DPH ${s2} %</td><td class="r">${pdp ? 'odvede odběratel' : fmtN(z2 * s2 / 100)}</td></tr>`).join('') : ''}
+        ${dph ? `<tr><td>Celkem bez DPH</td><td class="r">${kc(bez)}</td></tr><tr><td>DPH celkem</td><td class="r">${kc(sDph)}</td></tr>` : ''}
+        <tr class="zap"><td>${jeFakt(d.typ) ? 'Celkem k úhradě' : 'Celkem'}</td><td class="r">${kc(bez + sDph)}</td></tr></table></div>
+      ${pdp ? `<div style="margin-top:2cqw;font-weight:700">Daň odvede zákazník. Přenesená daňová povinnost podle § 92e zákona č. 235/2004 Sb., o dani z přidané hodnoty.</div>${k.dic ? '' : '<div class="netisk" style="margin-top:1cqw;color:#B42318">Pozor: u odběratele chybí DIČ – při přenesené daňové povinnosti je povinné. (Netiskne se.)</div>'}` : ''}
+
+      ${jeFakt(d.typ) ? `<div style="margin-top:2cqw">Platba: ${esc(d.forma_uhrady || 'převodem')}${F.ucet ? ` · účet <b>${esc(F.ucet)}</b>` : ''}${F.iban ? ` · IBAN ${esc(F.iban)}` : ''} · VS <b>${esc(d.vs || d.cislo.replace(/\D/g, ''))}</b></div>` : ''}
       ${d.poznamka ? `<div style="margin-top:2cqw;white-space:pre-line">${esc(d.poznamka)}</div>` : ''}`}
     <div class="pata"><span>${esc([F.telefon, F.email, F.web].filter(Boolean).join(' · '))}</span><span>Vystaveno v YeY</span></div>
   </div></div>`;
@@ -1066,6 +1118,7 @@ POHLEDY.doklad = async t => {
           ${jeFakt(d.typ) ? `<label class="pole">Var. symbol<input name="vs" value="${esc(d.vs)}" inputmode="numeric"></label>` : ''}
           ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole">DUZP<input name="duzp" type="date" value="${esc(d.duzp)}"></label>` : ''}
           ${jeFakt(d.typ) ? `<label class="pole">Forma úhrady<select name="forma_uhrady">${['převodem', 'hotově', 'kartou', 'dobírkou'].map(x => `<option ${x === d.forma_uhrady ? 'selected' : ''}>${x}</option>`).join('')}</select></label>` : ''}
+          ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;display:flex"><input type="checkbox" name="pdp" ${d.pdp ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--inkoust)"> Přenesená daňová povinnost (§ 92e – stavební a montážní práce pro plátce DPH)</label>` : ''}
           <label class="pole">Stav<select name="stav">${stavy.map(s => `<option value="${s}" ${s === d.stav ? 'selected' : ''}>${STAV[s]}</option>`).join('')}</select></label>
         </div>
       </form>
@@ -1113,7 +1166,7 @@ function edNahled() {
 const edUlozit = debounce(async () => {
   const st = $('#edUlozeno'); if (st) { st.textContent = 'Ukládám…'; st.style.color = 'var(--ocel)'; }
   try {
-    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null };
+    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
     await q(sb.from('doklady').update(hl).eq('id', d.id));
     const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: cislo(p.cena), dph: S.firma.platce_dph ? cislo(p.dph) : 0 }));
     const smazane = [...ED.puvodniIds].filter(id => !ED.pol.some(p => p.id === id));
@@ -1128,8 +1181,9 @@ const edUlozit = debounce(async () => {
 function poEditor() {
   edRadky(); edNahled();
   const f = $('#fDok');
-  f.addEventListener('input', e => { const n = e.target.name; if (!n) return; ED.d[n] = e.target.value; edNahled(); edUlozit(); });
-  f.addEventListener('change', e => { const n = e.target.name; if (!n) return; ED.d[n] = e.target.value; edNahled(); edUlozit(); });
+  const hod = t => t.type === 'checkbox' ? t.checked : t.value;
+  f.addEventListener('input', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
+  f.addEventListener('change', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
   tb.addEventListener('input', e => {
@@ -1194,7 +1248,7 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
     <div class="mrizka m2"><label class="pole">Město<input name="mesto" value="${esc(F.mesto)}"></label><label class="pole">PSČ<input name="psc" value="${esc(F.psc)}"></label></div>
     <div class="mrizka m3"><label class="pole">Telefon<input name="telefon" type="tel" value="${esc(F.telefon)}"></label><label class="pole">E-mail<input name="email" type="email" value="${esc(F.email)}"></label><label class="pole">Web<input name="web" value="${esc(F.web)}"></label></div>
     <div class="mrizka m2"><label class="pole">Číslo účtu<input name="ucet" value="${esc(F.ucet)}" placeholder="123456789/0800"><span class="napoveda">Z čísla účtu vytvoříme QR platbu na fakturách.</span></label><label class="pole">IBAN <span class="napoveda">(nepovinné)</span><input name="iban" value="${esc(F.iban)}"></label></div>
-    <div class="mrizka m2"><label class="pole">Splatnost faktur (dní)<input name="splatnost_dni" type="number" min="0" value="${esc(F.splatnost_dni)}"></label><label class="pole">Zápis v rejstříku<input name="zapis" value="${esc(F.zapis)}" placeholder="např. Fyzická osoba zapsaná v živnostenském rejstříku"></label></div>
+    <div class="mrizka m2"><label class="pole">Splatnost faktur (dní)<input name="splatnost_dni" type="number" min="0" value="${esc(F.splatnost_dni)}"></label><label class="pole">Zápis v rejstříku <span class="napoveda">(§ 435 OZ, tiskne se na doklady)</span><input name="zapis" value="${esc(F.zapis)}" placeholder="doplní se z ARES tlačítkem u IČO"></label></div>
     <label class="pole">Licenční klíč YeY <span class="napoveda">(odemkne celý katalog materiálu v kalkulačkách)</span><textarea name="licence" rows="2" style="font-family:monospace;font-size:12px" placeholder="Vložte licenční klíč">${esc(F.licence)}</textarea><span class="napoveda" id="licStav"></span></label>
     <div class="radek"><button class="btn zl" type="submit">Uložit údaje</button><span class="ulozeno skryt" id="nastOk">✓ Uloženo</span></div>
   </form>
