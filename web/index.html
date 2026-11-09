@@ -469,8 +469,11 @@ const poSplatnosti = d => jeFakt(d.typ) && d.typ !== 'dobropis' && !['zaplaceno'
 const odeslan = d => ['odeslano', 'prijato', 'podepsano', 'zaplaceno'].includes(d.stav);
 const celkem = d => d.typ === 'smlouva' ? sodCena(d).s : Number(d.celkem_bez || 0) + Number(d.celkem_dph || 0);
 /* Zaplacené zálohové faktury k odečtení od konečné faktury (stejná zakázka, případně odvozené ze stejné nabídky) */
-const zaplaceneZalohy = d => d.typ !== 'faktura' ? [] : S.doklady.filter(x => x.typ === 'zalohova' && x.stav === 'zaplaceno' && x.id !== d.id && (
-  (d.zakazka_id && x.zakazka_id === d.zakazka_id) || (!d.zakazka_id && ((d.zdroj_id && x.zdroj_id === d.zdroj_id) || x.id === d.zdroj_id)))).sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
+const zalohaKFakture = (x, d) => (d.zakazka_id && x.zakazka_id === d.zakazka_id) || (!d.zakazka_id && ((d.zdroj_id && x.zdroj_id === d.zdroj_id) || x.id === d.zdroj_id));
+const fakturaDriv = (f, d) => String(f.datum || '') < String(d.datum || '') || (String(f.datum || '') === String(d.datum || '') && String(f.cislo || '') < String(d.cislo || ''));
+/** Zaplacené zálohy k odečtu – každá jen na jedné (první) faktuře, aby se neodečetla dvakrát. */
+const zaplaceneZalohy = d => d.typ !== 'faktura' ? [] : S.doklady.filter(x => x.typ === 'zalohova' && x.stav === 'zaplaceno' && x.id !== d.id && zalohaKFakture(x, d)
+  && !S.doklady.some(f => f.typ === 'faktura' && f.id !== d.id && f.stav !== 'storno' && zalohaKFakture(x, f) && fakturaDriv(f, d))).sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
 const kUhrade = d => celkem(d) - zaplaceneZalohy(d).reduce((s, x) => s + celkem(x), 0);
 /** Stav dokladu zjednodušeně: ✓ Odesláno (po odeslání e-mailem), u faktur Zaplaceno / Nezaplaceno / Po splatnosti, případně Storno. */
 const cipStav = d => {
@@ -1059,11 +1062,26 @@ AKCE['vyber-dok'] = el => { UI.vybranyDoklad[el.dataset.z] = el.dataset.id; if (
 AKCE['vytvor-dok'] = async el => {
   const z = zakazka(el.dataset.z); const typ = el.dataset.typ;
   const zdroj = typ !== 'nabidka' ? S.doklady.find(d => d.zakazka_id === z.id && d.typ === 'nabidka' && d.stav !== 'odmitnuto') : null;
+  if (typ === 'faktura' && !(await hlidejDvojiFakturu(zdroj))) return;
   const d = await novyDoklad(typ, { zakazka_id: z.id, zdroj });
   jdi('doklad/' + d.id);
 };
+/** Z nabídky už je faktura? Zeptat se, jestli otevřít stávající, nebo přesto vystavit další. Vrací true = pokračovat. */
+function hlidejDvojiFakturu(zdroj) {
+  const f = zdroj && S.doklady.filter(x => x.typ === 'faktura' && x.stav !== 'storno' && x.zdroj_id === zdroj.id);
+  if (!f || !f.length) return Promise.resolve(true);
+  return new Promise(res => {
+    okno('Faktura už existuje', `<p style="margin:0">Z ${zdroj.typ === 'nabidka' ? 'nabídky' : zdroj.typ === 'protokol' ? 'protokolu' : TYP[zdroj.typ].toLowerCase()} <b>${esc(zdroj.cislo)}</b> už ${f.length > 1 ? 'jsou vystavené faktury' : 'je vystavená faktura'} ${f.map(x => `<b>${esc(x.cislo)}</b> (${kc(celkem(x))}, ${datum(x.datum)})`).join(', ')}.</p>
+      <p class="tlumene mal" style="margin:0">Další fakturu vystavte jen tehdy, když fakturujete jinou část práce – jinak hrozí, že zákazníkovi vyúčtujete totéž dvakrát.</p>`,
+      `<button class="btn" data-a="dvoji-zrus">Zrušit</button><button class="btn" data-a="dvoji-otevri" data-id="${f[0].id}">Otevřít ${esc(f[0].cislo)}</button><button class="btn zl" data-a="dvoji-pokracuj">Přesto vystavit novou</button>`);
+    AKCE['dvoji-zrus'] = () => { zavriOkno(); res(false); };
+    AKCE['dvoji-otevri'] = el => { zavriOkno(); res(false); jdi('doklad/' + el.dataset.id); };
+    AKCE['dvoji-pokracuj'] = () => { zavriOkno(); res(true); };
+  });
+}
 AKCE.prevest = async el => {
   const zdroj = doklad(el.dataset.id); const typ = el.dataset.typ;
+  if (typ === 'faktura' && !(await hlidejDvojiFakturu(zdroj))) return;
   const d = await novyDoklad(typ, { zakazka_id: zdroj.zakazka_id, zdroj });
   if (zdroj.zakazka_id && typ === 'faktura') await ulozZakazku(zdroj.zakazka_id, { faze: 'fakturace' });
   toast(`${TYP[typ]} ${d.cislo} vytvořena z ${zdroj.cislo}`); jdi('doklad/' + d.id);
@@ -1666,7 +1684,7 @@ POHLEDY.doklad = async t => {
           ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;display:flex"><input type="checkbox" name="pdp" ${d.pdp ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--inkoust)"> Přenesená daňová povinnost (§ 92e – stavební a montážní práce pro plátce DPH)</label>` : ''}
         </div>
       </form>
-      <div id="edKontrola" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="edKontrola" style="display:flex;flex-direction:column;gap:8px"></div><div id="edDuplicity"></div>
       <section class="karta">
         <div class="karta-h"><h3>Položky</h3><div class="radek">
           ${S.cenik.length ? `<button class="btn mal" data-a="z-ceniku">${ik('cenik', 16)}Z ceníku</button>` : ''}
@@ -1776,7 +1794,7 @@ const edUlozit = debounce(async () => {
     await obnovDoklad(d.id);
     const c = $('#edStavCip'); if (c) c.innerHTML = cipStav(doklad(d.id));
     if (d.typ === 'faktura' && d.cislo !== ED.cisloSync) { ED.cisloSync = d.cislo; await prSladCisla(doklad(d.id)); }
-    edKontrolaProtokolu();
+    edKontrolaProtokolu(); edDuplicity();
     if (st) { st.textContent = '✓ Uloženo'; st.style.color = ''; }
   } catch (e) { if (st) { st.textContent = '⚠ Neuloženo'; st.style.color = 'var(--pozor)'; } }
 }, 700);
@@ -1812,12 +1830,41 @@ AKCE['ed-rezim'] = el => {
   const st = $('#edSouhrnText'); if (st) st.classList.toggle('skryt', !/^souhrn/.test(r));
   edRezimTip(); edNahled(); edUlozit();
 };
+/* ---- hlídání dvojí fakturace v editoru ---- */
+const edDuplicity = debounce(async () => {
+  const el = $('#edDuplicity'); if (!el || !ED) return; const d = ED.d;
+  if (d.typ !== 'faktura' || d.stav === 'storno') { el.innerHTML = ''; return; }
+  const jine = S.doklady.filter(f => f.typ === 'faktura' && f.id !== d.id && f.stav !== 'storno' && ((d.kontakt_id && f.kontakt_id === d.kontakt_id) || (d.zdroj_id && f.zdroj_id === d.zdroj_id)));
+  if (!jine.length) { el.innerHTML = ''; return; }
+  const odk = arr => arr.map(f => `<a href="#doklad/${f.id}">${esc(f.cislo)}</a>`).join(', '), h = [];
+  const zdr = d.zdroj_id ? doklad(d.zdroj_id) : null;
+  const zNab = zdr && zdr.typ === 'nabidka' ? jine.filter(f => f.zdroj_id === zdr.id) : [];
+  if (zNab.length) h.push(`Z nabídky ${esc(zdr.cislo)} už je vystavená faktura ${odk(zNab)}.`);
+  // stejné položky (název + množství + cena) na jiné faktuře
+  const vlastni = ED.pol.filter(p => String(p.nazev || '').trim() && cislo(p.cena));
+  if (vlastni.length) {
+    const ids = jine.slice(0, 150).map(f => f.id).sort().join(',');
+    if (ED.dupKlic !== ids) { ED.dupKlic = ids; try { const { data } = await sb.from('polozky').select('doklad_id,nazev,mnozstvi,cena').in('doklad_id', ids.split(',')); ED.dupPol = data || []; } catch { ED.dupPol = []; } }
+    const k = p => normN(p.nazev) + '|' + Number(cislo(p.mnozstvi)).toFixed(3) + '|' + Number(cislo(p.cena)).toFixed(2);
+    const mapa = {}; (ED.dupPol || []).forEach(p => (mapa[k(p)] = mapa[k(p)] || new Set()).add(p.doklad_id));
+    const shody = vlastni.filter(p => mapa[k(p)]);
+    if (shody.length >= 2 || (shody.length && shody.length === vlastni.length)) {
+      const fakt = [...new Set(shody.flatMap(p => [...mapa[k(p)]]))].map(doklad).filter(Boolean);
+      h.push(`${shody.length === vlastni.length ? 'Všechny položky' : `${shody.length} z ${vlastni.length} položek`} (stejný název, množství i cena) už ${shody.length === 1 ? 'je' : 'jsou'} vyúčtované na faktuře ${odk(fakt)}: ${shody.slice(0, 4).map(p => esc(p.nazev)).join(', ')}${shody.length > 4 ? '…' : ''}.`);
+    }
+  }
+  // stejná částka pro stejného odběratele
+  const c = celkem(edAktualni());
+  const stejna = c > 0 ? jine.filter(f => f.kontakt_id === d.kontakt_id && Math.abs(celkem(f) - c) < 0.5) : [];
+  if (stejna.length) h.push(`Stejná částka ${kc(c)} jako na faktuře ${odk(stejna)} pro stejného odběratele.`);
+  el.innerHTML = h.length ? `<div class="hlaska err">⚠ <b>Pozor na dvojí fakturaci</b><br>${h.join('<br>')}</div>` : '';
+}, 600);
 function edNastav(n, v) { if (n.startsWith('u.')) ED.d.udaje = { ...(ED.d.udaje || {}), [n.slice(2)]: v }; else ED.d[n] = v; }
 function poEditor() {
   ED.ok = {}; ED.hist = {}; ED.pol.forEach(p => { ED.ok[p.id] = cislo(p.cena); });   // už uložené ceny se berou jako odsouhlasené
   edRadky(); edNahled();
   cenyHistorie().then(oznacCeny).catch(() => { });
-  ED.cisloSync = ED.d.cislo; edKontrolaProtokolu(); edRezimTip();
+  ED.cisloSync = ED.d.cislo; edKontrolaProtokolu(); edRezimTip(); edDuplicity();
   const rs = $('#edRezimSel'); if (rs) rs.onchange = () => AKCE['ed-rezim']({ dataset: { r: rs.value } });
   if (ED.d.typ === 'faktura') prSladCisla(doklad(ED.d.id)).then(() => edKontrolaProtokolu());
   const f = $('#fDok');
