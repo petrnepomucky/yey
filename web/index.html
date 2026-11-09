@@ -1141,7 +1141,7 @@ POHLEDY.doklad = async t => {
       ${!F.ucet && jeFakt(d.typ) ? `<div class="hlaska inf">Na faktuře chybí číslo účtu – doplňte ho v sekci <a href="#firma">Moje firma</a> a faktura dostane i QR platbu.</div>` : ''}
       <form id="fDok" class="karta mrizka">
         <div class="mrizka m2">
-          <label class="pole">Odběratel<select name="kontakt_id"><option value="">— vyberte —</option>${S.kontakty.map(k => `<option value="${k.id}" ${k.id === d.kontakt_id ? 'selected' : ''}>${esc(k.nazev)}</option>`).join('')}</select></label>
+          <label class="pole">Odběratel<select name="kontakt_id">${edKontaktyOpt(d.kontakt_id)}</select></label>
           <label class="pole">Zakázka<select name="zakazka_id"><option value="">— bez zakázky —</option>${S.zakazky.map(zz => `<option value="${zz.id}" ${zz.id === d.zakazka_id ? 'selected' : ''}>${esc(zz.nazev)}</option>`).join('')}</select></label>
         </div>
         <label class="pole">Předmět<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny"></label>
@@ -1206,6 +1206,19 @@ async function hlidejCenu(i) {
   if (ano) ED.ok[p.id] = cislo(p.cena); else p.cena = ref.cena;
   edRadky(); edNahled(); edUlozit();
 }
+const edKontaktyOpt = id => `<option value="">— vyberte —</option><option value="__novy">+ Nový odběratel…</option>${S.kontakty.map(k => `<option value="${k.id}" ${k.id === id ? 'selected' : ''}>${esc(k.nazev)}</option>`).join('')}`;
+function edNovyKontakt() {
+  okno('Nový odběratel', formKontaktu(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-kontakt-dok">Uložit a vybrat</button>`);
+  $('#fKon').onsubmit = e => { e.preventDefault(); AKCE['ulozit-kontakt-dok'](); }; aresEnter($('#fKon'));
+}
+AKCE['ulozit-kontakt-dok'] = async () => {
+  const o = dataKontaktu(); if (!o) return;
+  const k = await db.ins('kontakty', o); S.kontakty.push(k); S.kontakty.sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs'));
+  zavriOkno(); toast('Odběratel uložen ✓');
+  if (!ED) return;
+  ED.d.kontakt_id = k.id; const sel = $('#fDok [name=kontakt_id]'); if (sel) sel.innerHTML = edKontaktyOpt(k.id);
+  edNahled(); edUlozit(); cenyHistorie().then(oznacCeny).catch(() => { });
+};
 function edRadky() {
   const d = ED.d; const dph = S.firma.platce_dph && d.typ !== 'protokol';
   $('#edPol').innerHTML = ED.pol.map((p, i) => `<tr data-i="${i}">
@@ -1249,8 +1262,10 @@ function poEditor() {
   cenyHistorie().then(oznacCeny).catch(() => { });
   const f = $('#fDok');
   const hod = t => t.type === 'checkbox' ? t.checked : t.value;
-  f.addEventListener('input', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
-  f.addEventListener('change', e => { const n = e.target.name; if (!n) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
+  f.addEventListener('input', e => { const n = e.target.name; if (!n || e.target.value === '__novy') return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
+  f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
+    if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
+    ED.d[n] = hod(e.target); edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
   tb.addEventListener('input', e => {
