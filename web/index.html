@@ -717,11 +717,14 @@ async function aresZapis(ico, j) {
   return 'Fyzická osoba zapsaná v živnostenském rejstříku' + (urad ? ', ' + urad : '');
 }
 async function aresVyhledat(nazev, obec) {
-  const r = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ obchodniJmeno: nazev, start: 0, pocet: obec ? 100 : 30 }) });
-  if (!r.ok && r.status !== 400) throw new Error('ARES se teď nepodařilo prohledat – zkuste to později.');
-  const d = r.ok ? await r.json() : {}; let list = d.ekonomickeSubjekty || [];
-  if (obec) { const o = bezDia(obec); list = list.filter(x => bezDia((x.sidlo?.nazevObce || '') + ' ' + (x.sidlo?.textovaAdresa || '')).includes(o)); }
-  return { list: list.slice(0, 30), celkem: obec ? list.length : (d.pocetCelkem || list.length), moc: r.status === 400 || (d.pocetCelkem || 0) > 1000 };
+  // obec jde rovnou do dotazu (sidlo.textovaAdresa) – jinak ARES u častých jmen odmítne odpovědět (víc než 1 000 výsledků)
+  const body = { obchodniJmeno: nazev, start: 0, pocet: 30 }; if (obec) body.sidlo = { textovaAdresa: obec };
+  let r; try { r = await fetch('https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/vyhledat', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) }); }
+  catch { throw new Error('ARES teď neodpovídá – zkuste to prosím za chvíli.'); }
+  if (!r.ok && r.status !== 400) throw new Error(`ARES teď neodpovídá (HTTP ${r.status}) – zkuste to prosím za chvíli.`);
+  const d = await r.json().catch(() => ({}));
+  const list = r.ok ? (d.ekonomickeSubjekty || []) : [];
+  return { list, celkem: d.pocetCelkem || list.length, moc: r.status === 400 && /PRILIS_MNOHO|příliš mnoho/i.test((d.subKod || '') + (d.popis || '')), chyba: r.status === 400 ? String(d.popis || '').split('|')[0] : '' };
 }
 async function aresDoFormulare(form) {
   const ico = form.elements.ico?.value; if (!ico) { toast('Nejdřív napište IČO'); return; }
@@ -738,8 +741,11 @@ AKCE['ares-hledat'] = async el => {
   if (/^\d{6,8}$/.test(q.replace(/\s/g, ''))) { form.elements.ico.value = q.replace(/\s/g, ''); return aresDoFormulare(form); }
   if (q.length < 3) { info.textContent = 'Zadejte aspoň 3 znaky názvu.'; return; }
   info.textContent = 'Hledám v ARES…';
-  try { const { list, celkem, moc } = await aresVyhledat(q, obec);
-    if (!list.length) { info.textContent = moc ? 'Příliš mnoho výsledků – upřesněte název nebo doplňte obec.' : 'Nic nenalezeno – zkuste jiný tvar názvu nebo vynechte obec.'; return; }
+  try { let { list, celkem, moc, chyba } = await aresVyhledat(q, obec), obecPouzita = obec;
+    // časté jméno bez obce: zkusit obec z formuláře kontaktu
+    const mesto = form.elements.mesto?.value.trim();
+    if (moc && !obec && mesto) { ({ list, celkem, moc, chyba } = await aresVyhledat(q, mesto)); obecPouzita = mesto; if (list.length) form.querySelector('[data-ares=obec]').value = mesto; }
+    if (!list.length) { info.textContent = moc ? `Takových subjektů je v ARES příliš mnoho${obecPouzita ? ' i v obci ' + obecPouzita : ''} – doplňte celé jméno (např. „Jan Novák“) nebo obec.` : chyba ? 'ARES: ' + chyba : 'Nic nenalezeno – zkuste jiný tvar názvu nebo vynechte obec.'; return; }
     info.textContent = celkem > list.length ? 'Výsledků je hodně – upřesněte název nebo obec. Klikněte na správnou firmu:' : 'Klikněte na správnou firmu:';
     out.innerHTML = list.map((x, i) => `<button type="button" data-i="${i}"><b>${esc(x.obchodniJmeno || '')}</b><span>IČO ${esc(x.ico || '')}${x.sidlo?.textovaAdresa ? ' · ' + esc(x.sidlo.textovaAdresa) : ''}</span></button>`).join('');
     out.onclick = e => { const b = e.target.closest('button[data-i]'); if (!b) return; form.elements.ico.value = list[+b.dataset.i].ico || ''; out.innerHTML = ''; info.textContent = ''; aresDoFormulare(form); };
