@@ -184,6 +184,11 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .seg{display:inline-flex;background:var(--pod);border-radius:9px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;padding:7px 12px;border-radius:7px;font:inherit;font-size:13px;font-weight:600;color:var(--ocel);cursor:pointer}
 .seg button.akt{background:#fff;color:var(--inkoust);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+#naseptavac{position:fixed;z-index:60;background:#fff;border:1px solid var(--linka);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.16);max-height:320px;overflow:auto;padding:4px}
+.nas-pol{padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:14px;align-items:center}
+.nas-pol small{display:block;color:var(--ocel);font-size:12px}
+.nas-pol .num{white-space:nowrap;font-weight:600}
+.nas-pol.akt,.nas-pol:hover{background:var(--metr-bg)}
 .papir .p-konec{display:flow-root}
 .papir .p-hlava{position:relative}
 .papir.doc .doc-storno{position:absolute;left:50%;top:18cqw;transform:translateX(-50%) rotate(-14deg);font-size:9cqw;font-weight:800;letter-spacing:1.5cqw;color:rgba(179,38,30,.28);border:.6cqw solid rgba(179,38,30,.28);border-radius:1.5cqw;padding:.5cqw 3cqw;pointer-events:none;z-index:2}
@@ -1725,11 +1730,64 @@ async function cenyHistorie() {
   const poradi = Object.fromEntries(docs.map((x, i) => [x.id, i]));
   (data || []).sort((a, b) => poradi[a.doklad_id] - poradi[b.doklad_id]).forEach(p => { const k = normN(p.nazev); if (k && !(k in ED.hist) && Number(p.cena) > 0) ED.hist[k] = { cena: Number(p.cena), cislo: doklad(p.doklad_id)?.cislo || '' }; });
 }
+/* ---- historie všech dříve zadaných položek: našeptávač a hlídání cen prací ---- */
+let POL_HIST = null;
+async function nactiPolHist() {
+  const vlastni = ED?.d?.id;
+  const docs = Object.fromEntries(S.doklady.filter(x => !['protokol', 'dobropis', 'smlouva'].includes(x.typ) && x.stav !== 'storno' && x.id !== vlastni).map(d => [d.id, d]));
+  let data = []; try { const r = await sb.from('polozky').select('doklad_id,nazev,mj,cena,dph,kat').limit(10000); data = r.data || []; } catch { }
+  const m = new Map();
+  data.forEach(p => { const d = docs[p.doklad_id]; const k = normN(p.nazev); if (!d || !k || !(Number(p.cena) > 0)) return;
+    const dat = String(d.datum || ''), o = m.get(k);
+    if (!o) m.set(k, { nazev: String(p.nazev).trim(), mj: p.mj, cena: Number(p.cena), dph: p.dph, kat: p.kat, pocet: 1, cislo: d.cislo, datum: dat });
+    else { o.pocet++; if (!o.kat && p.kat) o.kat = p.kat; if (dat > o.datum) Object.assign(o, { nazev: String(p.nazev).trim(), mj: p.mj, cena: Number(p.cena), dph: p.dph, cislo: d.cislo, datum: dat }); } });
+  POL_HIST = m; return m;
+}
+function navrhyPolozek(q) {
+  const slova = bezDia(q).split(/\s+/).filter(Boolean); if (String(q).trim().length < 2) return [];
+  const m = new Map();
+  (POL_HIST || new Map()).forEach((h, k) => m.set(k, { ...h, zdroj: h.cislo ? `naposledy ${h.cislo}${h.datum ? ' · ' + datum(h.datum) : ''}` : '' }));
+  S.cenik.forEach(c => { const k = normN(c.nazev), o = m.get(k);
+    if (o) { o.pocet += 1000; if (!o.kat) o.kat = 'prace'; o.zdroj = 'ceník · ' + o.zdroj; }
+    else m.set(k, { nazev: c.nazev, mj: c.mj, cena: Number(c.cena), dph: c.dph, kat: 'prace', pocet: 1000, zdroj: 'ceník prací' }); });
+  const s0 = slova[0];
+  return [...m.values()].filter(x => { const t = bezDia(x.nazev); return slova.every(w => t.includes(w)); })
+    .sort((a, b) => (bezDia(b.nazev).startsWith(s0) - bezDia(a.nazev).startsWith(s0)) || b.pocet - a.pocet || a.nazev.localeCompare(b.nazev, 'cs')).slice(0, 8);
+}
+const NAS = { el: null, input: null, list: [], i: -1 };
+function nasZavri() { NAS.el?.remove(); NAS.el = null; NAS.list = []; NAS.i = -1; }
+function nasUkaz(input) {
+  NAS.input = input; NAS.list = navrhyPolozek(input.value); NAS.i = -1;
+  if (!NAS.list.length) return nasZavri();
+  if (!NAS.el) { NAS.el = document.createElement('div'); NAS.el.id = 'naseptavac'; NAS.el.setAttribute('role', 'listbox'); document.body.appendChild(NAS.el);
+    NAS.el.addEventListener('mousedown', e => { const r = e.target.closest('[data-n]'); if (r) { e.preventDefault(); nasVyber(+r.dataset.n); } }); }
+  const platce = S.firma.platce_dph; nasPozice();
+  NAS.el.innerHTML = NAS.list.map((x, i) => `<div class="nas-pol" data-n="${i}" role="option"><div><b>${esc(x.nazev)}</b><small>${esc(x.zdroj || '')}${x.kat && KAT_N[x.kat] ? ' · ' + KAT_N[x.kat] : ''}</small></div><span class="num">${kc(x.cena)}${x.mj ? '/' + esc(x.mj) : ''}${platce ? '' : ''}</span></div>`).join('');
+}
+/** Našeptávač drží pod políčkem i při posunu stránky; když políčko zmizí z obrazovky nebo ze stránky, zavře se. */
+function nasPozice() {
+  if (!NAS.el || !NAS.input) return;
+  if (!document.body.contains(NAS.input)) return nasZavri();
+  const b = NAS.input.getBoundingClientRect();
+  if (b.bottom < 0 || b.top > innerHeight) return nasZavri();
+  Object.assign(NAS.el.style, { left: Math.max(8, Math.min(b.left, innerWidth - 368)) + 'px', top: (b.bottom + 4) + 'px', width: Math.max(b.width, 360) + 'px' });
+}
+function nasZvyrazni() { NAS.el?.querySelectorAll('.nas-pol').forEach((r, i) => r.classList.toggle('akt', i === NAS.i)); NAS.el?.querySelector('.nas-pol.akt')?.scrollIntoView({ block: 'nearest' }); }
+function nasVyber(n) {
+  const x = NAS.list[n], tr = NAS.input?.closest('tr'); if (!x || !tr) return nasZavri();
+  const i = +tr.dataset.i, p = ED.pol[i]; nasZavri();
+  Object.assign(p, { nazev: x.nazev, mj: x.mj || p.mj || 'ks', cena: x.cena, dph: S.firma.platce_dph ? (x.dph != null ? Number(x.dph) : 21) : 0, kat: x.kat || p.kat || null });
+  ED.ok[p.id] = cislo(p.cena);   // cena převzatá z historie / ceníku je v pořádku
+  edRadky(); edNahled(); edUlozit(); edRezimTip?.();
+  const mn = $(`#edPol tr[data-i="${i}"] input[data-k=mnozstvi]`); if (mn) { mn.focus(); mn.select(); }
+}
 function cenaMinimum(p) {
   if (S.firma.hlidat_ceny === false || ED.d.typ === 'protokol' || !p) return null;
   const n = normN(p.nazev); if (!n) return null; let ref = null;
   const c = S.cenik.find(x => normN(x.nazev) === n); if (c && Number(c.cena) > 0) ref = { cena: Number(c.cena), text: 'v ceníku' };
   const h = ED.hist?.[n]; if (h && (!ref || h.cena > ref.cena)) ref = { cena: h.cena, text: 'naposledy u tohoto zákazníka' + (h.cislo ? ' (' + h.cislo + ')' : '') };
+  // práce: i poslední cena u kteréhokoli zákazníka
+  const g = POL_HIST?.get(n); if (g && (p.kat === 'prace' || g.kat === 'prace') && (!ref || g.cena > ref.cena)) ref = { cena: g.cena, text: 'naposledy za tuto práci' + (g.cislo ? ' (' + g.cislo + ')' : '') };
   return ref;
 }
 const cenaNizka = p => { const ref = cenaMinimum(p); return ref && cislo(p.cena) < ref.cena - 0.005 && ED.ok[p.id] !== cislo(p.cena) ? ref : null; };
@@ -1865,6 +1923,7 @@ function poEditor() {
   edRadky(); edNahled();
   cenyHistorie().then(oznacCeny).catch(() => { });
   ED.cisloSync = ED.d.cislo; edKontrolaProtokolu(); edRezimTip(); edDuplicity();
+  nactiPolHist().then(oznacCeny).catch(() => { });
   const rs = $('#edRezimSel'); if (rs) rs.onchange = () => AKCE['ed-rezim']({ dataset: { r: rs.value } });
   if (ED.d.typ === 'faktura') prSladCisla(doklad(ED.d.id)).then(() => edKontrolaProtokolu());
   const f = $('#fDok');
@@ -1887,6 +1946,16 @@ function poEditor() {
   tb.addEventListener('input', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') oznacCeny(); });
   tb.addEventListener('change', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') hlidejCenu(+e.target.closest('tr').dataset.i);
     if (e.target.dataset.k === 'kat') { ED.pol[+e.target.closest('tr').dataset.i].kat = e.target.value || null; edNahled(); edUlozit(); edRezimTip(); } });
+  // našeptávač názvů položek
+  tb.addEventListener('input', e => { if (e.target.dataset.k === 'nazev') nasUkaz(e.target); });
+  tb.addEventListener('focusout', e => { if (e.target.dataset.k === 'nazev') setTimeout(() => { if (document.activeElement !== NAS.input) nasZavri(); }, 150); });
+  tb.addEventListener('keydown', e => {
+    if (!NAS.el || e.target !== NAS.input) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); NAS.i = (NAS.i + (e.key === 'ArrowDown' ? 1 : -1) + NAS.list.length) % NAS.list.length; nasZvyrazni(); }
+    else if (e.key === 'Enter' && NAS.i >= 0) { e.preventDefault(); e.stopImmediatePropagation(); nasVyber(NAS.i); }
+    else if (e.key === 'Escape') { e.stopImmediatePropagation(); nasZavri(); }
+  }, true);
+  if (!window.__nasScroll) { window.__nasScroll = 1; window.addEventListener('scroll', () => nasPozice(), { passive: true, capture: true }); window.addEventListener('resize', () => nasPozice()); }
   tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); const tr = e.target.closest('tr'); if (!tr.nextElementSibling) AKCE['pridat-pol'](); else tr.nextElementSibling.querySelector('input').focus(); } });
   if (!ED.pol.length && ED.d.stav === 'koncept') { /* prázdný doklad – rovnou připravit řádek */ AKCE['pridat-pol'](true); }
 }
