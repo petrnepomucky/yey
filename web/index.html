@@ -1491,6 +1491,7 @@ AKCE['ulozit-kontakt-dok'] = async () => {
   if (!ED) return;
   ED.d.kontakt_id = k.id; const sel = $('#fDok [name=kontakt_id]'); if (sel) sel.innerHTML = edKontaktyOpt(k.id);
   edNahled(); edUlozit(); cenyHistorie().then(oznacCeny).catch(() => { });
+  edAutoZakazka();
 };
 function edRadky() {
   const d = ED.d; const dph = S.firma.platce_dph && d.typ !== 'protokol';
@@ -1540,7 +1541,9 @@ function poEditor() {
   f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
     if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
-    ED.d[n] = hod(e.target); if (n === 'tisk_rezim') $('#edSouhrnText').classList.toggle('skryt', !/^souhrn/.test(e.target.value));
+    if (n === 'zakazka_id') edZmenaZakazky(e.target.value);
+    ED.d[n] = hod(e.target); if (n === 'predmet' || n === 'kontakt_id') edAutoZakazka();
+    if (n === 'tisk_rezim') $('#edSouhrnText').classList.toggle('skryt', !/^souhrn/.test(e.target.value));
     edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
@@ -1574,6 +1577,48 @@ AKCE['z-ceniku'] = () => {
   $('#cenHled').oninput = kresli; kresli();
 };
 AKCE['vloz-cenik'] = el => { const c = S.cenik.find(x => x.id === el.dataset.id); ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena)); ED.pol.push({ id: uid(), nazev: c.nazev, mnozstvi: 1, mj: c.mj, cena: c.cena, dph: S.firma.platce_dph ? c.dph : 0, kat: 'prace' }); edRadky(); edNahled(); edUlozit(); toast('Přidáno: ' + c.nazev); };
+
+/* ---- nabídka bez zakázky: zakázka se založí sama a pojmenuje podle nabídky ---- */
+function edNazevZakazky(d) { const k = kontakt(d.kontakt_id); return [String(d.predmet || '').trim(), k?.nazev].filter(Boolean).join(' – '); }
+async function edAutoZakazka() {
+  const d = ED?.d; if (!d || d.typ !== 'nabidka' || ED.bezAutoZak || ED.autoBezi) return;
+  const nazev = edNazevZakazky(d); if (!nazev) return;
+  const k = kontakt(d.kontakt_id);
+  if (d.zakazka_id) {
+    // automaticky založenou zakázku držet v souladu s nabídkou, dokud ji uživatel sám nepřejmenuje
+    const z = zakazka(d.zakazka_id);
+    if (ED.autoZak?.id === d.zakazka_id && z && z.nazev === ED.autoZak.nazev && (z.nazev !== nazev || z.kontakt_id !== (d.kontakt_id || null))) {
+      await ulozZakazku(z.id, { nazev, kontakt_id: d.kontakt_id || null, ...(!z.adresa && k ? { adresa: edAdresa(k) } : {}) }); ED.autoZak.nazev = nazev;
+      const s2 = $('#fDok [name=zakazka_id]'); if (s2) s2.innerHTML = zakOpt(z.id); edNahled();
+    }
+    return;
+  }
+  if (d.stav !== 'koncept') return;
+  ED.autoBezi = true;
+  try {
+    const z = await db.ins('zakazky', { nazev, kontakt_id: d.kontakt_id || null, adresa: k ? edAdresa(k) : null, faze: 'nabidka' });
+    S.zakazky.unshift(z); ED.autoZak = { id: z.id, nazev };
+    ED.d.zakazka_id = z.id; const s2 = $('#fDok [name=zakazka_id]'); if (s2) s2.innerHTML = zakOpt(z.id);
+    zapisDenik(z.id, `Zakázka založena z nabídky ${d.cislo}`).catch(() => {});
+    edNahled(); edUlozit();
+    toast(`Založena zakázka „${nazev}“`, { akce: 'Zrušit', fn: () => edZrusAutoZakazku() });
+  } catch (e) { chyba(e); } finally { ED.autoBezi = false; }
+}
+const edAdresa = k => [k.ulice, [k.psc, k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ') || null;
+async function edZrusAutoZakazku() {
+  if (!ED?.autoZak) return; const id = ED.autoZak.id; ED.bezAutoZak = true; ED.autoZak = null;
+  if (ED.d.zakazka_id === id) { ED.d.zakazka_id = null; const s2 = $('#fDok [name=zakazka_id]'); if (s2) s2.innerHTML = zakOpt(null); edNahled(); edUlozit(); }
+  // smazat, jen když k ní nepatří žádný jiný doklad
+  if (!S.doklady.some(x => x.zakazka_id === id && x.id !== ED.d.id)) {
+    setTimeout(async () => { try { await q(sb.from('doklady').update({ zakazka_id: null }).eq('id', ED.d.id)); await db.del('zakazky', id); S.zakazky = S.zakazky.filter(x => x.id !== id); } catch { } }, 900);
+  }
+  toast('Nabídka je bez zakázky');
+}
+function edZmenaZakazky(nova) {
+  if (!ED?.autoZak) { if (nova === '' && ED) ED.bezAutoZak = true; return; }
+  if (nova === '') { edZrusAutoZakazku(); return; }
+  if (nova !== ED.autoZak.id) ED.autoZak = null;   // vybral jinou zakázku – automatická zůstane, jak je
+}
 
 /* ---- nová zakázka přímo z dokladu ---- */
 function zakOpt(vyb) { return `<option value="">— bez zakázky —</option><option value="__nova_zak">+ Nová zakázka…</option>${S.zakazky.map(zz => `<option value="${zz.id}" ${zz.id === vyb ? 'selected' : ''}>${esc(zz.nazev)}</option>`).join('')}`; }
