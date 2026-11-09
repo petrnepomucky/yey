@@ -171,33 +171,44 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 
 /* ---------- papír dokladu (náhled + tisk) ---------- */
 .papir-obal{container-type:inline-size;width:100%}
-.papir{background:#fff;color:#1D272F;width:100%;aspect-ratio:210/297;padding:7cqw;box-shadow:0 2px 10px rgba(0,0,0,.12);line-height:1.4;display:flex;flex-direction:column;overflow:hidden}
-.papir .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--metr);padding-bottom:3cqw;margin-bottom:3cqw}
+.papir{background:#fff;color:#1D272F;width:100%;aspect-ratio:210/297;padding:6cqw;box-shadow:0 2px 10px rgba(0,0,0,.12);line-height:1.4;display:flex;flex-direction:column;overflow:hidden}
+.papir .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.4cqw solid var(--metr);padding-bottom:2cqw;margin-bottom:2.5cqw}
 .papir .ph h2{font-size:5.4cqw;font-family:var(--font-c);letter-spacing:.4px}
 .papir .ph .cis{font-size:2.2cqw;color:var(--ocel);text-align:right}
 .papir{font-size:1.85cqw}
-.papir .strany{display:grid;grid-template-columns:1fr 1fr;gap:4cqw;margin-bottom:3cqw}
+.papir .strany{display:grid;grid-template-columns:1fr 1fr;gap:4cqw;margin-bottom:2.5cqw}
 .papir .strany small{display:block;font-size:1.5cqw;text-transform:uppercase;letter-spacing:.15cqw;color:var(--ocel);font-weight:700;margin-bottom:.6cqw}
-.papir .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(18cqw,1fr));gap:1.5cqw;background:#F4F5F2;padding:2cqw;border-radius:1cqw;margin-bottom:3cqw}
+.papir .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(18cqw,1fr));gap:1.5cqw;background:#F4F5F2;padding:1.5cqw 2cqw;border-radius:1cqw;margin-bottom:2.5cqw}
 .papir .info small{display:block;color:var(--ocel);font-size:1.5cqw}
 .papir table{width:100%;border-collapse:collapse}
 .papir th{text-align:left;font-size:1.5cqw;text-transform:uppercase;color:var(--ocel);border-bottom:.3cqw solid #1D272F;padding:1cqw .8cqw}
-.papir td{padding:1.1cqw .8cqw;border-bottom:.15cqw solid #E6E9E3}
+.papir td{padding:.75cqw .8cqw;border-bottom:.15cqw solid #E6E9E3}
 .papir .r{text-align:right}
-.papir .celkem{display:flex;justify-content:space-between;align-items:flex-end;margin-top:3cqw;gap:3cqw}
+.papir .celkem{display:flex;justify-content:space-between;align-items:flex-end;margin-top:2.5cqw;gap:3cqw}
 .papir .celkem table{width:auto;min-width:45%}
 .papir .celkem .zap td{font-size:3.2cqw;font-weight:700;border-top:.4cqw solid #1D272F;border-bottom:0}
-.papir .qr{width:18cqw;text-align:center;font-size:1.4cqw;color:var(--ocel)}
-.papir .qr img,.papir .qr svg{width:18cqw;height:18cqw}
-.papir .pata{margin-top:auto;padding-top:3cqw;font-size:1.5cqw;color:var(--ocel);display:flex;justify-content:space-between;gap:2cqw}
+.papir .qr{width:16cqw;text-align:center;font-size:1.4cqw;color:var(--ocel)}
+.papir .qr img,.papir .qr svg{width:16cqw;height:16cqw}
+.papir .p-konec{display:flow-root}
+.papir table.p-pol{table-layout:fixed}
+.papir table.p-pol td:first-child{overflow-wrap:anywhere}
+.papir table.sl5 th:nth-child(2){width:15cqw}.papir table.sl5 th:nth-child(3){width:14cqw}.papir table.sl5 th:nth-child(4){width:9cqw}.papir table.sl5 th:nth-child(5){width:14cqw}
+.papir table.sl4 th:nth-child(2){width:16cqw}.papir table.sl4 th:nth-child(3){width:15cqw}.papir table.sl4 th:nth-child(4){width:15cqw}
+.papir table.sl2 th:nth-child(2){width:20cqw}
+.papir .p-mini{display:flex;justify-content:space-between;align-items:baseline;border-bottom:.4cqw solid var(--metr);padding-bottom:1.5cqw;margin-bottom:2.5cqw;font-size:2cqw;color:var(--ocel)}
+.papir .p-mini b{font-size:2.6cqw;color:#1D272F;font-family:var(--font-c)}
+.papir .p-prenos{display:flex;justify-content:flex-end;gap:3cqw;margin-top:2cqw;font-size:1.8cqw;color:var(--ocel)}
+.papir .p-prenos b{color:#1D272F;min-width:14cqw;text-align:right}
+.papir-obal+.papir-obal{margin-top:18px}
+.papir .pata{margin-top:auto;padding-top:2cqw;font-size:1.5cqw;color:var(--ocel);display:flex;justify-content:space-between;gap:2cqw}
 .papir .podpisy{display:grid;grid-template-columns:1fr 1fr;gap:8cqw;margin-top:8cqw}
 .papir .podpisy div{border-top:.2cqw solid #1D272F;padding-top:1cqw;text-align:center;color:var(--ocel);position:relative}
 .papir .podpisy img{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);max-height:9cqw;max-width:30cqw;margin-bottom:-1.5cqw}
 .papir .pl-logo{display:flex;align-items:center;gap:2.2cqw;margin-bottom:2.5cqw}
-.papir .pl-logo img{max-height:10cqw;max-width:34cqw;object-fit:contain}
+.papir .pl-logo img{height:10cqw;max-width:34cqw;object-fit:contain;object-position:left center}
 .papir .pl-logo span{font-size:2cqw;color:#5D6B76;line-height:1.3}
-.papir .pl-podpis{margin-left:auto;margin-top:5cqw;width:38cqw;text-align:center;color:#5D6B76;font-size:1.6cqw}
-.papir .pl-podpis .misto{height:9cqw;display:flex;align-items:flex-end;justify-content:center}
+.papir .pl-podpis{margin-left:auto;margin-top:3cqw;width:38cqw;text-align:center;color:#5D6B76;font-size:1.6cqw}
+.papir .pl-podpis .misto{height:8cqw;display:flex;align-items:flex-end;justify-content:center}
 .papir .pl-podpis img{max-height:10cqw;max-width:36cqw;margin-bottom:-1.5cqw}
 .papir .pl-podpis .cara{border-top:.2cqw solid #1D272F;padding-top:.8cqw}
 .obr-nahled{min-height:84px;border:1px dashed var(--linka);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:8px;margin:6px 0 8px;
@@ -325,7 +336,9 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
   #app,#toasty,.zavoj{display:none!important}
   #tisk{display:block}
   #tisk .papir-obal{width:210mm}
-  #tisk .papir{box-shadow:none;width:210mm;height:297mm;aspect-ratio:auto;overflow:visible}
+  #tisk .papir{box-shadow:none;padding:6cqw;width:210mm;height:297mm;aspect-ratio:auto;overflow:hidden;break-after:page;page-break-after:always}
+  #tisk .papir-obal:last-child .papir{break-after:auto;page-break-after:auto}
+  #tisk .papir-obal+.papir-obal{margin-top:0}
 }
 .ed-akce{display:flex;flex-direction:column;gap:10px;padding:14px 16px;margin-bottom:16px}
 .ed-akce-tl{display:flex;flex-wrap:wrap;gap:8px}
@@ -466,7 +479,8 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
   const z = zakazka_id ? zakazka(zakazka_id) : null;
   const o = {
     typ, cislo: c, zakazka_id, kontakt_id: kontakt_id || z?.kontakt_id || zdroj?.kontakt_id || null,
-    predmet: predmet || zdroj?.predmet || z?.nazev || '', datum: dnes(), zdroj_id: zdroj?.id || null, stav: 'koncept'
+    predmet: predmet || zdroj?.predmet || z?.nazev || '', datum: dnes(), zdroj_id: zdroj?.id || null, stav: 'koncept',
+    tisk_rezim: zdroj?.tisk_rezim || 'polozky', souhrn_text: zdroj?.souhrn_text || null
   };
   if (jeFakt(typ)) { o.splatnost = plusDni(dnes(), S.firma.splatnost_dni || 14); o.duzp = dnes(); o.vs = c.replace(/\D/g, ''); }
   if (typ === 'nabidka') o.splatnost = plusDni(dnes(), 30); // platnost nabídky
@@ -906,7 +920,7 @@ POHLEDY.zakazky = async t => {
     const pol = await nactiPolozky(vyb.id);
     nahled = `<aside class="p-nahled" aria-label="Náhled dokladu">
       <div class="radek"><h3 style="font-size:18px">${TYP[vyb.typ]} ${esc(vyb.cislo)}</h3><span class="mezera"></span><button class="btn mal" data-a="tisk" data-id="${vyb.id}">${ik('tisk', 16)}PDF</button><a class="btn mal tm" href="#doklad/${vyb.id}">Upravit</a></div>
-      ${papir(vyb, pol)}
+      <div class="strany-obal">${dokladStrany(vyb, pol)}</div>
       ${vyb.typ === 'nabidka' ? `<a class="btn" href="#kalkulacky?doklad=${vyb.id}" style="border-style:dashed;border-color:var(--metr-ink)">${ik('kalk')}Přidat výměru z kalkulačky</a>` : ''}
       ${vyb.typ === 'nabidka' && !fak ? `<button class="btn zl" data-a="prevest" data-id="${vyb.id}" data-typ="faktura">Převést na fakturu</button>` : ''}
       ${jeFakt(vyb.typ) && vyb.stav !== 'zaplaceno' && vyb.stav !== 'koncept' ? `<button class="btn" data-a="zaplaceno" data-id="${vyb.id}" style="color:var(--ok)">✓ Označit jako zaplacené</button>` : ''}
@@ -1093,15 +1107,13 @@ function papir(d, pol) {
   const zal = zaplaceneZalohy(d);
   const qr = jeFakt(d.typ) ? qrPlatba(d) : '';
   return `<div class="papir-obal"><div class="papir">
-    <div class="ph"><div>${F.logo || F.logo_text ? `<div class="pl-logo">${F.logo ? `<img src="${F.logo}" alt="">` : ''}${F.logo_text ? `<span>${esc(F.logo_text)}</span>` : ''}</div>` : ''}<h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
+    <div class="p-hlava"><div class="ph"><div>${F.logo || F.logo_text ? `<div class="pl-logo">${F.logo ? `<img src="${F.logo}" alt="">` : ''}${F.logo_text ? `<span>${esc(F.logo_text)}</span>` : ''}</div>` : ''}<h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
     <div class="strany"><div><small>${d.typ === 'protokol' ? 'Zhotovitel' : 'Dodavatel'}</small><b>${esc(F.nazev)}</b><br>${adr(F)}<br>${ids(F)}${F.platce_dph ? '' : '<br>Není plátce DPH.'}${F.zapis ? `<br><span style="color:#5D6B76">${esc(F.zapis)}</span>` : ''}</div>
       <div><small>${d.typ === 'protokol' ? 'Objednatel' : 'Odběratel'}</small><b>${esc(k.nazev || '—')}</b>${k.osoba ? '<br>' + esc(k.osoba) : ''}<br>${adr(k)}<br>${ids(k)}</div></div>
     <div class="info">${info.map(([a, b]) => `<div><small>${a}</small>${b}</div>`).join('')}</div>
-    ${d.typ === 'protokol' ? `<p style="margin:0 0 2cqw">Zhotovitel předává a objednatel přebírá níže uvedené dokončené práce${z?.adresa ? ' na adrese ' + esc(z.adresa) : ''}.</p>` : ''}
-    <table><thead><tr><th>Položka</th><th class="r">Množství</th>${d.typ === 'protokol' ? '' : `<th class="r">Cena/MJ${dph ? ' bez DPH' : ''}</th>${dph ? '<th class="r">Sazba</th>' : ''}<th class="r">${dph ? 'Základ' : 'Celkem'}</th>`}</tr></thead><tbody>
-      ${pol.length ? pol.map(p => `<tr><td>${esc(p.nazev)}</td><td class="r">${fmtN(p.mnozstvi, 3)} ${esc(p.mj || '')}</td>${d.typ === 'protokol' ? '' : `<td class="r">${fmtN(p.cena)}</td>${dph ? `<td class="r">${fmtN(p.dph, 0)} %</td>` : ''}<td class="r">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>`}</tr>`).join('') : `<tr><td colspan="5" style="color:#5D6B76;text-align:center;padding:4cqw">Zatím žádné položky</td></tr>`}
-    </tbody></table>
-    ${d.typ === 'protokol' ? `<p style="margin-top:3cqw">Práce byly provedeny v dohodnutém rozsahu a kvalitě. ${d.poznamka ? '<br>Výhrady / poznámky: ' + esc(d.poznamka) : 'Objednatel nemá výhrady.'}</p>
+    ${d.typ === 'protokol' ? `<p style="margin:0 0 2cqw">Zhotovitel předává a objednatel přebírá níže uvedené dokončené práce${z?.adresa ? ' na adrese ' + esc(z.adresa) : ''}.</p>` : ''}</div>
+    ${papirTabulka(d, d.tisk_rezim && d.tisk_rezim !== 'polozky' ? souhrnRadky(d, pol) : pol, dph)}
+    <div class="p-konec">${d.typ === 'protokol' ? `<p style="margin-top:3cqw">Práce byly provedeny v dohodnutém rozsahu a kvalitě. ${d.poznamka ? '<br>Výhrady / poznámky: ' + esc(d.poznamka) : 'Objednatel nemá výhrady.'}</p>
       <div class="podpisy"><div>${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}Za zhotovitele</div><div>Za objednatele</div></div>`
     : `<div class="celkem"><div class="qr">${qr ? qr + '<div>QR platba</div>' : ''}</div><table>
         ${dph ? Object.entries(sazby).map(([s2, z2]) => `<tr><td>Základ daně ${s2} %</td><td class="r">${fmtN(z2)}</td></tr><tr><td>DPH ${s2} %</td><td class="r">${pdp ? 'odvede odběratel' : fmtN(z2 * s2 / 100)}</td></tr>`).join('') : ''}
@@ -1112,13 +1124,109 @@ function papir(d, pol) {
 
       ${jeFakt(d.typ) ? `<div style="margin-top:2cqw">Platba: ${esc(d.forma_uhrady || 'převodem')}${F.ucet ? ` · účet <b>${esc(F.ucet)}</b>` : ''}${F.iban ? ` · IBAN ${esc(F.iban)}` : ''} · VS <b>${esc(d.vs || d.cislo.replace(/\D/g, ''))}</b></div>` : ''}
       ${d.poznamka ? `<div style="margin-top:2cqw;white-space:pre-line">${esc(d.poznamka)}</div>` : ''}
-      <div class="pl-podpis"><div class="misto">${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}</div><div class="cara">${d.typ === 'nabidka' ? 'Za dodavatele' : 'Vystavil'}: ${esc(F.nazev)}</div></div>`}
+      <div class="pl-podpis"><div class="misto">${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}</div><div class="cara">${d.typ === 'nabidka' ? 'Za dodavatele' : 'Vystavil'}: ${esc(F.nazev)}</div></div>`}</div>
     <div class="pata"><span>${esc([F.telefon, F.email, F.web].filter(Boolean).join(' · '))}</span><span>Vystaveno v YeY</span></div>
   </div></div>`;
 }
+/** Rozdělí doklad na stránky A4. Položky se přelévají na další stránky (s mezisoučtem),
+ *  blok s rekapitulací, částkou k úhradě, platebními údaji, QR a podpisem zůstává vždy celý na poslední stránce. */
+function papirStrany(html) {
+  const W = 794, cq = W / 100, vyskaStr = W * 297 / 210, uzitna = vyskaStr - 12 * cq - 10;
+  const m = document.createElement('div'); m.style.cssText = `position:fixed;left:-20000px;top:0;width:${W}px;visibility:hidden;pointer-events:none`;
+  m.innerHTML = html; document.body.appendChild(m);
+  try {
+    const pa = m.querySelector('.papir'); if (!pa) return html;
+    pa.style.aspectRatio = 'auto'; pa.style.height = 'auto'; pa.style.overflow = 'visible';
+    const hl = pa.querySelector('.p-hlava'), tab = pa.querySelector('table.p-pol'), kon = pa.querySelector('.p-konec'), pata = pa.querySelector('.pata');
+    if (!hl || !tab || !kon || !pata) return html;
+    const vy = e => e.getBoundingClientRect().height;
+    const top0 = hl.getBoundingClientRect().top;
+    const hHlava = tab.getBoundingClientRect().top - top0;
+    const hThead = vy(tab.tHead), radky = [...tab.tBodies[0].rows], hRadky = radky.map(vy);
+    const hKonec = pata.getBoundingClientRect().top - tab.getBoundingClientRect().bottom;   // včetně okrajů
+    pata.style.marginTop = '0'; const hPata = vy(pata); pata.style.marginTop = '';
+    pa.style.aspectRatio = ''; pa.style.height = ''; pa.style.overflow = '';
+    pa.style.aspectRatio = 'auto'; pa.style.height = 'auto'; pa.style.overflow = 'visible';
+    if (pa.offsetHeight <= vyskaStr - 16) return html;   // vejde se na jednu stránku
+    const titul = (pa.querySelector('.ph h2')?.textContent || '').trim(), cis = (pa.querySelector('.ph .cis b')?.textContent || '').trim();
+    const sCenou = radky.some(r => r.dataset.z != null) && tab.tHead.rows[0].cells.length > 2;
+    const mini = (i, n) => `<div class="p-mini"><b>${esc(titul)}</b><span>č. ${esc(cis)} · strana ${i} z ${n}</span></div>`;
+    const prenos = (soucet, dalsi) => `<div class="p-prenos">${sCenou ? `<span>Mezisoučet (převádí se na stranu ${dalsi})</span><b>${fmtN(soucet)}</b>` : `<span>Pokračování na straně ${dalsi}</span>`}</div>`;
+    // výšky malé hlavičky a řádku s mezisoučtem
+    const vz = document.createElement('div'); vz.innerHTML = mini(2, 2) + prenos(0, 2); pa.insertBefore(vz, hl);
+    const hMini = vy(vz.firstChild) + parseFloat(getComputedStyle(vz.firstChild).marginBottom || 0), hPrenos = vy(vz.lastChild) + parseFloat(getComputedStyle(vz.lastChild).marginTop || 0);
+    vz.remove();
+    // rozdělení řádků
+    const str = []; let cur = { od: 0, do: 0, vyska: hHlava + hThead };
+    hRadky.forEach((h, i) => {
+      if (cur.do > cur.od && cur.vyska + h + hPrenos + hPata > uzitna) { str.push(cur); cur = { od: i, do: i, vyska: hMini + hThead }; }
+      cur.do = i + 1; cur.vyska += h;
+    });
+    if (cur.vyska + hKonec + hPata > uzitna) {
+      // rekapitulace se nevejde – přejde na novou stránku a vezme s sebou poslední položku, aby nezůstala osamocená
+      const prevest = cur.do - cur.od > 1 ? 1 : 0;
+      cur.do -= prevest; str.push(cur);
+      cur = { od: cur.do, do: radky.length, vyska: hMini + (prevest ? hThead + hRadky[radky.length - 1] : 0) };
+    }
+    str.push(cur);
+    // přesné dorovnání: každou stránku sestavit, změřit a případně přesunout řádky na další stránku
+    const theadH = tab.tHead.outerHTML, hlavaH = hl.outerHTML, konecH = kon.outerHTML, pataH0 = pata.outerHTML, tc = tab.className;
+    const rH = radky.map(r => r.outerHTML), rZ = radky.map(r => Number(r.dataset.z || 0));
+    const stranka = (i, n, st, posl) => {
+      const soucet = rZ.slice(0, st.do).reduce((a2, b2) => a2 + b2, 0);
+      const pataH = pataH0.replace(/<\/span>/, `</span><span>Strana ${i + 1} z ${n}</span>`);
+      return `<div class="papir-obal"><div class="papir">${i === 0 ? hlavaH : mini(i + 1, n)}${st.do > st.od ? `<table class="${tc}">${theadH}<tbody>${rH.slice(st.od, st.do).join('')}</tbody></table>` : ''}${posl ? konecH : prenos(soucet, i + 2)}${pataH}</div></div>`;
+    };
+    const sedi = h => { m.innerHTML = h; const p2 = m.querySelector('.papir'); p2.style.aspectRatio = 'auto'; p2.style.height = 'auto'; p2.style.overflow = 'visible'; return p2.offsetHeight <= vyskaStr - 16; };   // 16 px rezerva pro menší náhled
+    for (let i = 0, g = 0; i < str.length && g < 2000; g++) {
+      const st = str[i], posl = i === str.length - 1;
+      if (sedi(stranka(i, str.length, st, posl))) { i++; continue; }
+      if (!posl) { if (st.do - st.od <= 1) { i++; continue; } st.do--; str[i + 1].od--; continue; }
+      // poslední stránka se nevejde i s rekapitulací → oddělit předchozí řádky na samostatnou stránku
+      if (st.do - st.od > 1) { str.splice(i, 0, { od: st.od, do: st.do - 1 }); st.od = st.do - 1; }
+      else if (st.do - st.od === 1) { str.splice(i, 0, { od: st.od, do: st.do }); st.od = st.do; }
+      else { i++; }
+    }
+    const n = str.length;
+    return str.map((st, i) => stranka(i, n, st, i === n - 1)).join('');
+
+  } catch (e) { return html; } finally { m.remove(); }
+}
+/** Tabulka položek dokladu (stejná pro doklad i přílohu s rozpisem). */
+function papirTabulka(d, pol, dph) {
+  const sCenou = d.typ !== 'protokol';
+  return `<table class="p-pol ${sCenou ? (dph ? 'sl5' : 'sl4') : 'sl2'}"><thead><tr><th>Položka</th><th class="r">Množství</th>${sCenou ? `<th class="r">Cena/MJ${dph ? ' bez DPH' : ''}</th>${dph ? '<th class="r">Sazba</th>' : ''}<th class="r">${dph ? 'Základ' : 'Celkem'}</th>` : ''}</tr></thead><tbody>
+      ${pol.length ? pol.map(p => `<tr data-z="${cislo(p.mnozstvi) * cislo(p.cena)}"><td>${esc(p.nazev)}</td><td class="r">${fmtN(p.mnozstvi, 3)} ${esc(p.mj || '')}</td>${sCenou ? `<td class="r">${fmtN(p.cena)}</td>${dph ? `<td class="r">${fmtN(p.dph, 0)} %</td>` : ''}<td class="r">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>` : ''}</tr>`).join('') : `<tr><td colspan="5" style="color:#5D6B76;text-align:center;padding:4cqw">Zatím žádné položky</td></tr>`}
+    </tbody></table>`;
+}
+/** Souhrnný tisk: jeden řádek za každou sazbu DPH (základ daně musí být podle sazeb), text = souhrnný text nebo předmět. */
+function souhrnRadky(d, pol) {
+  if (!pol.length) return pol;
+  const platce = S.firma.platce_dph && d.typ !== 'protokol';
+  const text = (d.souhrn_text || '').trim() || (d.predmet ? `${d.predmet}` : 'Provedené práce a dodávky') ;
+  const pr = d.tisk_rezim === 'souhrn_priloha' ? ' – dle rozpisu v příloze' : '';
+  const sk = {}; pol.forEach(p => { const k = platce ? cislo(p.dph) : 0; sk[k] = (sk[k] || 0) + cislo(p.mnozstvi) * cislo(p.cena); });
+  const kl = Object.keys(sk);
+  return kl.map(k => ({ nazev: text + (kl.length > 1 ? ` (sazba ${k} %)` : '') + pr, mnozstvi: 1, mj: 'kpl', cena: Math.round(sk[k] * 100) / 100, dph: +k }));
+}
+/** Příloha: úplný rozpis položek k souhrnně tištěnému dokladu. */
+function papirPriloha(d, pol) {
+  const F = S.firma, dph = F.platce_dph && d.typ !== 'protokol';
+  const bez = pol.reduce((s2, p) => s2 + cislo(p.mnozstvi) * cislo(p.cena), 0);
+  return `<div class="papir-obal"><div class="papir">
+    <div class="p-hlava"><div class="ph"><div><h2>Rozpis položek</h2><div style="font-size:2.2cqw;margin-top:1cqw">Příloha k dokladu ${esc(TYP[d.typ].toLowerCase())} č. ${esc(d.cislo)}${d.predmet ? ' – ' + esc(d.predmet) : ''}</div></div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b></div></div></div>
+    ${papirTabulka(d, pol, dph)}
+    <div class="p-konec">${d.typ === 'protokol' ? '' : `<div class="celkem"><div></div><table><tr class="zap"><td>${dph ? 'Celkem bez DPH' : 'Celkem'}</td><td class="r">${kc(bez)}</td></tr></table></div>`}</div>
+    <div class="pata"><span>${esc(F.nazev)}</span><span>Příloha č. 1</span></div>
+  </div></div>`;
+}
+/** Kompletní doklad rozdělený na stránky (a případně s přílohou rozpisu položek). */
+function dokladStrany(d, pol) {
+  return papirStrany(papir(d, pol)) + (d.tisk_rezim === 'souhrn_priloha' && pol.length ? papirStrany(papirPriloha(d, pol)) : '');
+}
 AKCE.tisk = async el => { const d = doklad(el.dataset.id); const pol = await nactiPolozky(d.id); tisk(d, pol); };
 function tisk(d, pol) {
-  $('#tisk').innerHTML = papir(d, pol); const puv = document.title;
+  $('#tisk').innerHTML = dokladStrany(d, pol); const puv = document.title;
   document.title = `${TYP[d.typ]} ${d.cislo}${kontakt(d.kontakt_id) ? ' – ' + kontakt(d.kontakt_id).nazev : ''}`;
   setTimeout(() => { window.print(); document.title = puv; }, 60);
 }
@@ -1154,6 +1262,10 @@ POHLEDY.doklad = async t => {
           <label class="pole">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label>
         </div>
         <label class="pole">Předmět<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny"></label>
+        <div class="mrizka m2">
+          <label class="pole">Tisk položek<select name="tisk_rezim">${[['polozky', 'Položkově – všechny položky'], ['souhrn', 'Souhrnně – jeden řádek (za sazbu DPH)'], ['souhrn_priloha', 'Souhrnně + rozpis položek v příloze']].map(([k, n]) => `<option value="${k}" ${k === (d.tisk_rezim || 'polozky') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <label class="pole ${(d.tisk_rezim || 'polozky') === 'polozky' ? 'skryt' : ''}" id="edSouhrnText">Text souhrnného řádku<input name="souhrn_text" value="${esc(d.souhrn_text)}" placeholder="${esc(d.predmet || 'např. Rekonstrukce koupelny dle nabídky')}"></label>
+        </div>
         <div class="mrizka m4">
           <label class="pole">Číslo<input name="cislo" value="${esc(d.cislo)}"></label>
           <label class="pole">${d.typ === 'protokol' ? 'Datum předání' : 'Datum vystavení'}<input name="datum" type="date" value="${esc(d.datum)}"></label>
@@ -1253,13 +1365,13 @@ function edNahled() {
   d.celkem_bez = ED.pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena), 0);
   d.celkem_dph = dph ? ED.pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena) * cislo(p.dph) / 100, 0) : 0;
   const zal = zaplaceneZalohy(d);
-  $('#edNahled').innerHTML = papir(d, ED.pol);
+  $('#edNahled').innerHTML = dokladStrany(d, ED.pol);
   const so = $('#edSouhrn'); if (so) so.innerHTML = `<table>${dph ? `<tr><td class="tlumene">Bez DPH</td><td class="r num">${kc(d.celkem_bez)}</td></tr><tr><td class="tlumene">DPH</td><td class="r num">${kc(d.celkem_dph)}</td></tr>` : ''}${zal.map(x => `<tr><td class="tlumene">Záloha č. ${esc(x.cislo)}</td><td class="r num">− ${kc(celkem(x))}</td></tr>`).join('')}<tr class="cel"><td>${zal.length ? 'K úhradě' : 'Celkem'}</td><td class="r num">${kc(d.celkem_bez + d.celkem_dph - zal.reduce((s, x) => s + celkem(x), 0))}</td></tr></table>`;
 }
 const edUlozit = debounce(async () => {
   const st = $('#edUlozeno'); if (st) { st.textContent = 'Ukládám…'; st.style.color = 'var(--ocel)'; }
   try {
-    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
+    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, tisk_rezim: d.tisk_rezim || 'polozky', souhrn_text: d.souhrn_text || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
     await q(sb.from('doklady').update(hl).eq('id', d.id));
     const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: (() => { const ref = cenaNizka(p); return ref ? ref.cena : cislo(p.cena); })(), dph: S.firma.platce_dph ? cislo(p.dph) : 0 }));
     const smazane = [...ED.puvodniIds].filter(id => !ED.pol.some(p => p.id === id));
@@ -1281,7 +1393,8 @@ function poEditor() {
   f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
     if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
-    ED.d[n] = hod(e.target); edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
+    ED.d[n] = hod(e.target); if (n === 'tisk_rezim') $('#edSouhrnText').classList.toggle('skryt', e.target.value === 'polozky');
+    edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
   tb.addEventListener('input', e => {
@@ -1747,18 +1860,16 @@ async function dokladPdf(d, pol) {
   await pdfSkript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   await pdfSkript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   const m = document.createElement('div'); m.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff';
-  m.innerHTML = papir(d, pol); m.querySelectorAll('.netisk').forEach(e => e.remove());
+  m.innerHTML = dokladStrany(d, pol); m.querySelectorAll('.netisk').forEach(e => e.remove());
   document.body.appendChild(m);
   try {
-    const pa = m.querySelector('.papir'); pa.style.boxShadow = 'none'; pa.style.aspectRatio = 'auto'; pa.style.minHeight = Math.round(794 * 297 / 210) + 'px'; pa.style.overflow = 'visible';
     await Promise.all([...m.querySelectorAll('img')].map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
-    const cv = await html2canvas(pa, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
     const { jsPDF } = window.jspdf; const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-    const strPx = Math.floor(cv.width * 297 / 210);
-    for (let y = 0, i = 0; y < cv.height - 4; y += strPx, i++) {
-      const h = Math.min(strPx, cv.height - y), c = document.createElement('canvas'); c.width = cv.width; c.height = h;
-      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, h); g.drawImage(cv, 0, -y);
-      if (i) pdf.addPage(); pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, h * 210 / cv.width);
+    const listy = [...m.querySelectorAll('.papir')];
+    for (let i = 0; i < listy.length; i++) {
+      listy[i].style.boxShadow = 'none';
+      const cv = await html2canvas(listy[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      if (i) pdf.addPage(); pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
     }
     return new File([pdf.output('blob')], pdfNazev(d), { type: 'application/pdf' });
   } finally { m.remove(); }
