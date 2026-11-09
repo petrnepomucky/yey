@@ -120,7 +120,7 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .kpi a.alarm{background:var(--pozor-bg);border-color:#EDBDB8}.kpi a.alarm .l,.kpi a.alarm .v,.kpi a.alarm .p{color:var(--pozor)}
 .dva-sl{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
 .dva-sl>.hl{flex:999 1 560px;min-width:0}.dva-sl>.bok{flex:1 1 300px}
-.tabule{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;overflow-x:auto;padding-bottom:4px}
+.tabule{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;overflow-x:auto;padding-bottom:4px}
 .sloupec{background:var(--pod);border-radius:10px;padding:10px;min-height:160px;display:flex;flex-direction:column;gap:8px}
 .sloupec.nad{outline:2px dashed var(--metr);background:var(--metr-bg)}
 .sloupec-h{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ocel);text-transform:uppercase;letter-spacing:.8px;padding:2px 4px}
@@ -145,7 +145,7 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .p-detail{container-type:inline-size;flex:1;min-width:0;padding:20px 26px 60px;display:flex;flex-direction:column;gap:16px}
 .p-nahled{width:370px;flex:none;background:#fff;border-left:1px solid var(--linka);padding:18px;display:flex;flex-direction:column;gap:12px;position:sticky;top:72px;height:calc(100vh - 72px);overflow:auto}
 .drobky{font-size:14px;color:var(--ocel)}.drobky a{color:var(--ocel);text-decoration:none}.drobky a:hover{text-decoration:underline}
-.kroky{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.kroky{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .kroky li{padding:9px 11px;border-radius:9px;background:#fff;border:1px solid var(--linka);color:var(--ocel);font-size:13px;position:relative}
 .kroky li b{display:block;font-size:14px;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .p-detail .mrizka.m2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
@@ -452,13 +452,12 @@ const inicialy = t => (t || '?').split(/[\s@.]+/).filter(Boolean).slice(0, 2).ma
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
 const FAZE = [
-  { k: 'poptavka', n: 'Poptávka', p: 'zaměření, domluva' },
   { k: 'nabidka', n: 'Nabídka', p: 'čeká na klienta' },
   { k: 'realizace', n: 'Realizace', p: 'práce běží' },
   { k: 'fakturace', n: 'K fakturaci', p: 'vystavit fakturu' },
   { k: 'hotovo', n: 'Hotovo', p: 'zaplaceno' }
 ];
-const FAZE_N = Object.fromEntries(FAZE.map(f => [f.k, f.n])); FAZE_N.zruseno = 'Zrušeno';
+const FAZE_N = Object.fromEntries(FAZE.map(f => [f.k, f.n])); FAZE_N.zruseno = 'Zrušeno'; FAZE_N.poptavka = 'Nabídka';
 const TYP = { nabidka: 'Nabídka', faktura: 'Faktura', zalohova: 'Zálohová faktura', protokol: 'Předávací protokol', smlouva: 'Smlouva o dílo', dobropis: 'Dobropis' };
 const TYP_MN = { nabidka: 'Nabídky', faktura: 'Faktury', zalohova: 'Zálohové faktury', protokol: 'Protokoly', smlouva: 'Smlouvy o dílo', dobropis: 'Dobropisy' };
 const STAV = { koncept: 'Koncept', odeslano: 'Odesláno', prijato: 'Přijato', odmitnuto: 'Odmítnuto', zaplaceno: 'Zaplaceno', storno: 'Storno', podepsano: 'Podepsáno' };
@@ -898,7 +897,7 @@ AKCE.odhlasit = async () => { await sb.auth.signOut(); location.hash = ''; locat
 POHLEDY.prehled = () => {
   const fakt = S.doklady.filter(d => jeFakt(d.typ) && d.typ !== 'dobropis' && !['zaplaceno', 'storno'].includes(d.stav));
   const poSpl = fakt.filter(poSplatnosti);
-  const nab = S.doklady.filter(d => d.typ === 'nabidka' && d.stav === 'odeslano' && (d.zakazka_id ? ['poptavka', 'nabidka'].includes(zakazka(d.zakazka_id)?.faze) : (Date.now() - new Date(d.datum)) / 864e5 <= 30));
+  const nab = S.doklady.filter(d => d.typ === 'nabidka' && d.stav === 'odeslano' && (d.zakazka_id ? zakazka(d.zakazka_id)?.faze === 'nabidka' : (Date.now() - new Date(d.datum)) / 864e5 <= 30));
   const bezi = S.zakazky.filter(z => z.faze === 'realizace');
   const terminy = S.zakazky.filter(z => z.termin && !['hotovo', 'zruseno'].includes(z.faze)).sort((a, b) => a.termin.localeCompare(b.termin));
   const h = new Date().getHours(); const pozdrav = h < 10 ? 'Dobré ráno' : h < 18 ? 'Dobrý den' : 'Dobrý večer';
@@ -910,7 +909,7 @@ POHLEDY.prehled = () => {
   terminy.filter(z => dniDo(z.termin) <= 7).slice(0, 5).forEach(z => ukoly.push({ b: 'var(--info)', t: `<b>${esc(z.nazev)}</b> – termín ${dniDo(z.termin) === 0 ? '<b>dnes</b>' : dniDo(z.termin) < 0 ? `<b>prošel ${datumK(z.termin)}</b>` : datum(z.termin)}`, a: `<a class="btn mal" href="#zakazky/${z.id}">Otevřít</a>` }));
   S.zakazky.filter(z => z.faze === 'fakturace' && !S.doklady.some(d => d.zakazka_id === z.id && d.typ === 'faktura')).forEach(z => ukoly.push({ b: 'var(--warn)', t: `<b>${esc(z.nazev)}</b> čeká na fakturu`, a: `<button class="btn mal zl" data-a="krok" data-id="${z.id}">Vystavit fakturu</button>` }));
 
-  const sloupce = FAZE.slice(0, 4).map(f => {
+  const sloupce = FAZE.slice(0, 3).map(f => {
     const zz = S.zakazky.filter(z => z.faze === f.k);
     return `<div class="sloupec" data-faze="${f.k}"><div class="sloupec-h"><span>${f.n}</span><span>${zz.length}</span></div>
       ${zz.map(z => `<a class="kartička" draggable="true" data-zak="${z.id}" href="#zakazky/${z.id}"><b>${esc(z.nazev)}</b><span class="tlumene mal">${esc(kontakt(z.kontakt_id)?.nazev || 'bez klienta')}${z.termin ? ' · ' + datumK(z.termin) : ''}</span>${f.k === 'realizace' ? `<div class="pr"><i style="width:${z.postup}%"></i></div>` : ''}</a>`).join('')}
@@ -978,7 +977,7 @@ POHLEDY.zakazky = async t => {
   const id = t.id || (window.innerWidth > 760 ? seznam[0]?.id : null);
   const z = id ? zakazka(id) : null;
   const sumaZak = zz => { const n = S.doklady.find(d => d.zakazka_id === zz.id && d.typ === 'nabidka' && d.stav !== 'odmitnuto') || S.doklady.find(d => d.zakazka_id === zz.id && jeFakt(d.typ)); return n ? kc0(celkem(n)) : ''; };
-  const filtry = [['aktivni', 'Aktivní'], ['poptavka', 'Poptávky'], ['nabidka', 'Nabídky'], ['realizace', 'Realizace'], ['hotove', 'Hotové'], ['vse', 'Vše']];
+  const filtry = [['aktivni', 'Aktivní'], ['nabidka', 'Nabídky'], ['realizace', 'Realizace'], ['fakturace', 'K fakturaci'], ['hotove', 'Hotové'], ['vse', 'Vše']];
 
   const levy = `<section class="p-seznam" aria-label="Seznam zakázek">
     <div class="hlavicka"><div class="radek"><h2 style="font-size:22px">Zakázky</h2><span class="mezera"></span><button class="btn zl mal" data-a="nova-zakazka">${ik('plus', 16)}Nová</button></div>
@@ -999,7 +998,6 @@ POHLEDY.zakazky = async t => {
   const vyb = doklad(UI.vybranyDoklad[z.id]) && doklad(UI.vybranyDoklad[z.id]).zakazka_id === z.id ? doklad(UI.vybranyDoklad[z.id]) : (fak || prot || nab || dok[0]);
   const fi = Math.max(0, FAZE.findIndex(f => f.k === z.faze));
   const dalsi = {
-    poptavka: nab ? ['Otevřít nabídku', 'nabidka'] : ['Vytvořit nabídku', 'nabidka'],
     nabidka: nab ? ['Zahájit práce →', 'prijato'] : ['Vytvořit nabídku', 'nabidka'],
     realizace: ['Práce hotové → předávací protokol', 'protokol'],
     fakturace: fak ? ['Otevřít fakturu', 'faktura'] : ['Vystavit fakturu', 'faktura'],
@@ -1059,7 +1057,6 @@ AKCE['vytvor-dok'] = async el => {
   const z = zakazka(el.dataset.z); const typ = el.dataset.typ;
   const zdroj = typ !== 'nabidka' ? S.doklady.find(d => d.zakazka_id === z.id && d.typ === 'nabidka' && d.stav !== 'odmitnuto') : null;
   const d = await novyDoklad(typ, { zakazka_id: z.id, zdroj });
-  if (typ === 'nabidka' && z.faze === 'poptavka') await ulozZakazku(z.id, { faze: 'nabidka' });
   jdi('doklad/' + d.id);
 };
 AKCE.prevest = async el => {
@@ -1073,11 +1070,7 @@ AKCE.prevest = async el => {
 AKCE.krok = async el => {
   const z = zakazka(el.dataset.id); const dok = S.doklady.filter(d => d.zakazka_id === z.id);
   const nab = dok.find(d => d.typ === 'nabidka' && d.stav !== 'odmitnuto');
-  if (z.faze === 'poptavka') {
-    if (nab) return jdi('doklad/' + nab.id);
-    const d = await novyDoklad('nabidka', { zakazka_id: z.id }); await ulozZakazku(z.id, { faze: 'nabidka' }); return jdi('doklad/' + d.id);
-  }
-  if (z.faze === 'nabidka') {
+  if (z.faze === 'nabidka' || z.faze === 'poptavka') {
     if (!nab) { const d = await novyDoklad('nabidka', { zakazka_id: z.id }); return jdi('doklad/' + d.id); }
     await ulozZakazku(z.id, { faze: 'realizace' }); zapisDenik(z.id, `Nabídka ${nab.cislo} – začíná realizace`).catch(() => {});
     toast('Zakázka přešla do realizace 🔨'); return render();
@@ -1102,7 +1095,7 @@ function formZakazky(z = {}) {
     <div id="novyKl" class="mrizka m2 skryt" style="background:var(--pod);padding:12px;border-radius:10px"><label class="pole">Jméno / firma klienta<input name="kl_nazev"></label><label class="pole">Telefon<input name="kl_telefon" type="tel"></label><label class="pole">E-mail<input name="kl_email" type="email"></label><label class="pole">Město<input name="kl_mesto"></label></div>
     <label class="pole">Adresa stavby<input name="adresa" value="${esc(z.adresa)}" placeholder="kde se pracuje"></label>
     <div class="mrizka m2"><label class="pole">Termín<input name="termin" type="date" value="${esc(z.termin)}"></label>
-    <label class="pole">Fáze<select name="faze">${[...FAZE, { k: 'zruseno', n: 'Zrušeno' }].map(f => `<option value="${f.k}" ${f.k === (z.faze || 'poptavka') ? 'selected' : ''}>${f.n}</option>`).join('')}</select></label></div>
+    <label class="pole">Fáze<select name="faze">${[...FAZE, { k: 'zruseno', n: 'Zrušeno' }].map(f => `<option value="${f.k}" ${f.k === (z.faze === 'poptavka' ? 'nabidka' : z.faze || 'nabidka') ? 'selected' : ''}>${f.n}</option>`).join('')}</select></label></div>
     <label class="pole">Poznámka<textarea name="poznamka" placeholder="co klient chce, specifika…">${esc(z.poznamka)}</textarea></label>
   </form>`;
 }
@@ -1842,7 +1835,7 @@ AKCE['pridat-pol'] = (tiho) => {
 AKCE['smaz-pol'] = el => { ED.pol.splice(+el.dataset.i, 1); edRadky(); edNahled(); edUlozit(); };
 AKCE['tisk-ed'] = () => { const d = { ...doklad(ED.d.id), ...ED.d }; tisk(d, ED.pol); };
 AKCE['ed-stav'] = async el => { ED.d.stav = el.dataset.s; await q(sb.from('doklady').update({ stav: el.dataset.s }).eq('id', ED.d.id)); await obnovDoklad(ED.d.id);
-  if (ED.d.zakazka_id && ED.d.typ === 'nabidka' && el.dataset.s === 'odeslano') { const z = zakazka(ED.d.zakazka_id); if (z.faze === 'poptavka') await ulozZakazku(z.id, { faze: 'nabidka' }); zapisDenik(z.id, `Nabídka ${ED.d.cislo} odeslána klientovi`).catch(() => {}); }
+  if (ED.d.zakazka_id && ED.d.typ === 'nabidka' && el.dataset.s === 'odeslano') { const z = zakazka(ED.d.zakazka_id); zapisDenik(z.id, `Nabídka ${ED.d.cislo} odeslána klientovi`).catch(() => {}); }
   toast(el.dataset.s === 'odeslano' ? '✓ Odesláno' : 'Stav: ' + STAV[el.dataset.s]); render(); };
 AKCE['ed-nezaplaceno'] = async () => { await q(sb.from('doklady').update({ stav: 'odeslano', zaplaceno_dne: null }).eq('id', ED.d.id)); ED.d.stav = 'odeslano'; await obnovDoklad(ED.d.id); toast('Vráceno na nezaplaceno'); render(); };
 AKCE['ed-zaplaceno'] = async () => { await oznacZaplaceno(doklad(ED.d.id)); render(); };
