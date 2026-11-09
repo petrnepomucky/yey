@@ -327,6 +327,11 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
   #tisk .papir-obal{width:210mm}
   #tisk .papir{box-shadow:none;width:210mm;height:297mm;aspect-ratio:auto;overflow:visible}
 }
+.katr{display:grid;grid-template-columns:52px 1fr auto 74px auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--linka-2);border-radius:10px;background:#fff}
+.katr img,.katr .bezfoto{width:52px;height:52px;object-fit:contain;border-radius:6px;background:var(--pod)}
+.katr-c{text-align:right;white-space:nowrap}
+.katr .vstup{height:38px;text-align:right;padding:0 8px}
+@media (max-width:640px){.katr{grid-template-columns:44px 1fr auto}.katr img,.katr .bezfoto{width:44px;height:44px}.katr-c{grid-column:2/3;text-align:left}.katr .vstup{grid-column:2/3}}
 </style>
 </head>
 <body>
@@ -1142,7 +1147,7 @@ POHLEDY.doklad = async t => {
       <form id="fDok" class="karta mrizka">
         <div class="mrizka m2">
           <label class="pole">Odběratel<select name="kontakt_id">${edKontaktyOpt(d.kontakt_id)}</select></label>
-          <label class="pole">Zakázka<select name="zakazka_id"><option value="">— bez zakázky —</option>${S.zakazky.map(zz => `<option value="${zz.id}" ${zz.id === d.zakazka_id ? 'selected' : ''}>${esc(zz.nazev)}</option>`).join('')}</select></label>
+          <label class="pole">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label>
         </div>
         <label class="pole">Předmět<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny"></label>
         <div class="mrizka m4">
@@ -1159,6 +1164,8 @@ POHLEDY.doklad = async t => {
       <section class="karta">
         <div class="karta-h"><h3>Položky</h3><div class="radek">
           ${S.cenik.length ? `<button class="btn mal" data-a="z-ceniku">${ik('cenik', 16)}Z ceníku</button>` : ''}
+          <button class="btn mal" data-a="z-katalogu">${ik('hledat', 16)}Z katalogu</button>
+          <button class="btn mal" data-a="z-excelu">${ik('plus', 16)}Z Excelu</button>
           ${d.typ !== 'protokol' ? `<a class="btn mal" href="#kalkulacky?doklad=${d.id}">${ik('kalk', 16)}Z kalkulačky</a>` : ''}</div></div>
         <div class="obal-tab"><table class="pol-tab"><thead><tr><th>Název</th><th class="c" style="width:92px">Množství</th><th style="width:70px">MJ</th>${d.typ === 'protokol' ? '' : `<th class="c" style="width:100px">Cena/MJ</th>${dph ? '<th class="c" style="width:64px">DPH %</th>' : ''}<th class="c" style="width:100px">Celkem</th>`}<th></th></tr></thead>
           <tbody id="edPol"></tbody></table></div>
@@ -1262,9 +1269,10 @@ function poEditor() {
   cenyHistorie().then(oznacCeny).catch(() => { });
   const f = $('#fDok');
   const hod = t => t.type === 'checkbox' ? t.checked : t.value;
-  f.addEventListener('input', e => { const n = e.target.name; if (!n || e.target.value === '__novy') return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
+  f.addEventListener('input', e => { const n = e.target.name; if (!n || /^__nov/.test(e.target.value)) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
   f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
     if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
+    if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
     ED.d[n] = hod(e.target); edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
@@ -1297,6 +1305,385 @@ AKCE['z-ceniku'] = () => {
   $('#cenHled').oninput = kresli; kresli();
 };
 AKCE['vloz-cenik'] = el => { const c = S.cenik.find(x => x.id === el.dataset.id); ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena)); ED.pol.push({ id: uid(), nazev: c.nazev, mnozstvi: 1, mj: c.mj, cena: c.cena, dph: S.firma.platce_dph ? c.dph : 0 }); edRadky(); edNahled(); edUlozit(); toast('Přidáno: ' + c.nazev); };
+
+/* ---- nová zakázka přímo z dokladu ---- */
+function zakOpt(vyb) { return `<option value="">— bez zakázky —</option><option value="__nova_zak">+ Nová zakázka…</option>${S.zakazky.map(zz => `<option value="${zz.id}" ${zz.id === vyb ? 'selected' : ''}>${esc(zz.nazev)}</option>`).join('')}`; }
+function edNovaZakazka() {
+  const faze = ED.d.typ === 'nabidka' ? 'nabidka' : jeFakt(ED.d.typ) ? 'fakturace' : 'realizace';
+  okno('Nová zakázka', formZakazky({ nazev: ED.d.predmet || '', kontakt_id: ED.d.kontakt_id, faze }), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-zak-dok">Založit a přiřadit</button>`);
+  poFormZak(AKCE['ulozit-zak-dok']);
+}
+AKCE['ulozit-zak-dok'] = async () => {
+  const o = await dataZakazky(); if (!o) return;
+  const z = await db.ins('zakazky', o); S.zakazky.unshift(z); zavriOkno();
+  if (!ED) return;
+  zapisDenik(z.id, `Zakázka založena z dokladu ${ED.d.cislo}`).catch(() => {});
+  ED.d.zakazka_id = z.id; if (!ED.d.kontakt_id && z.kontakt_id) ED.d.kontakt_id = z.kontakt_id;
+  const s = $('#fDok [name=zakazka_id]'); if (s) s.innerHTML = zakOpt(z.id);
+  const sk = $('#fDok [name=kontakt_id]'); if (sk) sk.innerHTML = edKontaktyOpt(ED.d.kontakt_id);
+  edNahled(); edUlozit(); toast('Zakázka založena a přiřazena ✓');
+};
+
+/* ---- výběr z katalogu (celý katalog, s licencí) + odkaz do Hornbachu / Bauhausu ---- */
+const KV = { q: '', tema: '', rows: [], n: 0 };
+function katPrirazka() { try { const v = localStorage.getItem('mk-kat-prirazka'); return v == null ? 15 : cislo(v); } catch { return 15; } }
+function katNakup(p) { return p.cena == null ? null : S.firma.platce_dph ? p.cena : Math.round(p.cena * (1 + p.sazba / 100) * 100) / 100; }
+function katProdej(p) { const n = katNakup(p); return n == null ? 0 : Math.round(n * (1 + katPrirazka() / 100) * 100) / 100; }
+function katDotaz() { return ($('#katHled')?.value || '').split(/\s+/).filter(w => w && w[0] !== '-').join(' '); }
+AKCE['z-katalogu'] = async () => {
+  const dphTxt = S.firma.platce_dph ? 'bez DPH' : 's DPH';
+  okno('Vybrat z katalogu', `
+    <div class="radek" style="gap:8px;flex-wrap:wrap">
+      <input class="vstup" id="katHled" placeholder="Název, kód nebo EAN… (‑slovo vyloučí)" autofocus style="flex:1 1 240px" value="${esc(KV.q)}">
+      <select class="vstup" id="katTema" style="flex:1 1 180px;max-width:260px"><option value="">Všechny kategorie</option></select>
+      <label class="mal radek" style="gap:6px;white-space:nowrap">Přirážka <input class="vstup" id="katPrir" inputmode="decimal" style="width:64px;height:38px" value="${fmtN(katPrirazka(), 0)}"> %</label>
+    </div>
+    <div class="radek mal" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="tlumene">Hledat i v obchodech:</span>
+      <button class="btn mal" data-a="ext-hledat" data-kde="hornbach">Hornbach ↗</button><button class="btn mal" data-a="ext-hledat" data-kde="bauhaus">Bauhaus ↗</button>
+      <span id="katInfo" class="tlumene"></span></div>
+    <div id="katSez" style="max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <details id="katRucne" class="karta" style="padding:10px 12px"><summary class="mal tuc" style="cursor:pointer">Přidat ručně – např. zboží nalezené v Hornbachu nebo Bauhausu</summary>
+      <div class="mrizka m2" style="margin-top:10px">
+        <label class="pole" style="grid-column:1/-1">Název<input id="krNazev"></label>
+        <label class="pole">Cena v obchodě za MJ (s DPH)<input id="krCena" inputmode="decimal"></label>
+        <label class="pole">MJ<input id="krMj" list="mjList" value="ks"></label>
+        <label class="pole">Množství<input id="krMn" inputmode="decimal" value="1"></label>
+        <label class="pole">Odkaz na zboží (nepovinné)<input id="krUrl" placeholder="https://…"></label>
+      </div>
+      <div class="radek" style="margin-top:8px;justify-content:space-between"><span class="mal tlumene">Na doklad půjde cena ${dphTxt} navýšená o přirážku.</span><button class="btn mal zl" data-a="kat-rucne">Přidat na doklad</button></div>
+    </details>`, `<button class="btn" data-a="zavrit">Hotovo</button>`, { trida: 'siroke' });
+  const t = $('#katHled'), sel = $('#katTema');
+  t.oninput = debounce(katHledatDok, 350); sel.onchange = katHledatDok;
+  t.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); katHledatDok(); } };
+  $('#katPrir').oninput = e => { try { localStorage.setItem('mk-kat-prirazka', String(cislo(e.target.value))); } catch { } kresliKat(); };
+  katToken().then(() => { const i = $('#katInfo'); if (i) i.textContent = katPristup() ? '' : 'Bez licence se hledá jen v základním výběru – licenci zadáte v Moje firma.'; });
+  katTemata().then(tt => { if (!$('#katTema')) return; sel.innerHTML = '<option value="">Všechny kategorie</option>' + tt.slice().sort((a, b) => a.localeCompare(b, 'cs')).map(x => `<option ${x === KV.tema ? 'selected' : ''}>${esc(x)}</option>`).join(''); });
+  if (KV.q || KV.tema) katHledatDok(); else $('#katSez').innerHTML = '<div class="tlumene">Zadejte, co hledáte, nebo vyberte kategorii.</div>';
+};
+async function katHledatDok() {
+  const n = ++KV.n, sez = $('#katSez'); if (!sez) return;
+  const q0 = $('#katHled').value, tema = $('#katTema').value; KV.q = q0; KV.tema = tema;
+  const slova = q0.split(/\s+/).filter(Boolean), bez = slova.filter(w => w[0] === '-' && w.length > 2).map(w => w.slice(1)), q = slova.filter(w => w[0] !== '-').join(' ');
+  if (q.length < 2 && !tema) { KV.rows = []; sez.innerHTML = '<div class="tlumene">Zadejte aspoň 2 znaky nebo vyberte kategorii.</div>'; return; }
+  sez.innerHTML = '<div class="tlumene">Hledám v katalogu…</div>';
+  let rows = [];
+  try {
+    const ul = [];
+    if (q.length >= 2 && !tema) ul.push(bez.length ? katRpc('katalog_hledat_bez', { dotaz: q, pocet: 80, bez }) : katRpc('katalog_hledat_vse', { dotaz: q, pocet: 80 }));
+    ul.push(katTabulka({ slova: q, temata: tema ? [tema] : null, pocet: tema && q.length < 2 ? 150 : 80, bez }));
+    (await Promise.allSettled(ul)).forEach(x => { if (x.status === 'fulfilled' && Array.isArray(x.value)) rows = rows.concat(x.value); });
+    const vid = new Set(); rows = rows.filter(r => r && r.kod && !r.neaktivni && !vid.has(r.kod) && vid.add(r.kod));
+    rows = await katDoplnBaleni(rows);
+  } catch (e) { if (n === KV.n) sez.innerHTML = `<div class="hlaska">Katalog se nepodařilo načíst: ${esc(e.message || e)}</div>`; return; }
+  if (n !== KV.n) return;
+  KV.rows = rows.map(r => ({ ...katProKalk(r), sazba: Number(r.sazba_dph ?? 21) || 21 }));
+  kresliKat();
+}
+function kresliKat() {
+  const sez = $('#katSez'); if (!sez || !KV.rows.length && !KV.q && !KV.tema) return;
+  if (!KV.rows.length) { sez.innerHTML = `<div class="tlumene">V katalogu nic nenalezeno. Zkuste jiné slovo, nebo hledejte v Hornbachu či Bauhausu a položku přidejte ručně.</div>`; return; }
+  sez.innerHTML = KV.rows.map((p, i) => `<div class="katr">
+    ${p.foto ? `<img src="${esc(p.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'bezfoto'}))">` : '<span class="bezfoto"></span>'}
+    <div style="min-width:0"><b>${esc(p.nazev)}</b><div class="mal tlumene">${[p.kod && 'kód ' + p.kod, p.ean && 'EAN ' + p.ean, p.rozmer, p.vBaleni && fmtN(p.vBaleni) + ' ' + p.mj + '/bal.', p.podskupina || p.tema].filter(Boolean).map(esc).join(' · ')}</div></div>
+    <div class="katr-c num">${p.cena != null ? `<b>${kc(katProdej(p))}</b>/${esc(p.mj)}<div class="mal tlumene">nákup ${kc(katNakup(p))}</div>` : '<span class="tlumene mal">bez ceny</span>'}</div>
+    <input class="vstup" data-km="${i}" inputmode="decimal" value="1" aria-label="Množství">
+    <button class="btn mal zl" data-a="kat-vloz" data-i="${i}">Přidat</button></div>`).join('') + (KV.rows.length >= 80 ? '<div class="mal tlumene" style="padding:6px">Zobrazeno prvních 80 – upřesněte hledání nebo kategorii.</div>' : '');
+}
+function edPridejPol(o) {
+  ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena));
+  ED.pol.push({ id: uid(), dph: S.firma.platce_dph ? 21 : 0, ...o });
+  edRadky(); edNahled(); edUlozit();
+}
+AKCE['kat-vloz'] = el => {
+  const i = +el.dataset.i, p = KV.rows[i]; if (!p) return;
+  const m = cislo($(`[data-km="${i}"]`)?.value) || 1;
+  edPridejPol({ nazev: p.nazev, mnozstvi: m, mj: p.mj || 'ks', cena: katProdej(p), dph: S.firma.platce_dph ? p.sazba : 0 });
+  el.textContent = '✓ Přidáno'; toast('Přidáno: ' + p.nazev);
+};
+AKCE['ext-hledat'] = el => {
+  const q = katDotaz() || ($('#krNazev')?.value || '').trim();
+  const url = el.dataset.kde === 'hornbach' ? (q ? 'https://www.hornbach.cz/s/' + encodeURIComponent(q) : 'https://www.hornbach.cz/')
+    : (q ? 'https://www.bauhaus.cz/catalogsearch/result/?q=' + encodeURIComponent(q) : 'https://www.bauhaus.cz/');
+  window.open(url, '_blank', 'noopener');
+  const d = $('#katRucne'); if (d) { d.open = true; const nz = $('#krNazev'); if (nz && !nz.value) nz.value = q; }
+};
+AKCE['kat-rucne'] = () => {
+  const nazev = ($('#krNazev').value || '').trim(), c = cislo($('#krCena').value);
+  if (!nazev) { toast('Vyplňte název', { chyba: true }); return; }
+  const nakup = S.firma.platce_dph ? c / 1.21 : c;
+  const cena = Math.round(nakup * (1 + katPrirazka() / 100) * 100) / 100;
+  edPridejPol({ nazev, mnozstvi: cislo($('#krMn').value) || 1, mj: ($('#krMj').value || 'ks').trim(), cena });
+  ['krNazev', 'krCena', 'krUrl'].forEach(id => { const x = $('#' + id); if (x) x.value = ''; }); $('#krMn').value = '1';
+  toast(`Přidáno: ${nazev} za ${kc(cena)}`);
+};
+
+/* ---- načtení položek z Excelu – převzato beze změny z yey.cz (parseCena, loadXLSX, nbParseTable, xlsAnalyzuj) ---- */
+function parseCena(v){
+  if(typeof v==='number') return v;
+  let s=(v==null?'':(''+v)).replace(/\s|\u00a0/g,'').replace(/kč/gi,'');
+  if(s==='') return null;
+  if(s.indexOf(',')>-1 && s.indexOf('.')>-1) s=s.replace(/\./g,'').replace(',','.');
+  else if(s.indexOf(',')>-1) s=s.replace(',','.');
+  const n=parseFloat(s); return isNaN(n)?null:n;
+}
+function loadXLSX(){
+  return new Promise((res,rej)=>{
+    if(window.XLSX) return res();
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('cdn'));
+    document.head.appendChild(s);
+  });
+}
+function nbParseTable(rows){
+  let cat='prace'; const items=[];
+  const catWord=(t)=>{ const n=norm(t); if(n.includes('material'))return 'material'; if(n.includes('doprava'))return 'doprava'; if(n.includes('rezie')||n.includes('vedlejsi'))return 'rezie'; if(n.includes('demontaz')||n.includes('montaz')||n.includes('prace'))return 'prace'; return null; };
+  const skipWord=(t)=>{ const n=norm(t); return ['rozpis prac','m.j.','m. j.','vymera','jedn. cena','jedn cena','cena celkem','celkem'].some(w=>n.includes(w)); };
+  (rows||[]).forEach(row=>{
+    if(!row) return;
+    const cells=row.map(c=>c==null?'':(''+c).trim());
+    const nonEmpty=cells.filter(c=>c!=='');
+    if(!nonEmpty.length) return;
+    const joined=nonEmpty.join(' ');
+    const nums=[]; cells.forEach(c=>{ if(c!==''){ const v=parseCena(c); if(v!=null) nums.push(v); } });
+    const ck=catWord(joined);
+    if(ck && nums.length===0){ cat=ck; return; }
+    if(nums.length<2) return;
+    let popisIdx=-1;
+    for(let i=0;i<cells.length;i++){ if(cells[i]!=='' && parseCena(cells[i])==null){ popisIdx=i; break; } }
+    if(popisIdx<0) return;
+    const popis=cells[popisIdx];
+    if(!popis || skipWord(popis)) return;
+    let mj='ks';
+    for(let i=popisIdx+1;i<cells.length;i++){ if(cells[i]!=='' && parseCena(cells[i])==null){ mj=cells[i]; break; } }
+    const cena=nums[nums.length-2];
+    const mnozstvi=nums.length>=3?nums[nums.length-3]:1;
+    items.push({nazev:popis, mj, mnozstvi, cena, sleva:0, kat:cat});
+  });
+  return items;
+}
+function xlsHodnoty(wb, jmeno){
+  const ws=wb.Sheets[jmeno]; if(!ws || !ws['!ref']) return {grid:[], radku:0, sloupcu:0};
+  const R=XLSX.utils.decode_range(ws['!ref']);
+  const cache={};
+  const cellVal=(sh, addr, hloubka)=>{
+    const key=sh+'!'+addr; if(key in cache) return cache[key];
+    const w=wb.Sheets[sh]; const c=w && w[addr]; let v=null;
+    if(c){
+      if(c.t!=='z' && c.v!==undefined && c.v!==null && c.v!=='') v=c.v;
+      else if(c.f && hloubka<25){ cache[key]=null; v=xlsVzorec(c.f, sh, hloubka+1); }
+    }
+    cache[key]=v; return v;
+  };
+  const xlsVzorec=(f, sh, hl)=>{
+    // malý bezpečný vyhodnocovač: + - * / ( ), čísla, odkazy (i na jiný list), SUM, ROUND, MIN, MAX
+    const s=String(f).replace(/^=/,''); let i=0;
+    const ws_=()=>{ while(s[i]===' ') i++; };
+    const ref=()=>{ const rest=s.slice(i);
+      let m=/^(?:'([^']+)'|([A-Za-z_À-ſ][\w.À-ſ]*))!\$?([A-Z]{1,3})\$?(\d+)/.exec(rest);
+      if(m){ i+=m[0].length; return {list:m[1]||m[2], col:m[3], row:+m[4]}; }
+      m=/^\$?([A-Z]{1,3})\$?(\d+)(?![\d(])/.exec(rest);
+      if(m){ i+=m[0].length; return {list:sh, col:m[1], row:+m[2]}; }
+      return null; };
+    const num=v=>{ if(typeof v==='number') return v; const p=parseCena(v); return p==null?0:p; };
+    const rozsah=(a,b)=>{ const out=[]; const c1=XLSX.utils.decode_col(a.col), c2=XLSX.utils.decode_col(b.col);
+      for(let r=Math.min(a.row,b.row);r<=Math.max(a.row,b.row);r++) for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++) out.push(num(cellVal(a.list, XLSX.utils.encode_col(c)+r, hl)));
+      return out; };
+    const args=()=>{ const out=[]; ws_(); if(s[i]===')'){ i++; return out; }
+      for(;;){ ws_(); const st=i; const a=ref(); ws_();
+        if(a && s[i]===':'){ i++; ws_(); const b=ref(); if(!b) throw 0; out.push(...rozsah(a,b)); }
+        else { i=st; out.push(expr()); }
+        ws_(); if(s[i]===','||s[i]===';'){ i++; continue; } if(s[i]===')'){ i++; break; } throw 0; }
+      return out; };
+    const factor=()=>{ ws_();
+      if(s[i]==='-'){ i++; return -factor(); } if(s[i]==='+'){ i++; return factor(); }
+      if(s[i]==='('){ i++; const v=expr(); ws_(); if(s[i]!==')') throw 0; i++; return v; }
+      const fm=/^([A-Z]+)\(/.exec(s.slice(i));
+      if(fm){ i+=fm[0].length; const a=args(); const n=fm[1];
+        if(n==='SUM') return a.reduce((x,y)=>x+y,0);
+        if(n==='ROUND'||n==='ROUNDUP'||n==='ROUNDDOWN'){ const d=Math.pow(10,a[1]||0); const fn=n==='ROUND'?Math.round:n==='ROUNDUP'?Math.ceil:Math.floor; return fn(a[0]*d)/d; }
+        if(n==='MIN') return Math.min(...a); if(n==='MAX') return Math.max(...a);
+        if(n==='AVERAGE') return a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+        throw 0; }
+      const nm=/^\d+(?:[.,]\d+)?%?/.exec(s.slice(i));
+      if(nm){ i+=nm[0].length; let v=parseFloat(nm[0].replace(',','.')); if(nm[0].endsWith('%')) v/=100; return v; }
+      const r=ref(); if(r) return num(cellVal(r.list, r.col+r.row, hl));
+      throw 0; };
+    const term=()=>{ let v=factor(); for(;;){ ws_(); if(s[i]==='*'){ i++; v*=factor(); } else if(s[i]==='/'){ i++; const d=factor(); v=d?v/d:0; } else return v; } };
+    const expr=()=>{ let v=term(); for(;;){ ws_(); if(s[i]==='+'){ i++; v+=term(); } else if(s[i]==='-'){ i++; v-=term(); } else return v; } };
+    try{ const v=expr(); ws_(); return (i>=s.length && isFinite(v)) ? Math.round(v*1e6)/1e6 : null; }catch(e){ return null; }
+  };
+  const grid=[];
+  for(let r=R.s.r;r<=R.e.r;r++){ const row=[]; for(let c=R.s.c;c<=R.e.c;c++){ const v=cellVal(jmeno, XLSX.utils.encode_cell({r,c}), 0); row.push(v==null?'':v); } grid.push(row); }
+  return {grid, radku:grid.length, sloupcu:(grid[0]||[]).length, r0:R.s.r, c0:R.s.c};
+}
+function xlsSloupecTyp(t){
+  const n=norm(t).replace(/\s+/g,' ').trim(); if(!n || n.length>40) return null;
+  if(/^(c|c\.|cis|cislo|por\.?|poradi|#|p\.c\.|pc)$/.test(n)) return 'cislo';
+  if(/^(kod|kat\.? ?c(islo)?|obj\.? ?c(islo)?|ean)$/.test(n)) return 'kod';
+  if(/celkem|castka|suma|cena celk|cena za polozku|mezisoucet/.test(n)) return 'celkem';
+  if(/^(mj|m\.j\.|m\. j\.|jedn(otka)?\.?|j\.)$/.test(n)) return 'mj';
+  if(/cena|sazba|kc\/|jedn\.? ?c|j\.? ?cena/.test(n)) return 'cena';
+  if(/mnozstvi|^mn\.?$|pocet|hodin|^hod\.?$|vymera|^ks$/.test(n)) return 'mnozstvi';
+  if(/popis|polozk|nazev|cinnost|^text$|predmet|specifikace|^prace$|^material$|druh prac|oznaceni/.test(n)) return 'popis';
+  return null;
+}
+function xlsKat(t){ const n=norm(t); if(!n) return null;
+  if(n.includes('material')) return 'material'; if(n.includes('doprav')) return 'doprava';
+  if(n.includes('rezie')||n.includes('vedlejsi')) return 'rezie';
+  if(n.includes('demontaz')||n.includes('montaz')||n.includes('prace')||n.includes('cinnost')||n.includes('hodin')) return 'prace';
+  return null; }
+const XLS_SOUCET=/(^|\s)(celkem|soucet|mezisoucet|sum[ae]?|rekapitulace|dph|zaokrouhl)/;
+function xlsAnalyzuj(wb){
+  const out={tabulky:[], odmitnute:[], extra:[], celkem:{}, predmet:''};
+  const skryte=((wb.Workbook||{}).Sheets||[]);
+  wb.SheetNames.forEach((jmeno, si)=>{
+    if(skryte[si] && skryte[si].Hidden) return;
+    const {grid}=xlsHodnoty(wb, jmeno);
+    const txt=v=>typeof v==='string' ? v.trim() : '';
+    const cislo=v=>{ if(typeof v==='number') return v; if(typeof v==='string' && /\d/.test(v) && !/[a-zA-ZÀ-ſ]{2,}/.test(v.replace(/kč/gi,''))) return parseCena(v); return null; };
+    let blokRekap=false;
+    for(let r=0;r<grid.length;r++){
+      const row=grid[r];
+      const texty=row.map(txt);
+      // předmět zakázky
+      if(!out.predmet){ const pi=texty.findIndex(t=>/^předmět\s*(zakázky|díla|nabídky)?\s*:/i.test(t)); if(pi>=0) out.predmet=texty[pi].replace(/^předmět[^:]*:\s*/i,'').trim(); }
+      // celková částka v sešitu (bez DPH)
+      const lbl=texty.find(t=>t)||'';
+      const nl=norm(lbl);
+      if(/celkem bez dph|cena bez dph|zaklad celkem|celkova cena bez/.test(nl)){ const nums=row.map(cislo).filter(v=>v!=null); if(nums.length) out.celkem[jmeno]={castka:nums[nums.length-1], popis:lbl}; }
+      // nadpis bloku rekapitulace
+      const neprazdne=row.filter(v=>v!=='' && v!=null);
+      if(neprazdne.length===1 && typeof neprazdne[0]==='string'){ blokRekap=/rekapitulace|souhrn|shrnuti|celkova cena/.test(norm(neprazdne[0])); }
+      // vedlejší položky v rekapitulaci (např. Doprava – paušál)
+      if(blokRekap && neprazdne.length===2){
+        const l=texty.find(t=>t), n=row.map(cislo).filter(v=>v!=null);
+        if(l && n.length===1 && !XLS_SOUCET.test(norm(l))) out.extra.push({list:jmeno, radek:r+1, nazev:l, castka:n[0]});
+        continue;
+      }
+      // hledání záhlaví tabulky
+      const typy={}; texty.forEach((t,c)=>{ const ty=xlsSloupecTyp(t); if(ty && typy[ty]==null) typy[ty]=c; });
+      const druhu=['mnozstvi','mj','cena','celkem'].filter(k=>typy[k]!=null).length;
+      if(typy.popis==null || druhu<2) continue;
+      // název tabulky = nejbližší samostatný text nad záhlavím
+      let nazev='';
+      for(let k=r-1;k>=Math.max(0,r-3);k--){ const ne=grid[k].filter(v=>v!==''&&v!=null); if(ne.length===1 && typeof ne[0]==='string'){ nazev=ne[0].trim(); break; } if(ne.length) break; }
+      const chybi=[]; if(typy.cena==null && !(typy.celkem!=null && typy.mnozstvi!=null)) chybi.push('Cena za MJ');
+      if(typy.mnozstvi==null && typy.celkem==null) chybi.push('Množství');
+      const sl={popis:typy.popis, mnozstvi:typy.mnozstvi, mj:typy.mj, cena:typy.cena, celkem:typy.celkem, kod:typy.kod};
+      const kat=xlsKat(nazev)||xlsKat(texty[typy.popis])||null;
+      const polozky=[], pozn=[]; let prazdne=0, konec=r;
+      for(let k=r+1;k<grid.length;k++){
+        const rw=grid[k], ne=rw.filter(v=>v!==''&&v!=null);
+        if(!ne.length){ if(++prazdne>=2) break; continue; }
+        prazdne=0;
+        // další záhlaví nebo samostatný nadpis = konec tabulky
+        const ty2=rw.map(v=>xlsSloupecTyp(txt(v))).filter(Boolean);
+        if(ty2.includes('popis') && ty2.length>=3) break;
+        if(ne.length===1 && typeof ne[0]==='string' && txt(rw[sl.popis])==='' ) break;
+        konec=k;
+        const popis=txt(rw[sl.popis]) || (typeof rw[sl.popis]==='number'?String(rw[sl.popis]):'');
+        if(!popis) continue;
+        if(XLS_SOUCET.test(norm(popis))){ if(/celkem|soucet/.test(norm(popis))) break; continue; }
+        let mn = sl.mnozstvi!=null ? cislo(rw[sl.mnozstvi]) : null;
+        let cena = sl.cena!=null ? cislo(rw[sl.cena]) : null;
+        const celk = sl.celkem!=null ? cislo(rw[sl.celkem]) : null;
+        if(mn==null && sl.mnozstvi==null) mn=1;
+        if(cena==null && celk!=null && mn) cena=Math.round(celk/mn*100)/100;
+        if(mn==null && celk!=null && cena) mn=Math.round(celk/cena*1000)/1000;
+        if(mn==null || cena==null){ pozn.push('Řádek '+(k+1)+' („'+popis.slice(0,40)+'“) – chybí '+(mn==null?'množství':'cena')+', vynechán.'); continue; }
+        if(!mn) continue;
+        let mj = sl.mj!=null ? txt(rw[sl.mj]) : '';
+        const p={nazev:popis, mj:mj||'ks', mnozstvi:mn, cena, sleva:0, kat: kat || (/^(h|hod|hodin|hodiny)\.?$/.test(norm(mj)) ? 'prace' : 'material')};
+        if(sl.kod!=null && txt(rw[sl.kod])) p.kod=txt(rw[sl.kod]);
+        polozky.push(p);
+      }
+      const t={list:jmeno, radek:r+1, nazev: nazev || ('Tabulka na řádku '+(r+1)), kat, sloupce:sl, hlavicka:texty, polozky, pozn, chybi, vybrano: !chybi.length && polozky.length>0};
+      if(chybi.length || !polozky.length) out.odmitnute.push({list:jmeno, nazev:t.nazev, duvod: chybi.length ? 'chybí sloupec '+chybi.join(' a ') : 'žádné řádky s množstvím a cenou'});
+      else out.tabulky.push(t);
+      r=konec;
+    }
+  });
+  // vedlejší položky z rekapitulace, které nejsou součtem některé tabulky
+  out.extra=out.extra.filter(x=>{ const k=xlsKat(x.nazev); return !out.tabulky.some(t=>(t.kat && k && t.kat===k && k!=='doprava') || norm(t.nazev).includes(norm(x.nazev))); })
+    .map(x=>({...x, vybrano:true, polozka:{nazev:x.nazev, mj:'ks', mnozstvi:1, cena:x.castka, sleva:0, kat:xlsKat(x.nazev)||'rezie'}}));
+  return out;
+}
+
+/* ---- okno „Z Excelu“ v editoru dokladu ---- */
+let XL = { pol: [], X: null };
+AKCE['z-excelu'] = () => {
+  XL = { pol: [], X: null };
+  okno('Načíst položky z Excelu', `
+    <div class="mal tlumene">Vyberte soubor – projdou se všechny listy a najdou se tabulky se záhlavím Popis / Množství / MJ / Cena (i rozpočty s rekapitulací). Nebo v Excelu označte řádky, dejte Ctrl+C a vložte je níže. Položky se nejdřív jen zobrazí, přidají se po potvrzení.</div>
+    <div class="radek" style="gap:10px;flex-wrap:wrap;align-items:center"><button class="btn zl" data-a="xl-vybrat">${ik('plus', 16)}Vybrat soubor .xlsx</button><input type="file" id="xlSoubor" accept=".xlsx,.xls,.xlsm" class="skryt"><span id="xlMsg" class="mal tlumene"></span></div>
+    <label class="pole">Nebo vložte ze schránky<textarea id="xlVloz" style="min-height:90px" placeholder="sem Ctrl+V"></textarea></label>
+    <div><button class="btn mal" data-a="xl-vlozena">Načíst vložená data</button></div>
+    <div id="xlSum" class="mal"></div>
+    <div id="xlNahled" style="max-height:45vh;overflow:auto"></div>`,
+    `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl skryt" id="xlPridat" data-a="xl-pridat">Přidat na doklad</button>`, { trida: 'siroke' });
+  $('#xlSoubor').onchange = e => { const f = e.target.files[0]; if (f) xlSoubor(f); e.target.value = ''; };
+  $('#xlVloz').addEventListener('paste', () => setTimeout(() => AKCE['xl-vlozena'](), 30));
+};
+AKCE['xl-vybrat'] = () => $('#xlSoubor').click();
+AKCE['xl-vlozena'] = () => {
+  const t = $('#xlVloz').value; if (!t.trim()) { $('#xlMsg').textContent = 'Vložte tabulku.'; return; }
+  XL.X = null; XL.pol = nbParseTable(t.replace(/\r/g, '').split('\n').map(l => l.split('\t'))); xlVykresli();
+};
+async function xlSoubor(file) {
+  const m = $('#xlMsg'); m.textContent = 'Načítám „' + file.name + '“…'; XL = { pol: [], X: null };
+  try {
+    await loadXLSX(); const buf = await file.arrayBuffer();
+    let X = null; try { X = xlsAnalyzuj(XLSX.read(buf, { type: 'array', sheetStubs: true })); } catch (e) { X = null; }
+    m.textContent = '';
+    if (X && X.tabulky.length) { XL.X = X; return xlVykresli(); }
+    const wb = XLSX.read(buf, { type: 'array' }); const ws = wb.Sheets[wb.SheetNames[0]];
+    XL.pol = nbParseTable(XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true })); xlVykresli();
+    if (X && X.odmitnute.length) $('#xlSum').insertAdjacentHTML('beforeend', `<div class="tlumene">Tabulky se záhlavím nebyly použitelné: ${X.odmitnute.map(o => esc(o.nazev) + ' – ' + esc(o.duvod)).join('; ')}. Načteno jednodušším způsobem.</div>`);
+  } catch (e) { m.textContent = 'Excel se nepodařilo načíst. Zkuste vložení ze schránky.'; }
+}
+function xlVybrane() {
+  const X = XL.X; if (!X) return XL.pol;
+  const it = []; X.tabulky.forEach(t => { if (t.vybrano) t.polozky.forEach(p => it.push(p)); });
+  X.extra.forEach(x => { if (x.vybrano) it.push(x.polozka); }); return it;
+}
+const xlTab = arr => `<table class="tab" style="font-size:13px">${arr.map(p => `<tr><td>${esc(p.nazev)}</td><td class="c">${esc(p.mj)}</td><td class="r num">${fmtN(p.mnozstvi)}</td><td class="r num">${kc(p.cena)}</td></tr>`).join('')}</table>`;
+const xlSoucet = arr => arr.reduce((a, p) => a + cislo(p.mnozstvi) * cislo(p.cena), 0);
+function xlVykresli() {
+  const box = $('#xlNahled'), sum = $('#xlSum'), X = XL.X; if (!box) return;
+  const vyb = xlVybrane(); const tl = $('#xlPridat'); tl.classList.toggle('skryt', !vyb.length); tl.textContent = `Přidat na doklad (${vyb.length})`;
+  if (!X) {
+    if (!vyb.length) { sum.innerHTML = ''; box.innerHTML = '<div class="tlumene">Z tabulky se nepodařilo nic načíst. Zkontrolujte, že má sloupce Popis, MJ, Množství a Cena.</div>'; return; }
+    sum.innerHTML = `Nalezeno <b>${vyb.length}</b> položek za <b>${kc(xlSoucet(vyb))}</b>.`; box.innerHTML = xlTab(vyb); return;
+  }
+  const L = c => c == null ? '—' : XLSX.utils.encode_col(c);
+  const listu = [...new Set(X.tabulky.map(t => t.list).concat(X.odmitnute.map(t => t.list)))];
+  let h = X.tabulky.map((t, i) => `<div class="karta" style="padding:8px 10px;margin:8px 0;${t.vybrano ? '' : 'opacity:.6'}">
+    <label class="radek tuc" style="gap:8px;cursor:pointer"><input type="checkbox" data-xl="t" data-i="${i}" ${t.vybrano ? 'checked' : ''} style="width:18px;height:18px"> ${esc(t.nazev)}
+      <span class="mal tlumene" style="font-weight:400">· ${listu.length > 1 ? 'list „' + esc(t.list) + '“ · ' : ''}${t.polozky.length} pol. · ${kc(xlSoucet(t.polozky))}</span></label>
+    <div class="mal tlumene" style="margin:4px 0 4px 26px">Sloupce: Popis ${L(t.sloupce.popis)} · Množství ${L(t.sloupce.mnozstvi)} · MJ ${L(t.sloupce.mj)} · Cena/MJ ${L(t.sloupce.cena)}${t.sloupce.cena == null ? ' (dopočtena z Celkem)' : ''}${t.sloupce.mj == null ? ' · <b style="color:var(--pozor)">MJ chybí – použije se „ks“</b>' : ''}</div>
+    ${t.vybrano ? xlTab(t.polozky) : ''}${t.pozn.length ? `<div class="mal" style="color:var(--pozor);margin:4px 0 0 26px">${t.pozn.map(esc).join('<br>')}</div>` : ''}</div>`).join('');
+  h += X.extra.map((x, i) => `<label class="radek karta" style="gap:8px;padding:8px 10px;margin:8px 0;border-style:dashed;cursor:pointer"><input type="checkbox" data-xl="x" data-i="${i}" ${x.vybrano ? 'checked' : ''} style="width:18px;height:18px"><span><b>${esc(x.nazev)}</b> – ${kc(x.castka)} <span class="mal tlumene">(z rekapitulace, není v žádné tabulce – přidá se jako 1 ks)</span></span></label>`).join('');
+  if (X.odmitnute.length) h += `<div class="mal tlumene" style="margin-top:8px"><b>Nepoužito:</b> ${X.odmitnute.map(o => esc(o.nazev) + (listu.length > 1 ? ' (list „' + esc(o.list) + '“)' : '') + ' – ' + esc(o.duvod)).join('; ')}.</div>`;
+  let kontrola = '';
+  Object.keys(X.celkem).forEach(list => {
+    const c = X.celkem[list]; const vse = X.tabulky.filter(t => t.list === list).reduce((a, t) => a + xlSoucet(t.polozky), 0) + X.extra.filter(x => x.list === list).reduce((a, x) => a + x.castka, 0);
+    const ok = Math.abs(vse - c.castka) < 0.6, kde = listu.length > 1 ? ' (list „' + esc(list) + '“)' : '';
+    kontrola += `<div class="tuc" style="margin-top:4px;color:${ok ? '#2e7d32' : 'var(--pozor)'}">${ok ? `✓ Souhlasí s částkou „${esc(c.popis)}“${kde} v sešitu – ${kc(c.castka)}.` : `⚠ V sešitu je „${esc(c.popis)}“${kde} ${kc(c.castka)}, z tabulek načteno ${kc(vse)} – zkontrolujte.`}</div>`;
+  });
+  sum.innerHTML = `Nalezeno <b>${X.tabulky.length}</b> ${X.tabulky.length === 1 ? 'tabulka' : X.tabulky.length < 5 ? 'tabulky' : 'tabulek'}${listu.length > 1 ? ' na ' + listu.length + ' listech' : ''} · vybráno <b>${vyb.length}</b> položek za <b>${kc(xlSoucet(vyb))}</b>.${kontrola}${X.predmet ? `<div class="tlumene">Předmět ze sešitu: „${esc(X.predmet)}“${ED && !ED.d.predmet ? ' – doplní se do dokladu.' : ''}</div>` : ''}`;
+  box.innerHTML = h;
+  box.querySelectorAll('input[data-xl]').forEach(c => c.onchange = () => { (c.dataset.xl === 't' ? X.tabulky : X.extra)[+c.dataset.i].vybrano = c.checked; xlVykresli(); });
+}
+AKCE['xl-pridat'] = () => {
+  const it = xlVybrane(); if (!it.length || !ED) return;
+  const platce = !!S.firma.platce_dph;
+  ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena));
+  it.forEach(p => ED.pol.push({ id: uid(), nazev: String(p.nazev || ''), mnozstvi: Math.round(cislo(p.mnozstvi) * 1000) / 1000, mj: p.mj || 'ks', cena: Math.round(cislo(p.cena) * 100) / 100, dph: platce ? 21 : 0 }));
+  if (XL.X && XL.X.predmet && !ED.d.predmet) { ED.d.predmet = XL.X.predmet; const i = $('#fDok [name=predmet]'); if (i) i.value = XL.X.predmet; }
+  zavriOkno(); edRadky(); edNahled(); edUlozit();
+  toast(`${it.length} položek přidáno z Excelu.`);
+};
 
 /* =================== CENÍK PRACÍ =================== */
 POHLEDY.cenik = () => ({ html: `
