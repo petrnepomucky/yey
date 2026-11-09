@@ -1347,13 +1347,13 @@ AKCE['z-katalogu'] = async () => {
       <label class="mal radek" style="gap:6px;white-space:nowrap">Přirážka <input class="vstup" id="katPrir" inputmode="decimal" style="width:64px;height:38px" value="${fmtN(katPrirazka(), 0)}"> %</label>
     </div>
     <div class="radek mal" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="tlumene">Hledat i v obchodech:</span>
-      <button class="btn mal" data-a="ext-hledat" data-kde="hornbach">Hornbach ↗</button><button class="btn mal" data-a="ext-hledat" data-kde="bauhaus">Bauhaus ↗</button>
+      ${OBCHODY.map(o => `<button class="btn mal" data-a="ext-hledat" data-kde="${o.k}" title="Hledat v ${esc(o.n)}">${esc(o.n)} ↗</button>`).join('')}
       <span id="katInfo" class="tlumene"></span></div>
     <div id="katSez" style="max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
-    <details id="katRucne" class="karta" style="padding:10px 12px"><summary class="mal tuc" style="cursor:pointer">Přidat z webu nebo ručně – zboží z Bauhausu, Hornbachu, OBI…</summary>
+    <details id="katRucne" class="karta" style="padding:10px 12px"><summary class="mal tuc" style="cursor:pointer">Přidat z webu nebo ručně – zboží z Bauhausu, OBI, Uni Hobby, Hornbachu…</summary>
       <div class="mrizka m2" style="margin-top:10px">
         <div class="pole" style="grid-column:1/-1">Odkaz na zboží – vložte adresu stránky produktu a načtu název a cenu
-          <div class="radek" style="gap:8px"><input class="vstup" id="krUrl" placeholder="https://www.bauhaus.cz/…" inputmode="url" style="flex:1"><button class="btn zl" data-a="kat-z-odkazu" type="button">Načíst</button></div>
+          <div class="radek" style="gap:8px"><input class="vstup" id="krUrl" placeholder="https://www.obi.cz/… nebo https://www.bauhaus.cz/…" inputmode="url" style="flex:1"><button class="btn zl" data-a="kat-z-odkazu" type="button">Načíst</button></div>
           <div id="krStav" class="mal tlumene"></div></div>
         <label class="pole" style="grid-column:1/-1">Název<input id="krNazev"></label>
         <label class="pole">Cena v obchodě za MJ (s DPH)<input id="krCena" inputmode="decimal"></label>
@@ -1411,10 +1411,18 @@ AKCE['kat-vloz'] = el => {
   edPridejPol({ nazev: p.nazev, mnozstvi: m, mj: p.mj || 'ks', cena: katProdej(p), dph: S.firma.platce_dph ? p.sazba : 0 });
   el.textContent = '✓ Přidáno'; toast('Přidáno: ' + p.nazev);
 };
+/* Hobbymarkety a srovnávač – adresy hledání ověřené 9. 11. 2026. */
+const OBCHODY = [
+  { k: 'hornbach', n: 'Hornbach', web: 'https://www.hornbach.cz/', hledat: q => 'https://www.hornbach.cz/s/' + encodeURIComponent(q) },
+  { k: 'bauhaus', n: 'Bauhaus', web: 'https://www.bauhaus.cz/', hledat: q => 'https://www.bauhaus.cz/serp?q=' + encodeURIComponent(q) },
+  { k: 'obi', n: 'OBI', web: 'https://www.obi.cz/', hledat: q => 'https://www.obi.cz/search/' + encodeURIComponent(q) + '/' },
+  { k: 'unihobby', n: 'Uni Hobby', web: 'https://www.unihobby.cz/', hledat: q => 'https://www.unihobby.cz/produkty?search=' + encodeURIComponent(q) },
+  { k: 'zbozi', n: 'Zboží.cz', web: 'https://www.zbozi.cz/', hledat: q => 'https://www.zbozi.cz/hledej/?q=' + encodeURIComponent(q) }
+];
 AKCE['ext-hledat'] = el => {
   const q = katDotaz() || ($('#krNazev')?.value || '').trim();
-  const url = el.dataset.kde === 'hornbach' ? (q ? 'https://www.hornbach.cz/s/' + encodeURIComponent(q) : 'https://www.hornbach.cz/')
-    : (q ? 'https://www.bauhaus.cz/catalogsearch/result/?q=' + encodeURIComponent(q) : 'https://www.bauhaus.cz/');
+  const o = OBCHODY.find(x => x.k === el.dataset.kde) || OBCHODY[0];
+  const url = q ? o.hledat(q) : o.web;
   window.open(url, '_blank', 'noopener');
   const d = $('#katRucne'); if (d) { d.open = true; const st = $('#krStav'); if (st) st.textContent = 'Až v obchodě najdete zboží, zkopírujte adresu jeho stránky a vložte ji sem.'; }
 };
