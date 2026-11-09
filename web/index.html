@@ -189,6 +189,13 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .nas-pol small{display:block;color:var(--ocel);font-size:12px}
 .nas-pol .num{white-space:nowrap;font-weight:600}
 .nas-pol.akt,.nas-pol:hover{background:var(--metr-bg)}
+#webPanel{position:fixed;right:16px;bottom:16px;z-index:55;width:340px;max-width:calc(100vw - 32px);background:#fff;border:2px solid var(--metr);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.2);padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+#webPanel .wp-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}#webPanel .wp-h b{font-size:15px;white-space:nowrap}
+#webPanel .wp-x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--ocel)}
+#webPanel .wp-kroky summary{cursor:pointer;font-weight:600;font-size:13px}#webPanel ol{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5}
+#webPanel .wp-zal{display:inline-block;background:var(--metr);color:#15233c;font-weight:700;padding:3px 10px;border-radius:7px;text-decoration:none;cursor:grab;white-space:nowrap}
+#webPanel .wp-odkaz{display:flex;gap:6px}#webPanel .wp-odkaz input{flex:1;min-width:0;height:36px;border:1px solid var(--linka);border-radius:8px;padding:0 10px;font:inherit}
+#webPanel .wp-log{font-size:12px;color:#1e7a3c;display:flex;flex-direction:column;gap:2px}
 .papir .p-konec{display:flow-root}
 .papir .p-hlava{position:relative}
 .papir.doc .doc-storno{position:absolute;left:50%;top:18cqw;transform:translateX(-50%) rotate(-14deg);font-size:9cqw;font-weight:800;letter-spacing:1.5cqw;color:rgba(179,38,30,.28);border:.6cqw solid rgba(179,38,30,.28);border-radius:1.5cqw;padding:.5cqw 3cqw;pointer-events:none;z-index:2}
@@ -670,6 +677,8 @@ async function render() {
     const v = await fn(t);
     app.innerHTML = shell(v.html, v);
     v.po && v.po();
+    // plovoucí panel vkládání z obchodu žije jen v editoru dokladu
+    if ($('#webPanel')) { if (t.c === 'doklad' && ED) webPanel(); else $('#webPanel').remove(); }
   } catch (e) { chyba(e, 'Chyba zobrazení'); }
 }
 
@@ -2151,9 +2160,67 @@ AKCE['ext-hledat'] = el => {
   const q = katDotaz() || ($('#krNazev')?.value || '').trim();
   const o = OBCHODY.find(x => x.k === el.dataset.kde) || OBCHODY[0];
   const url = q ? o.hledat(q) : o.web;
-  window.open(url, '_blank', 'noopener');
-  const d = $('#katRucne'); if (d) { d.open = true; const st = $('#krStav'); if (st) st.textContent = 'Až v obchodě najdete zboží, zkopírujte adresu jeho stránky a vložte ji sem.'; }
+  obchodOtevri(url, o.n);
 };
+/* ---- obchod v okně vedle aplikace + záložka „YeY ⇢ vložit“ s plovoucím okénkem přímo na stránce obchodu ---- */
+const ZALOZKA_SRC = "(function () {var APP = '__APP__';var old = document.getElementById('yey-vlozit'); if (old) { old.remove(); return; }var q = function (s) { return document.querySelector(s); };var meta = function (k) { var e = q('meta[property=\"' + k + '\"],meta[name=\"' + k + '\"],meta[itemprop=\"' + k + '\"]'); return e ? e.getAttribute('content') : ''; };var num = function (v) { if (v == null || v === '') return null; v = String(v).replace(/\\s| |Kč|CZK|,-/gi, ''); if (v.indexOf(',') > -1 && v.indexOf('.') > -1) v = v.replace(/\\./g, '').replace(',', '.'); else v = v.replace(',', '.'); var n = parseFloat(v); return isFinite(n) ? n : null; };var prod = function (x) {if (!x || typeof x !== 'object') return null;if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) { var r = prod(x[i]); if (r) return r; } return null; }var t = [].concat(x['@type'] || []).join(' ');if (/Product/i.test(t)) return x;return prod(x['@graph']) || prod(x.mainEntity);};var nazev = '', cena = null, foto = '', kod = '';document.querySelectorAll('script[type=\"application/ld+json\"]').forEach(function (s) {if (nazev && cena != null) return;try {var p = prod(JSON.parse(s.textContent)); if (!p) return;nazev = nazev || p.name || '';var o = p.offers; if (Array.isArray(o)) o = o[0];if (o && cena == null) cena = num(o.price != null ? o.price : (o.lowPrice != null ? o.lowPrice : (o.priceSpecification && o.priceSpecification.price)));foto = foto || [].concat(p.image || [])[0] || ''; if (foto && typeof foto === 'object') foto = foto.url || '';kod = kod || p.sku || p.gtin13 || p.mpn || '';} catch (e) { }});if (!nazev) nazev = meta('og:title') || ((q('h1') || {}).innerText || document.title || '').trim();if (cena == null) cena = num(meta('product:price:amount') || meta('og:price:amount') || meta('price') || ((q('[itemprop=price]') || {}).getAttribute ? (q('[itemprop=price]').getAttribute('content') || q('[itemprop=price]').textContent) : ''));nazev = String(nazev).replace(/\\s*[|–-]\\s*(HORNBACH|BAUHAUS|OBI|UNI HOBBY)[^|]*$/i, '').replace(/\\s+/g, ' ').trim().slice(0, 300);var spojeno = window.opener && !window.opener.closed;var d = document.createElement('div'); d.id = 'yey-vlozit';d.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:2147483647;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#15233c;border:2px solid #F5B800;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);font:14px/1.4 Arial,Helvetica,sans-serif;padding:14px;text-align:left');var inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #cfd6dc;border-radius:8px;padding:0 10px;font:inherit;color:#15233c;background:#fff;margin:3px 0 8px';var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>\"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]; }); };d.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:8px\"><b style=\"font-size:15px\">YeY – vložit do dokladu</b><button type=\"button\" data-x style=\"border:0;background:none;font-size:20px;cursor:pointer;color:#5d6b76;line-height:1\">×</button></div>' + (foto ? '<img src=\"' + esc(foto) + '\" alt=\"\" style=\"width:56px;height:56px;object-fit:contain;float:right;margin:0 0 6px 8px\">' : '') + '<label style=\"font-size:12px;color:#5d6b76\">Název<input data-n style=\"' + inp + '\" value=\"' + esc(nazev) + '\"></label>' + '<div style=\"display:flex;gap:8px\"><label style=\"flex:1.3;font-size:12px;color:#5d6b76\">Cena s DPH<input data-c inputmode=\"decimal\" style=\"' + inp + '\" value=\"' + (cena != null ? String(cena).replace('.', ',') : '') + '\"></label>' + '<label style=\"flex:.8;font-size:12px;color:#5d6b76\">MJ<input data-j style=\"' + inp + '\" value=\"ks\"></label>' + '<label style=\"flex:1;font-size:12px;color:#5d6b76\">Množství<input data-m inputmode=\"decimal\" style=\"' + inp + '\" value=\"1\"></label></div>' + '<button type=\"button\" data-v style=\"width:100%;height:40px;border:0;border-radius:9px;background:#F5B800;color:#15233c;font:inherit;font-weight:700;cursor:pointer\">Vložit do dokladu</button>' + '<div data-s style=\"font-size:12px;color:#5d6b76;margin-top:8px\">' + (spojeno ? (cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : 'Zkontrolujte údaje a vložte.') : '<b style=\"color:#b3261e\">Okno obchodu není spojené s aplikací YeY.</b> Otevřete obchod z aplikace (Z katalogu → tlačítko obchodu) a záložku použijte znovu.') + '</div>';document.body.appendChild(d);var st = d.querySelector('[data-s]');d.querySelector('[data-x]').onclick = function () { d.remove(); };d.querySelector('[data-v]').onclick = function () {if (!window.opener || window.opener.closed) { st.innerHTML = '<b style=\"color:#b3261e\">Aplikace YeY není otevřená.</b> Otevřete obchod znovu z aplikace.'; return; }var data = { typ: 'yey-produkt', v: 1, nazev: d.querySelector('[data-n]').value.trim(), cena: num(d.querySelector('[data-c]').value), mj: d.querySelector('[data-j]').value.trim() || 'ks',mnozstvi: num(d.querySelector('[data-m]').value) || 1, odkaz: location.href, obchod: location.hostname.replace(/^www\\./, ''), kod: String(kod || '') };if (!data.nazev) { st.textContent = 'Vyplňte název.'; return; }if (data.cena == null) { st.textContent = 'Vyplňte cenu.'; return; }window.opener.postMessage(data, APP); st.textContent = 'Odesílám…';};window.addEventListener('message', function (e) {if (e.origin !== APP || !e.data || e.data.typ !== 'yey-ok') return;st.innerHTML = e.data.ok ? '<b style=\"color:#1e7a3c\">✓ ' + esc(e.data.text) + '</b>' : '<b style=\"color:#b3261e\">' + esc(e.data.text) + '</b>';});})();";
+const zalozkaHref = () => 'javascript:' + encodeURIComponent(ZALOZKA_SRC.replace('__APP__', location.origin));
+let OBCH = { win: null, nazev: '', log: [] };
+function obchodOtevri(url, nazev) {
+  const w = Math.min(1200, Math.round(screen.availWidth * 0.55)), h = Math.round(screen.availHeight * 0.92);
+  const l = Math.max(0, (screen.availLeft || 0) + screen.availWidth - w);
+  // bez noopener: stránka obchodu pak může přes záložku poslat produkt zpět do aplikace (window.opener)
+  const okn = window.open(url, 'yey-obchod', `popup=yes,width=${w},height=${h},left=${l},top=0`);
+  if (okn) { OBCH.win = okn; try { okn.focus(); } catch { } }
+  OBCH.nazev = nazev; zavriOkno(); webPanel();
+}
+function zalozkaMa() { try { return localStorage.getItem('yey-zalozka') === '1'; } catch { return false; } }
+function webPanel() {
+  let el = $('#webPanel');
+  if (!ED || ED.d.typ === 'smlouva') { el?.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'webPanel'; document.body.appendChild(el); }
+  const ma = zalozkaMa();
+  el.innerHTML = `<div class="wp-h"><b>Vkládání z obchodu</b><span class="tlumene mal">→ ${esc(TYP[ED.d.typ])} ${esc(ED.d.cislo)}</span><button type="button" class="wp-x" data-a="web-panel-zavrit" aria-label="Zavřít">×</button></div>
+    <details ${ma ? '' : 'open'} class="wp-kroky"><summary>${ma ? 'Jak na to' : '1× nastavení – záložka do prohlížeče'}</summary>
+      <ol><li>Přetáhněte tlačítko <a class="wp-zal" href="${zalozkaHref()}" onclick="event.preventDefault();toast('Tlačítko přetáhněte myší na lištu záložek prohlížeče (Ctrl+Shift+B ji zobrazí).')">⭐ YeY ⇢ vložit</a> na lištu záložek prohlížeče (stačí jednou).</li>
+      <li>V okně ${esc(OBCH.nazev || 'obchodu')} otevřete stránku produktu a klikněte na záložku <b>YeY ⇢ vložit</b>.</li>
+      <li>Na stránce se objeví okénko s názvem a cenou – zadejte množství a <b>Vložit do dokladu</b>.</li></ol></details>
+    <div class="wp-odkaz"><input id="wpUrl" placeholder="…nebo sem vložte odkaz na produkt" inputmode="url"><button type="button" class="btn mal zl" data-a="web-odkaz">Vložit</button></div>
+    <div id="wpStav" class="mal tlumene"></div>
+    ${OBCH.log.length ? `<div class="wp-log">${OBCH.log.slice(-4).reverse().map(x => `<div>✓ ${esc(x)}</div>`).join('')}</div>` : ''}`;
+  const u = $('#wpUrl'); u.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); AKCE['web-odkaz'](); } };
+  u.addEventListener('paste', () => setTimeout(() => AKCE['web-odkaz'](), 30));
+}
+AKCE['web-panel-zavrit'] = () => $('#webPanel')?.remove();
+/** Přidá produkt z obchodu do otevřeného dokladu: cena s DPH → (u plátce bez DPH) + přirážka. */
+function webVloz({ nazev, cena, mj, mnozstvi, obchod }) {
+  const nakup = S.firma.platce_dph ? cena / 1.21 : cena;
+  const prodej = Math.round(nakup * (1 + katPrirazka() / 100) * 100) / 100;
+  edPridejPol({ nazev, mnozstvi: mnozstvi || 1, mj: mj || 'ks', cena: prodej, kat: 'material' });
+  const t = `${nazev} – ${fmtN(mnozstvi || 1)} ${mj || 'ks'} × ${kc(prodej)}${obchod ? ' (' + obchod + ')' : ''}`;
+  OBCH.log.push(t); toast('Vloženo: ' + nazev); webPanel();
+  return prodej;
+}
+AKCE['web-odkaz'] = async () => {
+  const u = ($('#wpUrl')?.value || '').trim(), st = $('#wpStav'); if (!u || !ED) return;
+  if (!/^https?:\/\//i.test(u)) { st.textContent = 'Odkaz musí začínat https://'; return; }
+  st.textContent = 'Načítám produkt…';
+  let r = null; try { const { data, error } = await sb.functions.invoke('zbozi-z-odkazu', { body: { url: u } }); r = data || (error && await error.context?.json?.().catch(() => null)) || null; } catch { }
+  if (r && r.ok && r.nazev && r.cena != null) { webVloz({ nazev: r.nazev, cena: r.cena, mj: r.mj || 'ks', mnozstvi: 1, obchod: r.obchod }); $('#wpStav') && ($('#wpStav').textContent = 'Vloženo – množství upravte v položkách.'); }
+  else { st.textContent = (r && r.chyba) || 'Z odkazu se nepodařilo načíst cenu – použijte záložku YeY ⇢ vložit přímo na stránce produktu.'; }
+};
+window.addEventListener('message', e => {
+  const m = e.data; if (!m || m.typ !== 'yey-produkt' || m.v !== 1) return;
+  const odpoved = (ok, text) => { try { e.source?.postMessage({ typ: 'yey-ok', ok, text }, e.origin); } catch { } };
+  if (!OBCH.win || e.source !== OBCH.win) return odpoved(false, 'Otevřete obchod znovu z aplikace YeY (Z katalogu → tlačítko obchodu).');
+  if (!/^https:\/\//.test(e.origin) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(e.origin)) return odpoved(false, 'Nezabezpečená stránka.');
+  if (!ED || !ED.d || ED.d.typ === 'smlouva') return odpoved(false, 'V aplikaci otevřete nabídku nebo fakturu, do které chcete vkládat.');
+  const nazev = String(m.nazev || '').trim().slice(0, 300), cena = Number(m.cena), mj = String(m.mj || 'ks').trim().slice(0, 12) || 'ks', mn = Number(m.mnozstvi) || 1;
+  if (!nazev || !isFinite(cena) || cena < 0 || cena > 1e7 || mn <= 0 || mn > 1e6) return odpoved(false, 'Neplatné údaje produktu.');
+  try { localStorage.setItem('yey-zalozka', '1'); } catch { }
+  const prodej = webVloz({ nazev, cena, mj, mnozstvi: mn, obchod: String(m.obchod || '').slice(0, 60) });
+  odpoved(true, `Vloženo do dokladu ${ED.d.cislo}: ${fmtN(mn)} ${mj} × ${kc(prodej)}`);
+});
 /** Název z adresy produktu, když obchod stránku nevydá (např. hornbach.cz/p/sadrokartonova-deska-…-12-5-mm/3286520/). */
 function nazevZOdkazu(u) {
   try {
