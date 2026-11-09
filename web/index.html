@@ -34,6 +34,7 @@ h1{font-size:30px;line-height:1.1}h2{font-size:20px}h3{font-size:17px}
 .hlava{position:sticky;top:0;z-index:30}
 .hlava-top{background:var(--inkoust);color:#fff;display:flex;align-items:center;gap:14px;padding:8px 16px;min-height:58px}
 .znacka{font-family:var(--font-c);font-size:30px;font-weight:700;color:var(--metr);line-height:1;text-decoration:none;letter-spacing:.3px}
+.kk-obchody{font-size:13px;color:var(--ocel);margin-top:4px}.kk-obchody a{color:inherit;text-decoration:underline}.kk-obchody a:hover{color:var(--inkoust)}
 .firma-jm{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
 .firma-jm small{display:block;color:#AEB8BF;font-weight:500;font-size:11px;letter-spacing:1.4px;text-transform:uppercase}
 .hledani{flex:1;max-width:520px;margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--inkoust-2);border:1px solid var(--inkoust-3);border-radius:10px;padding:0 12px;height:40px;color:#C9D0D5;cursor:pointer;text-align:left}
@@ -1677,6 +1678,18 @@ POHLEDY.kalkulacky = t => {
     if (!katPristup() && S.firma?.licence) katToken().then(t => { if (t) try { YeyKalk.katalogZmena(); } catch { } });
   } };
 };
+
+/* Odkazy na vyhledání materiálu v Bauhausu a Hornbachu (u každého řádku materiálu v kalkulačkách; kalk.js zůstává beze změny) */
+const OBCHODY = [['Bauhaus', 'bauhaus.cz'], ['Hornbach', 'hornbach.cz']];
+function kalkObchody(root) {
+  root.querySelectorAll('.kk-r').forEach(r => {
+    if (r.querySelector('.kk-obchody')) return;
+    const n = r.querySelector('.kk-r-nazev'); const nazev = n?.textContent.trim(); if (!nazev) return;
+    n.parentElement.insertAdjacentHTML('beforeend', `<div class="kk-obchody">Porovnat cenu: ${OBCHODY.map(([t, h]) => `<a href="https://www.google.com/search?q=${encodeURIComponent('site:' + h + ' ' + nazev)}" target="_blank" rel="noopener">${t}</a>`).join(' · ')}</div>`);
+  });
+}
+{ let ob = null; const stary = POHLEDY.kalkulacky;
+  POHLEDY.kalkulacky = t => { const o = stary(t); const po = o.po; o.po = () => { po(); if (!ob && KK_ROOT) { ob = new MutationObserver(() => kalkObchody(KK_ROOT)); ob.observe(KK_ROOT, { childList: true, subtree: true }); } if (KK_ROOT) kalkObchody(KK_ROOT); }; return o; }; }
 
 /* =================== START =================== */
 let startBezi = false;
