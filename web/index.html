@@ -463,13 +463,21 @@ const TYP = { nabidka: 'Nabídka', faktura: 'Faktura', zalohova: 'Zálohová fak
 const TYP_MN = { nabidka: 'Nabídky', faktura: 'Faktury', zalohova: 'Zálohové faktury', protokol: 'Protokoly', smlouva: 'Smlouvy o dílo', dobropis: 'Dobropisy' };
 const STAV = { koncept: 'Koncept', odeslano: 'Odesláno', prijato: 'Přijato', odmitnuto: 'Odmítnuto', zaplaceno: 'Zaplaceno', storno: 'Storno', podepsano: 'Podepsáno' };
 const jeFakt = t => t === 'faktura' || t === 'zalohova' || t === 'dobropis';
-const poSplatnosti = d => jeFakt(d.typ) && !['zaplaceno', 'storno', 'koncept'].includes(d.stav) && d.splatnost && dniDo(d.splatnost) < 0;
+const poSplatnosti = d => jeFakt(d.typ) && d.typ !== 'dobropis' && !['zaplaceno', 'storno'].includes(d.stav) && d.splatnost && dniDo(d.splatnost) < 0;
+const odeslan = d => ['odeslano', 'prijato', 'podepsano', 'zaplaceno'].includes(d.stav);
 const celkem = d => d.typ === 'smlouva' ? sodCena(d).s : Number(d.celkem_bez || 0) + Number(d.celkem_dph || 0);
 /* Zaplacené zálohové faktury k odečtení od konečné faktury (stejná zakázka, případně odvozené ze stejné nabídky) */
 const zaplaceneZalohy = d => d.typ !== 'faktura' ? [] : S.doklady.filter(x => x.typ === 'zalohova' && x.stav === 'zaplaceno' && x.id !== d.id && (
   (d.zakazka_id && x.zakazka_id === d.zakazka_id) || (!d.zakazka_id && ((d.zdroj_id && x.zdroj_id === d.zdroj_id) || x.id === d.zdroj_id)))).sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
 const kUhrade = d => celkem(d) - zaplaceneZalohy(d).reduce((s, x) => s + celkem(x), 0);
-const cipStav = d => poSplatnosti(d) ? `<span class="cip c-po">Po splatnosti ${-dniDo(d.splatnost)} d</span>` : `<span class="cip c-${d.stav}">${STAV[d.stav] || d.stav}</span>`;
+/** Stav dokladu zjednodušeně: ✓ Odesláno (po odeslání e-mailem), u faktur Zaplaceno / Nezaplaceno / Po splatnosti, případně Storno. */
+const cipStav = d => {
+  if (d.stav === 'storno') return '<span class="cip c-storno">Storno</span>';
+  if (jeFakt(d.typ) && d.stav === 'zaplaceno') return `<span class="cip c-zaplaceno">✓ ${d.typ === 'dobropis' ? 'Vráceno' : 'Zaplaceno'}</span>`;
+  const o = odeslan(d) ? '<span class="cip c-odeslano">✓ Odesláno</span>' : '';
+  if (jeFakt(d.typ)) return (poSplatnosti(d) ? `<span class="cip c-po">Po splatnosti ${-dniDo(d.splatnost)} d</span>` : `<span class="cip c-koncept">${d.typ === 'dobropis' ? 'Nevráceno' : 'Nezaplaceno'}</span>`) + o;
+  return o || '<span class="cip c-koncept">Neodesláno</span>';
+};
 
 /* ---------- ikony (čárové SVG) ---------- */
 const IK = {
@@ -882,9 +890,9 @@ AKCE.odhlasit = async () => { await sb.auth.signOut(); location.hash = ''; locat
 
 /* =================== PŘEHLED =================== */
 POHLEDY.prehled = () => {
-  const fakt = S.doklady.filter(d => jeFakt(d.typ) && !['zaplaceno', 'storno', 'koncept'].includes(d.stav));
+  const fakt = S.doklady.filter(d => jeFakt(d.typ) && d.typ !== 'dobropis' && !['zaplaceno', 'storno'].includes(d.stav));
   const poSpl = fakt.filter(poSplatnosti);
-  const nab = S.doklady.filter(d => d.typ === 'nabidka' && d.stav === 'odeslano');
+  const nab = S.doklady.filter(d => d.typ === 'nabidka' && d.stav === 'odeslano' && (d.zakazka_id ? ['poptavka', 'nabidka'].includes(zakazka(d.zakazka_id)?.faze) : (Date.now() - new Date(d.datum)) / 864e5 <= 30));
   const bezi = S.zakazky.filter(z => z.faze === 'realizace');
   const terminy = S.zakazky.filter(z => z.termin && !['hotovo', 'zruseno'].includes(z.faze)).sort((a, b) => a.termin.localeCompare(b.termin));
   const h = new Date().getHours(); const pozdrav = h < 10 ? 'Dobré ráno' : h < 18 ? 'Dobrý den' : 'Dobrý večer';
@@ -986,7 +994,7 @@ POHLEDY.zakazky = async t => {
   const fi = Math.max(0, FAZE.findIndex(f => f.k === z.faze));
   const dalsi = {
     poptavka: nab ? ['Otevřít nabídku', 'nabidka'] : ['Vytvořit nabídku', 'nabidka'],
-    nabidka: nab?.stav === 'koncept' ? ['Dokončit a odeslat nabídku', 'otevrit'] : ['Klient přijal → zahájit práce', 'prijato'],
+    nabidka: nab ? ['Zahájit práce →', 'prijato'] : ['Vytvořit nabídku', 'nabidka'],
     realizace: ['Práce hotové → předávací protokol', 'protokol'],
     fakturace: fak ? ['Otevřít fakturu', 'faktura'] : ['Vystavit fakturu', 'faktura'],
     hotovo: null, zruseno: null
@@ -1026,7 +1034,7 @@ POHLEDY.zakazky = async t => {
       <div class="strany-obal">${dokladStrany(vyb, pol)}</div>
       ${vyb.typ === 'nabidka' ? `<a class="btn" href="#kalkulacky?doklad=${vyb.id}" style="border-style:dashed;border-color:var(--metr-ink)">${ik('kalk')}Přidat výměru z kalkulačky</a>` : ''}
       ${vyb.typ === 'nabidka' && !fak ? `<button class="btn zl" data-a="prevest" data-id="${vyb.id}" data-typ="faktura">Převést na fakturu</button>` : ''}
-      ${jeFakt(vyb.typ) && vyb.stav !== 'zaplaceno' && vyb.stav !== 'koncept' ? `<button class="btn" data-a="zaplaceno" data-id="${vyb.id}" style="color:var(--ok)">✓ Označit jako zaplacené</button>` : ''}
+      ${jeFakt(vyb.typ) && vyb.stav !== 'zaplaceno' && vyb.stav !== 'storno' ? `<button class="btn" data-a="zaplaceno" data-id="${vyb.id}" style="color:var(--ok)">✓ Označit jako zaplacené</button>` : ''}
     </aside>`;
   }
   return { plna: true, html: `<div class="panely ${t.id ? 's-detailem' : ''}">${levy}${detail}${nahled}</div>`, po: () => {
@@ -1065,9 +1073,7 @@ AKCE.krok = async el => {
   }
   if (z.faze === 'nabidka') {
     if (!nab) { const d = await novyDoklad('nabidka', { zakazka_id: z.id }); return jdi('doklad/' + d.id); }
-    if (nab.stav === 'koncept') return jdi('doklad/' + nab.id);
-    Object.assign(nab, await db.upd('doklady', nab.id, { stav: 'prijato' }));
-    await ulozZakazku(z.id, { faze: 'realizace' }); zapisDenik(z.id, `Nabídka ${nab.cislo} přijata – začíná realizace`).catch(() => {});
+    await ulozZakazku(z.id, { faze: 'realizace' }); zapisDenik(z.id, `Nabídka ${nab.cislo} – začíná realizace`).catch(() => {});
     toast('Zakázka přešla do realizace 🔨'); return render();
   }
   if (z.faze === 'realizace') {
@@ -1173,12 +1179,11 @@ POHLEDY.doklady = t => {
   const typ = t.p.get('typ') || 'faktura'; const f = t.p.get('f') || UI.filtrDok; const hl = UI.hledatDok.toLowerCase();
   const typy = typ === 'faktura' ? ['faktura', 'zalohova', 'dobropis'] : [typ];
   let s = S.doklady.filter(d => typy.includes(d.typ));
-  const filtry = typ === 'nabidka' ? [['vse', 'Vše'], ['koncept', 'Koncepty'], ['odeslano', 'Čekají'], ['prijato', 'Přijaté'], ['odmitnuto', 'Odmítnuté']]
-    : typ === 'protokol' ? [['vse', 'Vše'], ['koncept', 'Koncepty'], ['podepsano', 'Podepsané']]
-    : typ === 'smlouva' ? [['vse', 'Vše'], ['koncept', 'Koncepty'], ['odeslano', 'Odeslané'], ['podepsano', 'Podepsané']]
-    : [['vse', 'Vše'], ['neuhrazene', 'Neuhrazené'], ['po', 'Po splatnosti'], ['zaplaceno', 'Zaplacené'], ['koncept', 'Koncepty']];
+  const filtry = typ === 'faktura' ? [['vse', 'Vše'], ['neuhrazene', 'Nezaplacené'], ['po', 'Po splatnosti'], ['zaplaceno', 'Zaplacené'], ['storno', 'Storno']]
+    : [['vse', 'Vše'], ['odeslano', 'Odeslané'], ['neodeslano', 'Neodeslané']];
   const fAkt = filtry.some(x => x[0] === f) ? f : 'vse';
-  s = s.filter(d => fAkt === 'vse' ? true : fAkt === 'neuhrazene' ? !['zaplaceno', 'storno', 'koncept'].includes(d.stav) : fAkt === 'po' ? poSplatnosti(d) : d.stav === fAkt);
+  s = s.filter(d => fAkt === 'vse' ? true : fAkt === 'neuhrazene' ? !['zaplaceno', 'storno'].includes(d.stav) : fAkt === 'po' ? poSplatnosti(d)
+    : fAkt === 'odeslano' ? odeslan(d) : fAkt === 'neodeslano' ? !odeslan(d) && d.stav !== 'storno' : d.stav === fAkt);
   if (hl) s = s.filter(d => [d.cislo, d.predmet, kontakt(d.kontakt_id)?.nazev, zakazka(d.zakazka_id)?.nazev].join(' ').toLowerCase().includes(hl));
   const suma = s.reduce((a, d) => a + celkem(d), 0);
   return { html: `
@@ -1320,7 +1325,7 @@ function smlouvaPohled(d) {
       <div class="radek" style="justify-content:space-between;align-items:flex-end">
         <div><h1>Smlouva o dílo ${esc(d.cislo)}</h1><div class="radek mal" style="margin-top:6px"><span id="edStavCip">${cipStav(d)}</span><span class="ulozeno" id="edUlozeno">✓ Uloženo</span></div></div>
         <div class="radek"><button class="btn" data-a="tisk-ed">${ik('tisk', 16)}PDF / Tisk</button><button class="btn" data-a="email-ed">${ik('mail', 16)}E-mail</button>
-          ${d.stav !== 'podepsano' ? `<button class="btn zl" data-a="ed-stav" data-s="podepsano">Podepsáno</button>` : ''}</div></div>
+</div></div>
       <div class="hlaska inf">Žlutě zvýrazněné údaje v náhledu se mění z tohoto formuláře. Nevyplněné se vytisknou jako tečky k doplnění rukou.</div>
       <form id="fDok" class="karta mrizka">
         <h3>Smluvní strany a předmět</h3>
@@ -1341,7 +1346,6 @@ function smlouvaPohled(d) {
         <h3>Uzavření smlouvy</h3>
         <div class="mrizka m4"><label class="pole">Číslo smlouvy<input name="cislo" value="${esc(d.cislo)}"></label><label class="pole">Datum uzavření<input name="datum" type="date" value="${esc(d.datum)}"></label>
           ${p('misto_uzavreni', 'Místo uzavření', u.misto_uzavreni)}${p('vyhotoveni', 'Počet stejnopisů (slovem)', u.vyhotoveni, 'list="sodVyh"')}</div>
-        <label class="pole">Stav<select name="stav">${['koncept', 'odeslano', 'podepsano'].map(s2 => `<option value="${s2}" ${s2 === d.stav ? 'selected' : ''}>${STAV[s2]}</option>`).join('')}</select></label>
         <label class="pole">Další ujednání <span class="napoveda">(vloží se jako samostatný článek; prázdné = článek se vynechá)</span><textarea name="poznamka" rows="3">${esc(d.poznamka)}</textarea></label>
         <datalist id="sodVyh"><option value="dvou"><option value="třech"><option value="čtyřech"></datalist>
       </form>
@@ -1625,7 +1629,6 @@ POHLEDY.doklad = async t => {
   if (d.typ === 'smlouva') { ED.d.udaje = { ...(d.udaje || {}) }; return smlouvaPohled(ED.d); }
   const F = S.firma; const dph = F.platce_dph && d.typ !== 'protokol';
   const z = zakazka(d.zakazka_id);
-  const stavy = d.typ === 'nabidka' ? ['koncept', 'odeslano', 'prijato', 'odmitnuto'] : d.typ === 'protokol' ? ['koncept', 'podepsano'] : ['koncept', 'odeslano', 'zaplaceno', 'storno'];
   const navazne = S.doklady.filter(x => x.zdroj_id === d.id || x.id === d.zdroj_id);
   return { plna: true, html: `<div class="editor">
     <section class="form">
@@ -1635,11 +1638,8 @@ POHLEDY.doklad = async t => {
         <div class="radek">
           <button class="btn" data-a="tisk-ed">${ik('tisk', 16)}PDF / Tisk</button>
           <button class="btn" data-a="email-ed">${ik('mail', 16)}E-mail</button>
-          ${d.typ === 'nabidka' && d.stav === 'koncept' ? `<button class="btn zl" data-a="ed-stav" data-s="odeslano">Označit jako odeslanou</button>` : ''}
-          ${d.typ === 'nabidka' && d.stav === 'odeslano' ? `<button class="btn zl" data-a="nab-prijata" data-id="${d.id}">Klient přijal</button>` : ''}
-          ${jeFakt(d.typ) && d.stav === 'koncept' ? `<button class="btn zl" data-a="ed-stav" data-s="odeslano">Vystavit (odesláno)</button>` : ''}
-          ${jeFakt(d.typ) && d.stav === 'odeslano' ? `<button class="btn zl" data-a="ed-zaplaceno">✓ ${d.typ === 'dobropis' ? 'Vráceno' : 'Zaplaceno'}</button>` : ''}
-          ${d.typ === 'protokol' && d.stav === 'koncept' ? `<button class="btn zl" data-a="ed-stav" data-s="podepsano">Podepsáno</button>` : ''}
+          ${jeFakt(d.typ) && !['zaplaceno', 'storno'].includes(d.stav) ? `<button class="btn zl" data-a="ed-zaplaceno">✓ ${d.typ === 'dobropis' ? 'Vráceno' : 'Zaplaceno'}</button>` : ''}
+          ${jeFakt(d.typ) && d.stav === 'zaplaceno' ? `<button class="btn mal" data-a="ed-nezaplaceno" title="Vrátit na nezaplaceno">Zrušit ${d.typ === 'dobropis' ? 'vrácení' : 'zaplacení'}</button>` : ''}
         </div></div>
       ${!F.ucet && jeFakt(d.typ) ? `<div class="hlaska inf">Na faktuře chybí číslo účtu – doplňte ho v sekci <a href="#firma">Moje firma</a> a faktura dostane i QR platbu.</div>` : ''}
       <form id="fDok" class="karta mrizka">
@@ -1663,7 +1663,6 @@ POHLEDY.doklad = async t => {
           ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole">DUZP<input name="duzp" type="date" value="${esc(d.duzp)}"></label>` : ''}
           ${jeFakt(d.typ) ? `<label class="pole">Forma úhrady<select name="forma_uhrady">${['převodem', 'hotově', 'kartou', 'dobírkou'].map(x => `<option ${x === d.forma_uhrady ? 'selected' : ''}>${x}</option>`).join('')}</select></label>` : ''}
           ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;display:flex"><input type="checkbox" name="pdp" ${d.pdp ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--inkoust)"> Přenesená daňová povinnost (§ 92e – stavební a montážní práce pro plátce DPH)</label>` : ''}
-          <label class="pole">Stav<select name="stav">${stavy.map(s => `<option value="${s}" ${s === d.stav ? 'selected' : ''}>${STAV[s]}</option>`).join('')}</select></label>
         </div>
       </form>
       <div id="edKontrola" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -1686,7 +1685,7 @@ POHLEDY.doklad = async t => {
         <button class="btn zl" data-a="email-ed">${ik('mail', 16)}Odeslat e-mailem</button>
         ${d.typ === 'nabidka' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Převést na fakturu</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="smlouva">→ Smlouva o dílo</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="zalohova">→ Zálohová faktura</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="protokol">→ Předávací protokol</button>` : ''}
         ${d.typ === 'protokol' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Vystavit fakturu</button>` : ''}
-        ${d.typ === 'faktura' && d.stav !== 'koncept' && d.stav !== 'storno' ? `<button class="btn" data-a="prevest" data-id="${d.id}" data-typ="dobropis">→ Dobropis</button>` : ''}
+        ${d.typ === 'faktura' && d.stav !== 'storno' ? `<button class="btn" data-a="prevest" data-id="${d.id}" data-typ="dobropis">→ Dobropis</button>` : ''}
         ${(d.typ === 'faktura' || d.typ === 'zalohova') && d.stav !== 'storno' ? `<button class="btn" data-a="storno-fa">Stornovat</button>` : ''}
         ${jeFakt(d.typ) ? `<button class="btn" data-a="isdoc-ed" title="Elektronická faktura ve formátu ISDOC pro účetní programy">${ik('instal', 16)}ISDOC</button>` : ''}
         <button class="btn" data-a="kopie-dok">${ik('kopie', 16)}Duplikovat</button>
@@ -1838,7 +1837,8 @@ AKCE['smaz-pol'] = el => { ED.pol.splice(+el.dataset.i, 1); edRadky(); edNahled(
 AKCE['tisk-ed'] = () => { const d = { ...doklad(ED.d.id), ...ED.d }; tisk(d, ED.pol); };
 AKCE['ed-stav'] = async el => { ED.d.stav = el.dataset.s; await q(sb.from('doklady').update({ stav: el.dataset.s }).eq('id', ED.d.id)); await obnovDoklad(ED.d.id);
   if (ED.d.zakazka_id && ED.d.typ === 'nabidka' && el.dataset.s === 'odeslano') { const z = zakazka(ED.d.zakazka_id); if (z.faze === 'poptavka') await ulozZakazku(z.id, { faze: 'nabidka' }); zapisDenik(z.id, `Nabídka ${ED.d.cislo} odeslána klientovi`).catch(() => {}); }
-  toast('Stav: ' + STAV[el.dataset.s]); render(); };
+  toast(el.dataset.s === 'odeslano' ? '✓ Odesláno' : 'Stav: ' + STAV[el.dataset.s]); render(); };
+AKCE['ed-nezaplaceno'] = async () => { await q(sb.from('doklady').update({ stav: 'odeslano', zaplaceno_dne: null }).eq('id', ED.d.id)); ED.d.stav = 'odeslano'; await obnovDoklad(ED.d.id); toast('Vráceno na nezaplaceno'); render(); };
 AKCE['ed-zaplaceno'] = async () => { await oznacZaplaceno(doklad(ED.d.id)); render(); };
 /* ---- storno faktury ---- */
 AKCE['storno-fa'] = async () => {
@@ -2473,7 +2473,6 @@ AKCE['email-ed'] = () => {
   let sdilet = false; try { sdilet = !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] })); } catch { }
   let isdocSdilet = false; try { isdocSdilet = !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.isdoc', { type: 'application/xml' })] })); } catch { }
   EM = { soubor: null, d, prot: null, isdocSdilet };
-  const oznacit = d.stav === 'koncept' && d.typ !== 'protokol';
   const prot = d.typ === 'faktura' ? emNajdiProtokol(d) : null;
   okno(`Odeslat ${TYP[d.typ].toLowerCase()} e-mailem`, `
     <label class="pole">Komu<input id="emKomu" type="email" value="${esc(n.komu)}" placeholder="e-mail odběratele"></label>
@@ -2484,7 +2483,6 @@ AKCE['email-ed'] = () => {
     ${jeFakt(d.typ) ? `<label class="radek karta" style="padding:10px 12px;gap:10px;cursor:pointer;align-items:center"><input type="checkbox" id="emIsdoc" checked style="width:18px;height:18px">
       <span>Přiložit i <b>ISDOC</b> – elektronickou fakturu, kterou si odběratel načte do účetního programu bez přepisování</span></label>` : ''}
     <div class="radek karta" style="padding:10px 12px;gap:10px;align-items:center">📎 <b id="emPdfNazev">${esc(pdfNazev(d))}</b><span class="mal tlumene" id="emPdfStav">PDF dokladu</span><span class="mezera"></span><button class="btn mal" data-a="em-pdf">Stáhnout PDF</button></div>
-    ${oznacit ? `<label class="radek mal" style="gap:8px;cursor:pointer"><input type="checkbox" id="emOznacit" checked style="width:18px;height:18px"> Po odeslání označit ${d.typ === 'nabidka' ? 'nabídku' : d.typ === 'smlouva' ? 'smlouvu' : 'fakturu'} jako odeslanou</label>` : ''}
     <div class="mal tlumene">${sdilet ? '„Sdílet s přílohou“ otevře poštu v telefonu rovnou s PDF. ' : ''}„Otevřít v e-mailu“ stáhne PDF a otevře nový e-mail s vyplněným textem – PDF do něj jen přetáhněte jako přílohu.</div>`,
     `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn" data-a="em-kopirovat">Kopírovat text</button>${sdilet ? `<button class="btn" data-a="em-sdilet">Sdílet s přílohou</button>` : ''}<button class="btn zl" data-a="em-odeslat">${ik('mail', 16)}Otevřít v e-mailu</button>`, { trida: 'siroke' });
   const cb = $('#emProt'); if (cb) cb.onchange = () => emProtokol(cb.checked);
@@ -2532,8 +2530,8 @@ async function emPoOdeslani(komu) {
   const k = kontakt(ED.d.kontakt_id);
   if (k && komu && !k.email) { try { Object.assign(k, await db.upd('kontakty', k.id, { email: komu })); } catch { } }
   if (ED.d.zakazka_id) zapisDenik(ED.d.zakazka_id, `${TYP[ED.d.typ]} ${ED.d.cislo} odeslána e-mailem${komu ? ' na ' + komu : ''}`).catch(() => {});
-  const ozn = $('#emOznacit')?.checked; zavriOkno();
-  if (ozn) await AKCE['ed-stav']({ dataset: { s: 'odeslano' } });
+  zavriOkno();
+  if (ED.d.stav === 'koncept') await AKCE['ed-stav']({ dataset: { s: 'odeslano' } });
 }
 AKCE['em-odeslat'] = async () => {
   const komu = $('#emKomu').value.trim(), pr = $('#emPredmet').value, tx = $('#emText').value;
@@ -2926,7 +2924,7 @@ function zamceno() { return false; }
 function licBrana() { return false; }
 /* Kam se vkládá: doklad, ze kterého byla kalkulačka otevřena, jiný rozpracovaný doklad, nebo nová nabídka. */
 function kalkCilHtml() {
-  const moznosti = S.doklady.filter(d => d.typ !== 'protokol' && ['koncept', 'odeslano'].includes(d.stav) || d.id === UI.kalkCil).slice(0, 60);
+  const moznosti = S.doklady.filter(d => !['protokol', 'smlouva'].includes(d.typ) && !['zaplaceno', 'storno'].includes(d.stav) || d.id === UI.kalkCil).slice(0, 60);
   return `<div class="karta" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;margin-bottom:14px">
     <span class="tuc">Výsledek vložit do:</span>
     <select id="kalkCilSel" class="vstup" style="flex:1;min-width:240px;height:42px">
