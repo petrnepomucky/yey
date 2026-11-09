@@ -2651,6 +2651,12 @@ const CSS = `
 .kk-mj-obal .kk-in{padding-right:3.2rem}
 .kk-mj-obal i{position:absolute;right:.6rem;top:50%;transform:translateY(-50%);font-style:normal;color:var(--kk-ocel);font-size:.8rem;pointer-events:none;max-width:3rem;text-align:right;line-height:1.05}
 .kk-mrizka{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+/* Širší okno: vlevo zadání (rozměry, parametry), vpravo materiál a výsledek */
+@media (min-width:1240px){
+  .kk{display:grid;grid-template-columns:minmax(360px,5fr) minmax(0,7fr);gap:0 1.1rem;align-items:start}
+  .kk-druhy,.kk-lista{grid-column:1/-1}
+  .kk-karta{min-width:0}
+}
 .kk-pole-siroke{grid-column:span 2}
 .kk-pole-popis{display:block;font-weight:500;font-size:.88rem;margin-bottom:.25rem}
 .kk-pole-ano{display:flex;flex-direction:column;justify-content:flex-end}
