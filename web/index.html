@@ -1651,8 +1651,7 @@ POHLEDY.doklad = async t => {
         </div>
         <label class="pole">Předmět<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny"></label>
         <div class="mrizka m2">
-          <label class="pole">Tisk položek<select name="tisk_rezim">${[['polozky', 'Položkově – všechny položky'], ['kategorie', 'Po kategoriích – řádek za kategorii'], ['souhrn', 'Souhrnně – jeden řádek (za sazbu DPH)'], ['souhrn_priloha', 'Souhrnně + rozpis položek v příloze']].map(([k, n]) => `<option value="${k}" ${k === (d.tisk_rezim || 'polozky') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-          <label class="pole ${/^souhrn/.test(d.tisk_rezim || '') ? '' : 'skryt'}" id="edSouhrnText">Text souhrnného řádku<input name="souhrn_text" value="${esc(d.souhrn_text)}" placeholder="${esc(d.predmet || 'např. Rekonstrukce koupelny dle nabídky')}"></label>
+          <label class="pole ${/^souhrn/.test(d.tisk_rezim || '') ? '' : 'skryt'}" id="edSouhrnText" style="grid-column:1/-1">Text souhrnného řádku<input name="souhrn_text" value="${esc(d.souhrn_text)}" placeholder="${esc(d.predmet || 'např. Rekonstrukce koupelny dle nabídky')}"></label>
         </div>
         <div class="mrizka m4">
           <label class="pole">Číslo<input name="cislo" value="${esc(d.cislo)}"></label>
@@ -1695,7 +1694,7 @@ POHLEDY.doklad = async t => {
         </div>
         ${navazne.length ? `<div class="tlumene mal">Navázané doklady: ${navazne.map(x => `<a href="#doklad/${x.id}">${TYP[x.typ]} ${esc(x.cislo)}</a>`).join(', ')}</div>` : ''}
       </div>
-      <div class="radek" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap"><div class="tlumene mal tuc" style="text-transform:uppercase;letter-spacing:1px">Živý náhled</div>${jeFakt(d.typ) || d.typ === 'protokol' ? `<div class="seg" id="edRezim" role="group" aria-label="Rozpis dokladu">${edRezimTl(d)}</div>` : ''}</div><div id="edRezimTip"></div><div id="edNahled"></div></aside>
+      <div class="radek" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap"><div class="tlumene mal tuc" style="text-transform:uppercase;letter-spacing:1px">Živý náhled</div><label class="radek mal" style="gap:8px;align-items:center"><span class="tlumene">Rozpis:</span><select id="edRezimSel" class="vstup" style="height:38px;width:auto;font-size:14px" aria-label="Rozpis dokladu">${edRezimTl(d)}</select></label></div><div id="edRezimTip"></div><div id="edNahled"></div></aside>
   </div>`, po: poEditor };
 };
 /* Hlídání cen: řádek nesmí být levněji než v ceníku ani než naposledy u téhož zákazníka – nižší cena jen po odsouhlasení. */
@@ -1801,11 +1800,8 @@ function edKontrolaProtokolu() {
 }
 AKCE['pr-opravit-cislo'] = el => { ED.d.cislo = el.dataset.c; const i = $('#fDok [name=cislo]'); if (i) i.value = el.dataset.c; edNahled(); edUlozit(); edKontrolaProtokolu(); };
 /* ---- přepínač nad náhledem: položkově / po kategoriích (práce, materiál, doprava…) ---- */
-function edRezimTl(d) {
-  const r = d.tisk_rezim || 'polozky';
-  return [['polozky', 'Položkově'], ['kategorie', 'Po kategoriích']].map(([k, n]) => `<button type="button" class="${r === k ? 'akt' : ''}" data-a="ed-rezim" data-r="${k}">${n}</button>`).join('')
-    + (/^souhrn/.test(r) ? `<button type="button" class="akt" data-a="ed-rezim" data-r="${r}" title="Nastaveno ve formuláři (Tisk položek)">Souhrnně</button>` : '');
-}
+const ROZPISY = [['polozky', 'Položkově – všechny položky'], ['kategorie', 'Po kategoriích – práce, materiál, doprava…'], ['souhrn', 'Souhrnně – jeden řádek (za sazbu DPH)'], ['souhrn_priloha', 'Souhrnně + rozpis položek v příloze']];
+function edRezimTl(d) { const r = d.tisk_rezim || 'polozky'; return ROZPISY.map(([k, n]) => `<option value="${k}" ${k === r ? 'selected' : ''}>${n}</option>`).join(''); }
 function edRezimTip() {
   const el = $('#edRezimTip'); if (!el || !ED) return;
   const bez = ED.d.tisk_rezim === 'kategorie' && ED.pol.some(p => (p.nazev || '').trim()) && ED.pol.filter(p => (p.nazev || '').trim()).every(p => !p.kat);
@@ -1813,9 +1809,7 @@ function edRezimTip() {
 }
 AKCE['ed-rezim'] = el => {
   if (!ED) return; const r = el.dataset.r; ED.d.tisk_rezim = r;
-  const sel = $('#fDok [name=tisk_rezim]'); if (sel) sel.value = r;
   const st = $('#edSouhrnText'); if (st) st.classList.toggle('skryt', !/^souhrn/.test(r));
-  const g = $('#edRezim'); if (g) g.innerHTML = edRezimTl(ED.d);
   edRezimTip(); edNahled(); edUlozit();
 };
 function edNastav(n, v) { if (n.startsWith('u.')) ED.d.udaje = { ...(ED.d.udaje || {}), [n.slice(2)]: v }; else ED.d[n] = v; }
@@ -1824,6 +1818,7 @@ function poEditor() {
   edRadky(); edNahled();
   cenyHistorie().then(oznacCeny).catch(() => { });
   ED.cisloSync = ED.d.cislo; edKontrolaProtokolu(); edRezimTip();
+  const rs = $('#edRezimSel'); if (rs) rs.onchange = () => AKCE['ed-rezim']({ dataset: { r: rs.value } });
   if (ED.d.typ === 'faktura') prSladCisla(doklad(ED.d.id)).then(() => edKontrolaProtokolu());
   const f = $('#fDok');
   const hod = t => t.type === 'checkbox' ? t.checked : t.value;
@@ -1833,7 +1828,6 @@ function poEditor() {
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
     if (n === 'zakazka_id') edZmenaZakazky(e.target.value);
     edNastav(n, hod(e.target)); if (n === 'predmet' || n === 'kontakt_id') edAutoZakazka();
-    if (n === 'tisk_rezim') { $('#edSouhrnText').classList.toggle('skryt', !/^souhrn/.test(e.target.value)); const g = $('#edRezim'); if (g) g.innerHTML = edRezimTl(ED.d); edRezimTip(); }
     edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
