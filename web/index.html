@@ -1350,19 +1350,22 @@ AKCE['z-katalogu'] = async () => {
       <button class="btn mal" data-a="ext-hledat" data-kde="hornbach">Hornbach ↗</button><button class="btn mal" data-a="ext-hledat" data-kde="bauhaus">Bauhaus ↗</button>
       <span id="katInfo" class="tlumene"></span></div>
     <div id="katSez" style="max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
-    <details id="katRucne" class="karta" style="padding:10px 12px"><summary class="mal tuc" style="cursor:pointer">Přidat ručně – např. zboží nalezené v Hornbachu nebo Bauhausu</summary>
+    <details id="katRucne" class="karta" style="padding:10px 12px"><summary class="mal tuc" style="cursor:pointer">Přidat z webu nebo ručně – zboží z Bauhausu, Hornbachu, OBI…</summary>
       <div class="mrizka m2" style="margin-top:10px">
+        <div class="pole" style="grid-column:1/-1">Odkaz na zboží – vložte adresu stránky produktu a načtu název a cenu
+          <div class="radek" style="gap:8px"><input class="vstup" id="krUrl" placeholder="https://www.bauhaus.cz/…" inputmode="url" style="flex:1"><button class="btn zl" data-a="kat-z-odkazu" type="button">Načíst</button></div>
+          <div id="krStav" class="mal tlumene"></div></div>
         <label class="pole" style="grid-column:1/-1">Název<input id="krNazev"></label>
         <label class="pole">Cena v obchodě za MJ (s DPH)<input id="krCena" inputmode="decimal"></label>
         <label class="pole">MJ<input id="krMj" list="mjList" value="ks"></label>
         <label class="pole">Množství<input id="krMn" inputmode="decimal" value="1"></label>
-        <label class="pole">Odkaz na zboží (nepovinné)<input id="krUrl" placeholder="https://…"></label>
       </div>
       <div class="radek" style="margin-top:8px;justify-content:space-between"><span class="mal tlumene">Na doklad půjde cena ${dphTxt} navýšená o přirážku.</span><button class="btn mal zl" data-a="kat-rucne">Přidat na doklad</button></div>
     </details>`, `<button class="btn" data-a="zavrit">Hotovo</button>`, { trida: 'siroke' });
   const t = $('#katHled'), sel = $('#katTema');
   t.oninput = debounce(katHledatDok, 350); sel.onchange = katHledatDok;
   t.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); katHledatDok(); } };
+  const ku = $('#krUrl'); ku.addEventListener('paste', () => setTimeout(() => AKCE['kat-z-odkazu'](), 30)); ku.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); AKCE['kat-z-odkazu'](); } };
   $('#katPrir').oninput = e => { try { localStorage.setItem('mk-kat-prirazka', String(cislo(e.target.value))); } catch { } kresliKat(); };
   katToken().then(() => { const i = $('#katInfo'); if (i) i.textContent = katPristup() ? '' : 'Bez licence se hledá jen v základním výběru – licenci zadáte v Moje firma.'; });
   katTemata().then(tt => { if (!$('#katTema')) return; sel.innerHTML = '<option value="">Všechny kategorie</option>' + tt.slice().sort((a, b) => a.localeCompare(b, 'cs')).map(x => `<option ${x === KV.tema ? 'selected' : ''}>${esc(x)}</option>`).join(''); });
@@ -1413,7 +1416,35 @@ AKCE['ext-hledat'] = el => {
   const url = el.dataset.kde === 'hornbach' ? (q ? 'https://www.hornbach.cz/s/' + encodeURIComponent(q) : 'https://www.hornbach.cz/')
     : (q ? 'https://www.bauhaus.cz/catalogsearch/result/?q=' + encodeURIComponent(q) : 'https://www.bauhaus.cz/');
   window.open(url, '_blank', 'noopener');
-  const d = $('#katRucne'); if (d) { d.open = true; const nz = $('#krNazev'); if (nz && !nz.value) nz.value = q; }
+  const d = $('#katRucne'); if (d) { d.open = true; const st = $('#krStav'); if (st) st.textContent = 'Až v obchodě najdete zboží, zkopírujte adresu jeho stránky a vložte ji sem.'; }
+};
+/** Název z adresy produktu, když obchod stránku nevydá (např. hornbach.cz/p/sadrokartonova-deska-…-12-5-mm/3286520/). */
+function nazevZOdkazu(u) {
+  try {
+    const seg = new URL(u).pathname.split('/').filter(x => /[a-z]-[a-z0-9]/i.test(x)).sort((a, b) => b.length - a.length)[0] || '';
+    let t = decodeURIComponent(seg).replace(/\.html?$/, '').replace(/-\d{5,}$/, '').replace(/(\d)-(\d)(?=-?(mm|cm|m|kg|l)\b)/g, '$1,$2').replace(/-x-/g, ' × ').replace(/-+/g, ' ').trim();
+    return t ? t[0].toUpperCase() + t.slice(1) : '';
+  } catch { return ''; }
+}
+AKCE['kat-z-odkazu'] = async () => {
+  const u = ($('#krUrl')?.value || '').trim(), st = $('#krStav'); if (!u) { st.textContent = 'Vložte adresu stránky zboží.'; return; }
+  if (!/^https?:\/\//i.test(u)) { st.textContent = 'Adresa musí začínat https://'; return; }
+  st.textContent = 'Načítám stránku zboží…';
+  let r = null;
+  try { const { data, error } = await sb.functions.invoke('zbozi-z-odkazu', { body: { url: u } }); r = data || (error && await error.context?.json?.().catch(() => null)) || null; } catch (e) { r = null; }
+  if (!$('#krNazev')) return;
+  if (r && r.ok) {
+    if (r.nazev) $('#krNazev').value = r.nazev;
+    if (r.cena != null) $('#krCena').value = fmtN(r.cena);
+    if (r.mj) $('#krMj').value = r.mj;
+    const prod = r.cena != null ? Math.round((S.firma.platce_dph ? r.cena / 1.21 : r.cena) * (1 + katPrirazka() / 100) * 100) / 100 : null;
+    st.innerHTML = `${r.foto ? `<img src="${esc(r.foto)}" alt="" referrerpolicy="no-referrer" style="width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px;background:#fff;border-radius:6px">` : ''}✓ Načteno z <b>${esc(r.obchod || '')}</b>${r.cena != null ? ` – cena ${kc(r.cena)}${r.mena && r.mena !== 'CZK' ? ' ' + esc(r.mena) : ''}, na doklad půjde ${kc(prod)} za MJ. Zkontrolujte jednotku.` : ' – cenu jsem nenašel, doplňte ji.'}`;
+    (r.cena == null ? $('#krCena') : $('#krMn')).focus();
+  } else {
+    const n = nazevZOdkazu(u); if (n && !$('#krNazev').value) $('#krNazev').value = n;
+    st.textContent = (r && r.chyba) || 'Stránku se nepodařilo načíst – doplňte název a cenu ručně.';
+    $('#krCena').focus();
+  }
 };
 AKCE['kat-rucne'] = () => {
   const nazev = ($('#krNazev').value || '').trim(), c = cislo($('#krCena').value);
@@ -1421,7 +1452,7 @@ AKCE['kat-rucne'] = () => {
   const nakup = S.firma.platce_dph ? c / 1.21 : c;
   const cena = Math.round(nakup * (1 + katPrirazka() / 100) * 100) / 100;
   edPridejPol({ nazev, mnozstvi: cislo($('#krMn').value) || 1, mj: ($('#krMj').value || 'ks').trim(), cena });
-  ['krNazev', 'krCena', 'krUrl'].forEach(id => { const x = $('#' + id); if (x) x.value = ''; }); $('#krMn').value = '1';
+  ['krNazev', 'krCena', 'krUrl'].forEach(id => { const x = $('#' + id); if (x) x.value = ''; }); $('#krMn').value = '1'; $('#krStav').innerHTML = '';
   toast(`Přidáno: ${nazev} za ${kc(cena)}`);
 };
 
