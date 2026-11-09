@@ -181,6 +181,9 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 /* ---------- papír dokladu (náhled + tisk) ---------- */
 .papir-obal{container-type:inline-size;width:100%}
 .papir{background:#fff;color:#15233c;width:100%;aspect-ratio:210/297;padding:7.14cqw;font-family:"Arial Narrow",Arial,"Helvetica Neue",sans-serif;font-size:1.51cqw;box-shadow:0 2px 10px rgba(0,0,0,.12);line-height:1.5;display:flex;flex-direction:column;overflow:hidden}
+.seg{display:inline-flex;background:var(--pod);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:7px;font:inherit;font-size:13px;font-weight:600;color:var(--ocel);cursor:pointer}
+.seg button.akt{background:#fff;color:var(--inkoust);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .papir .p-konec{display:flow-root}
 .papir .p-hlava{position:relative}
 .papir.doc .doc-storno{position:absolute;left:50%;top:18cqw;transform:translateX(-50%) rotate(-14deg);font-size:9cqw;font-weight:800;letter-spacing:1.5cqw;color:rgba(179,38,30,.28);border:.6cqw solid rgba(179,38,30,.28);border-radius:1.5cqw;padding:.5cqw 3cqw;pointer-events:none;z-index:2}
@@ -1692,7 +1695,7 @@ POHLEDY.doklad = async t => {
         </div>
         ${navazne.length ? `<div class="tlumene mal">Navázané doklady: ${navazne.map(x => `<a href="#doklad/${x.id}">${TYP[x.typ]} ${esc(x.cislo)}</a>`).join(', ')}</div>` : ''}
       </div>
-      <div class="tlumene mal tuc" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Živý náhled</div><div id="edNahled"></div></aside>
+      <div class="radek" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap"><div class="tlumene mal tuc" style="text-transform:uppercase;letter-spacing:1px">Živý náhled</div>${jeFakt(d.typ) || d.typ === 'protokol' ? `<div class="seg" id="edRezim" role="group" aria-label="Rozpis dokladu">${edRezimTl(d)}</div>` : ''}</div><div id="edRezimTip"></div><div id="edNahled"></div></aside>
   </div>`, po: poEditor };
 };
 /* Hlídání cen: řádek nesmí být levněji než v ceníku ani než naposledy u téhož zákazníka – nižší cena jen po odsouhlasení. */
@@ -1797,12 +1800,30 @@ function edKontrolaProtokolu() {
   el.innerHTML = h.join('');
 }
 AKCE['pr-opravit-cislo'] = el => { ED.d.cislo = el.dataset.c; const i = $('#fDok [name=cislo]'); if (i) i.value = el.dataset.c; edNahled(); edUlozit(); edKontrolaProtokolu(); };
+/* ---- přepínač nad náhledem: položkově / po kategoriích (práce, materiál, doprava…) ---- */
+function edRezimTl(d) {
+  const r = d.tisk_rezim || 'polozky';
+  return [['polozky', 'Položkově'], ['kategorie', 'Po kategoriích']].map(([k, n]) => `<button type="button" class="${r === k ? 'akt' : ''}" data-a="ed-rezim" data-r="${k}">${n}</button>`).join('')
+    + (/^souhrn/.test(r) ? `<button type="button" class="akt" data-a="ed-rezim" data-r="${r}" title="Nastaveno ve formuláři (Tisk položek)">Souhrnně</button>` : '');
+}
+function edRezimTip() {
+  const el = $('#edRezimTip'); if (!el || !ED) return;
+  const bez = ED.d.tisk_rezim === 'kategorie' && ED.pol.some(p => (p.nazev || '').trim()) && ED.pol.filter(p => (p.nazev || '').trim()).every(p => !p.kat);
+  el.innerHTML = bez ? '<div class="hlaska inf mal" style="margin-bottom:8px">Položky zatím nemají kategorii – doplňte ji ve sloupci <b>Kategorie</b> (Práce, Materiál, Doprava…), jinak bude vše v „Ostatní“.</div>' : '';
+}
+AKCE['ed-rezim'] = el => {
+  if (!ED) return; const r = el.dataset.r; ED.d.tisk_rezim = r;
+  const sel = $('#fDok [name=tisk_rezim]'); if (sel) sel.value = r;
+  const st = $('#edSouhrnText'); if (st) st.classList.toggle('skryt', !/^souhrn/.test(r));
+  const g = $('#edRezim'); if (g) g.innerHTML = edRezimTl(ED.d);
+  edRezimTip(); edNahled(); edUlozit();
+};
 function edNastav(n, v) { if (n.startsWith('u.')) ED.d.udaje = { ...(ED.d.udaje || {}), [n.slice(2)]: v }; else ED.d[n] = v; }
 function poEditor() {
   ED.ok = {}; ED.hist = {}; ED.pol.forEach(p => { ED.ok[p.id] = cislo(p.cena); });   // už uložené ceny se berou jako odsouhlasené
   edRadky(); edNahled();
   cenyHistorie().then(oznacCeny).catch(() => { });
-  ED.cisloSync = ED.d.cislo; edKontrolaProtokolu();
+  ED.cisloSync = ED.d.cislo; edKontrolaProtokolu(); edRezimTip();
   if (ED.d.typ === 'faktura') prSladCisla(doklad(ED.d.id)).then(() => edKontrolaProtokolu());
   const f = $('#fDok');
   const hod = t => t.type === 'checkbox' ? t.checked : t.value;
@@ -1812,7 +1833,7 @@ function poEditor() {
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
     if (n === 'zakazka_id') edZmenaZakazky(e.target.value);
     edNastav(n, hod(e.target)); if (n === 'predmet' || n === 'kontakt_id') edAutoZakazka();
-    if (n === 'tisk_rezim') $('#edSouhrnText').classList.toggle('skryt', !/^souhrn/.test(e.target.value));
+    if (n === 'tisk_rezim') { $('#edSouhrnText').classList.toggle('skryt', !/^souhrn/.test(e.target.value)); const g = $('#edRezim'); if (g) g.innerHTML = edRezimTl(ED.d); edRezimTip(); }
     edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
@@ -1824,7 +1845,7 @@ function poEditor() {
   });
   tb.addEventListener('input', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') oznacCeny(); });
   tb.addEventListener('change', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') hlidejCenu(+e.target.closest('tr').dataset.i);
-    if (e.target.dataset.k === 'kat') { ED.pol[+e.target.closest('tr').dataset.i].kat = e.target.value || null; edNahled(); edUlozit(); } });
+    if (e.target.dataset.k === 'kat') { ED.pol[+e.target.closest('tr').dataset.i].kat = e.target.value || null; edNahled(); edUlozit(); edRezimTip(); } });
   tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); const tr = e.target.closest('tr'); if (!tr.nextElementSibling) AKCE['pridat-pol'](); else tr.nextElementSibling.querySelector('input').focus(); } });
   if (!ED.pol.length && ED.d.stav === 'koncept') { /* prázdný doklad – rovnou připravit řádek */ AKCE['pridat-pol'](true); }
 }
