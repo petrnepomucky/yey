@@ -517,8 +517,32 @@ async function obnovDoklad(id) { const d = await q(sb.from('doklady').select('*'
 async function ulozZakazku(id, zm) { const r = await db.upd('zakazky', id, zm); Object.assign(zakazka(id), r); return r; }
 async function zapisDenik(zid, text) { const r = await db.ins('denik', { zakazka_id: zid, text }); (S.denik[zid] ||= []).unshift(r); return r; }
 
+/* ---- předávací protokol číslovaný podle faktury (jako yey.cz): F2026010 → P2026010 ---- */
+function prDleFaktury() { return ((S.firma.cisla || {}).protokol || {}).dle_faktury !== false; }
+function prPrefix() { const v = ((S.firma.cisla || {}).protokol || {}).prefix; return v != null ? String(v) : 'P'; }
+function prCisloZFaktury(f) { return prPrefix() + String(f?.cislo || '').replace(/^[A-Za-zÁ-Žá-ž]+/, ''); }
+/** Faktura, ke které protokol patří: vznikl z ní, ona vznikla z něj, mají stejnou nabídku, nebo je v zakázce jediná. */
+function prFaktura(p) {
+  const F = S.doklady.filter(x => x.typ === 'faktura' && x.stav !== 'storno');
+  const zdr = p.zdroj_id ? doklad(p.zdroj_id) : null;
+  return (zdr?.typ === 'faktura' ? zdr : null) || (p.id && F.find(f => f.zdroj_id === p.id))
+    || (zdr?.typ === 'nabidka' && F.find(f => f.zdroj_id === zdr.id))
+    || (p.zakazka_id && (a => a.length === 1 ? a[0] : null)(F.filter(f => f.zakazka_id === p.zakazka_id))) || null;
+}
+function fakturaProtokoly(f) { return S.doklady.filter(p => p.typ === 'protokol' && prFaktura(p)?.id === f.id); }
+async function prSladCisla(f) {
+  if (!prDleFaktury() || !f?.cislo) return [];
+  const zm = [];
+  for (const p of fakturaProtokoly(f)) {
+    const c = prCisloZFaktury(f); if (p.cislo === c) continue;
+    try { await q(sb.from('doklady').update({ cislo: c }).eq('id', p.id)); zm.push(`${p.cislo} → ${c}`); p.cislo = c; } catch { }
+  }
+  if (zm.length) toast('Předávací protokol přečíslován podle faktury: ' + zm.join(', '), { ms: 5000 });
+  return zm;
+}
 async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = null, predmet = '' } = {}) {
-  const c = await q(sb.rpc('dalsi_cislo', { p_firma: S.firma.id, p_typ: typ }));
+  const fPr = typ === 'protokol' && prDleFaktury() ? prFaktura({ id: null, zdroj_id: zdroj?.id || null, zakazka_id: zakazka_id || zdroj?.zakazka_id || null }) : null;
+  const c = fPr?.cislo ? prCisloZFaktury(fPr) : await q(sb.rpc('dalsi_cislo', { p_firma: S.firma.id, p_typ: typ }));
   const z = zakazka_id ? zakazka(zakazka_id) : null;
   const o = {
     typ, cislo: c, zakazka_id, kontakt_id: kontakt_id || z?.kontakt_id || zdroj?.kontakt_id || null,
@@ -527,6 +551,7 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
   };
   if (jeFakt(typ)) { o.splatnost = plusDni(dnes(), S.firma.splatnost_dni || 14); o.duzp = dnes(); o.vs = c.replace(/\D/g, ''); }
   if (typ === 'nabidka') o.splatnost = plusDni(dnes(), 30); // platnost nabídky
+  if (fPr && fPr.datum && fPr.datum < dnes()) o.datum = fPr.datum;   // protokol nejpozději v den vystavení faktury
   const d = await db.ins('doklady', o); S.doklady.unshift(d);
   if (zdroj) {
     const pol = await nactiPolozky(zdroj.id);
@@ -536,6 +561,7 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
     } else S.polozky[d.id] = [];
   } else S.polozky[d.id] = [];
   if (zakazka_id) zapisDenik(zakazka_id, `${TYP[typ]} ${c} vytvořena`).catch(() => {});
+  if (typ === 'faktura') await prSladCisla(doklad(d.id));
   return doklad(d.id);
 }
 
@@ -1422,6 +1448,7 @@ POHLEDY.doklad = async t => {
           <label class="pole">Stav<select name="stav">${stavy.map(s => `<option value="${s}" ${s === d.stav ? 'selected' : ''}>${STAV[s]}</option>`).join('')}</select></label>
         </div>
       </form>
+      <div id="edKontrola" style="display:flex;flex-direction:column;gap:8px"></div>
       <section class="karta">
         <div class="karta-h"><h3>Položky</h3><div class="radek">
           ${S.cenik.length ? `<button class="btn mal" data-a="z-ceniku">${ik('cenik', 16)}Z ceníku</button>` : ''}
@@ -1528,16 +1555,39 @@ const edUlozit = debounce(async () => {
     ED.puvodniIds = new Set(rows.map(r => r.id)); S.polozky[d.id] = rows.map(r => ({ ...r }));
     await obnovDoklad(d.id);
     const c = $('#edStavCip'); if (c) c.innerHTML = cipStav(doklad(d.id));
+    if (d.typ === 'faktura' && d.cislo !== ED.cisloSync) { ED.cisloSync = d.cislo; await prSladCisla(doklad(d.id)); }
+    edKontrolaProtokolu();
     if (st) { st.textContent = '✓ Uloženo'; st.style.color = ''; }
   } catch (e) { if (st) { st.textContent = '⚠ Neuloženo'; st.style.color = 'var(--pozor)'; } }
 }, 700);
+/** Protokol ↔ faktura: stejná číselná řada a datum předání nejpozději v den vystavení faktury. */
+function edKontrolaProtokolu() {
+  const el = $('#edKontrola'); if (!el || !ED) return;
+  const d = ED.d, h = [];
+  if (d.typ === 'protokol') {
+    const f = prFaktura(d);
+    if (f && prDleFaktury()) {
+      const c = prCisloZFaktury(f);
+      h.push(d.cislo === c ? `<div class="hlaska ok">✓ Číslo protokolu odpovídá faktuře <a href="#doklad/${f.id}">${esc(f.cislo)}</a>.</div>`
+        : `<div class="hlaska err">⚠ Číslo neodpovídá faktuře <a href="#doklad/${f.id}">${esc(f.cislo)}</a> – má být <b>${esc(c)}</b>. <button type="button" class="btn mal" data-a="pr-opravit-cislo" data-c="${esc(c)}">Opravit</button></div>`);
+    }
+    if (f && d.datum && f.datum && d.datum > f.datum) h.push(`<div class="hlaska err">⚠ Datum předání (${datum(d.datum)}) je pozdější než vystavení faktury ${esc(f.cislo)} (${datum(f.datum)}). Protokol musí být vyhotoven nejpozději v den vystavení faktury.</div>`);
+  } else if (d.typ === 'faktura') {
+    const pr = fakturaProtokoly(d), pozde = pr.filter(p => p.datum && d.datum && p.datum > d.datum);
+    if (pozde.length) h.push(`<div class="hlaska err">⚠ Datum vystavení (${datum(d.datum)}) je dřívější než datum předání v protokolu ${pozde.map(p => `<a href="#doklad/${p.id}">${esc(p.cislo)}</a> (${datum(p.datum)})`).join(', ')}. Protokol musí být vyhotoven nejpozději v den vystavení faktury.</div>`);
+  }
+  el.innerHTML = h.join('');
+}
+AKCE['pr-opravit-cislo'] = el => { ED.d.cislo = el.dataset.c; const i = $('#fDok [name=cislo]'); if (i) i.value = el.dataset.c; edNahled(); edUlozit(); edKontrolaProtokolu(); };
 function poEditor() {
   ED.ok = {}; ED.hist = {}; ED.pol.forEach(p => { ED.ok[p.id] = cislo(p.cena); });   // už uložené ceny se berou jako odsouhlasené
   edRadky(); edNahled();
   cenyHistorie().then(oznacCeny).catch(() => { });
+  ED.cisloSync = ED.d.cislo; edKontrolaProtokolu();
+  if (ED.d.typ === 'faktura') prSladCisla(doklad(ED.d.id)).then(() => edKontrolaProtokolu());
   const f = $('#fDok');
   const hod = t => t.type === 'checkbox' ? t.checked : t.value;
-  f.addEventListener('input', e => { const n = e.target.name; if (!n || /^__nov/.test(e.target.value)) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); });
+  f.addEventListener('input', e => { const n = e.target.name; if (!n || /^__nov/.test(e.target.value)) return; ED.d[n] = hod(e.target); edNahled(); edUlozit(); if (n === 'cislo' || n === 'datum') edKontrolaProtokolu(); });
   f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
     if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
@@ -2289,7 +2339,8 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
     <div class="pole">Číselné řady dokladů <span class="napoveda">Značky: {RRRR} rok (2026), {RR} rok (26), {MM} měsíc, {NNN} pořadí (počet N = počet míst). „Další číslo“ prázdné = pokračuje za posledním dokladem. Při změně roku začne řada od 1.</span>
       <table class="cis-tab"><thead><tr><th>Doklad</th><th>Tvar čísla</th><th style="width:110px">Další číslo</th><th style="width:120px">Náhled</th></tr></thead><tbody>
       ${CIS_TYPY.map(([t, n]) => { const c = (F.cisla || {})[t] || {}; return `<tr><td>${n}</td><td><input data-cis-fmt="${t}" value="${esc(c.fmt || CIS_VYCHOZI[t])}"></td><td><input data-cis-n="${t}" inputmode="numeric" value="${esc(c.dalsi ?? '')}" placeholder="auto"></td><td class="nahl" data-cis-nahl="${t}"></td></tr>`; }).join('')}
-      </tbody></table></div>
+      </tbody></table>
+      <label style="display:flex;gap:10px;align-items:center;cursor:pointer;margin-top:10px;flex-wrap:wrap"><input type="checkbox" data-pr-dle ${prDleFaktury() ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--inkoust)"> <span><b>Předávací protokol číslovat podle faktury</b> – předpona <input data-pr-prefix value="${esc(prPrefix())}" style="width:56px;height:34px;border:1px solid var(--linka);border-radius:7px;padding:0 8px"> → faktura F2026010 = protokol <span data-pr-nahl>${esc(prPrefix())}2026010</span>. Při změně čísla faktury se protokol přečísluje sám.</span></label></div>
     <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" name="hlidat_ceny" ${F.hlidat_ceny !== false ? 'checked' : ''} style="width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--inkoust)"> <span><b>Hlídat ceny</b> – cena položky nesmí být nižší než v ceníku ani než naposledy u stejného zákazníka. Nižší cenu je potřeba odsouhlasit.</span></label>
     <label class="pole">Licenční klíč YeY <span class="napoveda">(odemkne celý katalog materiálu v kalkulačkách)</span><textarea name="licence" rows="2" style="font-family:monospace;font-size:12px" placeholder="Vložte licenční klíč">${esc(F.licence)}</textarea><span class="napoveda" id="licStav"></span></label>
     <div class="radek"><button class="btn zl" type="submit">Uložit údaje</button><span class="ulozeno skryt" id="nastOk">✓ Uloženo</span></div>
@@ -2324,7 +2375,9 @@ function formatCislo(mask, n) { const d = new Date(), rrrr = String(d.getFullYea
 function cisZFormulare() { const puv = S.firma.cisla || {}, o = {};
   CIS_TYPY.forEach(([t]) => { const fmt = ($(`[data-cis-fmt="${t}"]`)?.value || '').trim() || CIS_VYCHOZI[t]; const n = parseInt($(`[data-cis-n="${t}"]`)?.value, 10);
     o[t] = { ...(puv[t] || {}), fmt }; if (n > 0) { o[t].dalsi = n; o[t].rok = new Date().getFullYear(); } else delete o[t].dalsi; if (!/\{N+\}/.test(fmt)) o[t].fmt = fmt + '{NNN}'; });
+  const dle = $('[data-pr-dle]'); if (dle) { o.protokol.dle_faktury = dle.checked; o.protokol.prefix = ($('[data-pr-prefix]')?.value || '').trim(); }
   return o; }
+document.addEventListener('input', e => { if (e.target.matches?.('[data-pr-prefix]')) { const n = $('[data-pr-nahl]'); if (n) n.textContent = e.target.value.trim() + '2026010'; } });
 function cisNahled() { CIS_TYPY.forEach(([t]) => { const el = $(`[data-cis-nahl="${t}"]`); if (!el) return; const fmt = $(`[data-cis-fmt="${t}"]`).value.trim() || CIS_VYCHOZI[t]; const n = parseInt($(`[data-cis-n="${t}"]`).value, 10);
   el.textContent = /\{N+\}/.test(fmt) ? formatCislo(fmt, n > 0 ? n : 1) + (n > 0 ? '' : ' …') : 'chybí {NNN}'; }); }
 
