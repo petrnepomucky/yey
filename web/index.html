@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>YeY – Kancelář pro řemeslníky</title>
 <meta name="theme-color" content="#1D272F">
+<link rel="icon" type="image/png" sizes="32x32" href="/ikony/favicon-32.png">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/ikony/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="YeY">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -423,7 +430,7 @@ const IK = {
   kalk: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h1M12 12h1M16 12h0M8 16h1M12 16h1M16 15v2"/>',
   cenik: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   firma: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>', hledat: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', instal: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', hledat: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
   tisk: '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/>',
   smaz: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>', zpet: '<path d="M15 18l-6-6 6-6"/>',
   tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/>',
@@ -538,7 +545,7 @@ function shell(obsah, opt = {}) {
       ${pol('kontakty', 'kontakty', 'Kontakty', `<span class="pocet">${S.kontakty.length || ''}</span>`)}
       ${pol('kalkulacky', 'kalk', 'Kalkulačky')}
       ${pol('cenik', 'cenik', 'Ceník prací')}
-      <div class="spodek">${pol('firma', 'firma', 'Moje firma')}</div>
+      <div class="spodek">${jeNainstalovano() ? '' : `<a href="#" data-a="instalovat">${ik('instal')}Nainstalovat aplikaci</a>`}${pol('firma', 'firma', 'Moje firma')}</div>
     </nav>
     <main class="obsah ${opt.plna ? 'plna' : ''}" id="obsah">${obsah}</main>
   </div>
@@ -771,8 +778,24 @@ async function doplnZapis() {
 
 AKCE.ucet = () => okno('Účet', `<div><div class="tuc">${esc(S.user.email)}</div><div class="tlumene mal">Data se ukládají automaticky do cloudu.</div></div>
   <a class="btn" href="#firma" data-a="zavrit-jdi" data-h="firma">${ik('firma')}Moje firma a údaje na dokladech</a>
-  <button class="btn" type="button" data-a="zmena-hesla">Změnit heslo</button>`,
+  <button class="btn" type="button" data-a="zmena-hesla">Změnit heslo</button>${jeNainstalovano() ? '' : `<button class="btn" type="button" data-a="instalovat">${ik('instal')}Nainstalovat jako aplikaci</button>`}`,
   `<button class="btn cerv" type="button" data-a="odhlasit">${ik('odhl')}Odhlásit</button>`);
+/* ---- instalace jako aplikace (PWA) ---- */
+let INSTAL = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTAL = e; });
+window.addEventListener('appinstalled', () => { INSTAL = null; toast('Aplikace YeY je nainstalovaná ✓'); try { render(); } catch { } });
+function jeNainstalovano() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => { });
+AKCE.instalovat = async () => {
+  if (INSTAL) { zavriOkno(); INSTAL.prompt(); const r = await INSTAL.userChoice.catch(() => null); INSTAL = null; if (r && r.outcome === 'accepted') toast('Instaluji aplikaci YeY…'); return; }
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const ff = /Firefox\//.test(navigator.userAgent);
+  okno('Nainstalovat aplikaci YeY', `<div class="radek" style="gap:14px;align-items:center"><img src="/ikony/ikona-192.png" alt="" width="64" height="64" style="border-radius:14px"><div>Aplikace se pak otevírá z plochy nebo z nabídky Start jako samostatný program, bez adresního řádku.</div></div>
+    ${ios ? `<ol style="margin:0;padding-left:20px;line-height:1.7"><li>Otevřete tuto stránku v <b>Safari</b>.</li><li>Klepněte na <b>Sdílet</b> (čtvereček se šipkou nahoru).</li><li>Zvolte <b>Přidat na plochu</b> a potvrďte <b>Přidat</b>.</li></ol>`
+    : ff ? `<div>Firefox instalaci aplikací nepodporuje. Otevřete <b>kancelar.yey.cz</b> v prohlížeči <b>Chrome</b> nebo <b>Edge</b> a zvolte instalaci tam.</div>`
+    : `<ol style="margin:0;padding-left:20px;line-height:1.7"><li>V adresním řádku klikněte na ikonu <b>Nainstalovat</b> (monitor se šipkou), nebo</li><li>otevřete menu prohlížeče <b>⋮</b> → <b>Uložit a sdílet / Aplikace</b> → <b>Nainstalovat YeY</b>.</li><li>Na Androidu: menu <b>⋮</b> → <b>Přidat na plochu / Instalovat aplikaci</b>.</li></ol>`}`,
+    `<button class="btn zl" data-a="zavrit">Rozumím</button>`);
+};
 AKCE['zavrit-jdi'] = el => { zavriOkno(); jdi(el.dataset.h); };
 AKCE['zmena-hesla'] = () => { UI.prihlRezim = 'noveheslo'; zavriOkno(); renderPrihlaseni(); };
 AKCE.odhlasit = async () => { await sb.auth.signOut(); location.hash = ''; location.reload(); };
@@ -1856,11 +1879,11 @@ function edAktualni() {
 }
 function pdfNazev(d) { return (`${TYP[d.typ]} ${d.cislo}`).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '_') + '.pdf'; }
 /** PDF dokladu (A4, více stran, pokud se nevejde) – stejný vzhled jako náhled a tisk. */
-async function dokladPdf(d, pol) {
+async function dokladPdf(d, pol, dalsi = []) {
   await pdfSkript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   await pdfSkript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   const m = document.createElement('div'); m.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff';
-  m.innerHTML = dokladStrany(d, pol); m.querySelectorAll('.netisk').forEach(e => e.remove());
+  m.innerHTML = dokladStrany(d, pol) + dalsi.map(x => dokladStrany(x.d, x.pol)).join(''); m.querySelectorAll('.netisk').forEach(e => e.remove());
   document.body.appendChild(m);
   try {
     await Promise.all([...m.querySelectorAll('img')].map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
@@ -1871,7 +1894,7 @@ async function dokladPdf(d, pol) {
       const cv = await html2canvas(listy[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
       if (i) pdf.addPage(); pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
     }
-    return new File([pdf.output('blob')], pdfNazev(d), { type: 'application/pdf' });
+    return new File([pdf.output('blob')], dalsi.length ? pdfNazev(d).replace(/\.pdf$/, '') + dalsi.map(x => '_a_' + pdfNazev(x.d).replace(/\.pdf$/, '')).join('') + '.pdf' : pdfNazev(d), { type: 'application/pdf' });
   } finally { m.remove(); }
 }
 function emailNavrh(d) {
@@ -1904,19 +1927,49 @@ AKCE['email-ed'] = () => {
   if (!ED) return;
   const d = edAktualni(), n = emailNavrh(d);
   let sdilet = false; try { sdilet = !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] })); } catch { }
-  EM = { soubor: null, d };
+  EM = { soubor: null, d, prot: null };
   const oznacit = d.stav === 'koncept' && d.typ !== 'protokol';
+  const prot = d.typ === 'faktura' ? emNajdiProtokol(d) : null;
   okno(`Odeslat ${TYP[d.typ].toLowerCase()} e-mailem`, `
     <label class="pole">Komu<input id="emKomu" type="email" value="${esc(n.komu)}" placeholder="e-mail odběratele"></label>
     <label class="pole">Předmět<input id="emPredmet" value="${esc(n.predmet)}"></label>
     <label class="pole">Text e-mailu<textarea id="emText" style="min-height:240px;line-height:1.5">${esc(n.text)}</textarea></label>
-    <div class="radek karta" style="padding:10px 12px;gap:10px;align-items:center">📎 <b>${esc(pdfNazev(d))}</b><span class="mal tlumene" id="emPdfStav">PDF dokladu</span><span class="mezera"></span><button class="btn mal" data-a="em-pdf">Stáhnout PDF</button></div>
+    ${d.typ === 'faktura' ? `<label class="radek karta" style="padding:10px 12px;gap:10px;cursor:pointer;align-items:center"><input type="checkbox" id="emProt" ${prot ? 'checked' : ''} style="width:18px;height:18px">
+      <span>${prot ? `Přiložit i <b>předávací protokol ${esc(prot.cislo)}</b> – faktura a protokol v jednom PDF` : 'Vytvořit <b>předávací protokol</b> k této faktuře a přiložit ho do stejného PDF'}</span></label>` : ''}
+    <div class="radek karta" style="padding:10px 12px;gap:10px;align-items:center">📎 <b id="emPdfNazev">${esc(pdfNazev(d))}</b><span class="mal tlumene" id="emPdfStav">PDF dokladu</span><span class="mezera"></span><button class="btn mal" data-a="em-pdf">Stáhnout PDF</button></div>
     ${oznacit ? `<label class="radek mal" style="gap:8px;cursor:pointer"><input type="checkbox" id="emOznacit" checked style="width:18px;height:18px"> Po odeslání označit ${d.typ === 'nabidka' ? 'nabídku' : 'fakturu'} jako odeslanou</label>` : ''}
     <div class="mal tlumene">${sdilet ? '„Sdílet s přílohou“ otevře poštu v telefonu rovnou s PDF. ' : ''}„Otevřít v e-mailu“ stáhne PDF a otevře nový e-mail s vyplněným textem – PDF do něj jen přetáhněte jako přílohu.</div>`,
     `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn" data-a="em-kopirovat">Kopírovat text</button>${sdilet ? `<button class="btn" data-a="em-sdilet">Sdílet s přílohou</button>` : ''}<button class="btn zl" data-a="em-odeslat">${ik('mail', 16)}Otevřít v e-mailu</button>`, { trida: 'siroke' });
-  EM.p = dokladPdf(d, ED.pol).then(f => { EM.soubor = f; const s = $('#emPdfStav'); if (s) s.textContent = `PDF připraveno (${Math.max(1, Math.round(f.size / 1024))} kB)`; return f; })
-    .catch(e => { const s = $('#emPdfStav'); if (s) s.textContent = 'PDF se nepodařilo vytvořit – použijte PDF / Tisk.'; return null; });
+  const cb = $('#emProt'); if (cb) cb.onchange = () => emProtokol(cb.checked);
+  if (prot) emProtokol(true, prot); else emPriprav();
 };
+function emPriprav() {
+  const n = $('#emPdfNazev'); if (n) n.textContent = EM.prot ? pdfNazev(EM.d).replace(/\.pdf$/, '') + '_a_' + pdfNazev(EM.prot.d) : pdfNazev(EM.d);
+  const s0 = $('#emPdfStav'); if (s0) s0.textContent = 'Připravuji PDF…';
+  EM.soubor = null;
+  const p = EM.p = dokladPdf(EM.d, ED.pol, EM.prot ? [EM.prot] : []).then(f => { if (EM.p === p) { EM.soubor = f; const s = $('#emPdfStav'); if (s) s.textContent = `PDF připraveno (${Math.max(1, Math.round(f.size / 1024))} kB${EM.prot ? ', faktura + protokol' : ''})`; } return f; })
+    .catch(e => { const s = $('#emPdfStav'); if (s) s.textContent = 'PDF se nepodařilo vytvořit – použijte PDF / Tisk.'; return null; });
+}
+/** Předávací protokol patřící k faktuře: vytvořený z ní, ze stejné nabídky, nebo ve stejné zakázce. */
+function emNajdiProtokol(d) {
+  const P = S.doklady.filter(x => x.typ === 'protokol');
+  return P.find(x => x.zdroj_id === d.id || x.id === d.zdroj_id) || (d.zdroj_id && P.find(x => x.zdroj_id === d.zdroj_id)) || (d.zakazka_id && P.find(x => x.zakazka_id === d.zakazka_id)) || null;
+}
+async function emProtokol(zapnout, prot) {
+  const tx = $('#emText'), pr = $('#emPredmet');
+  if (zapnout) {
+    prot = prot || emNajdiProtokol(EM.d);
+    if (!prot) { prot = await novyDoklad('protokol', { zakazka_id: EM.d.zakazka_id, zdroj: doklad(EM.d.id) }); toast(`Vytvořen předávací protokol ${prot.cislo} – zkontrolujte ho později v Dokladech.`); }
+    EM.prot = { d: prot, pol: await nactiPolozky(prot.id) };
+    const c = EM.d.cislo, pc = prot.cislo;
+    if (tx && !tx.value.includes('předávací protokol č.')) tx.value = tx.value.replace(`fakturu č. ${c}`, `fakturu č. ${c} a předávací protokol č. ${pc}`);
+    if (pr && !pr.value.includes('protokol')) pr.value = pr.value.replace(`Faktura ${c}`, `Faktura ${c} a předávací protokol ${pc}`);
+  } else {
+    if (EM.prot) { const pc = EM.prot.d.cislo; if (tx) tx.value = tx.value.replace(` a předávací protokol č. ${pc}`, ''); if (pr) pr.value = pr.value.replace(` a předávací protokol ${pc}`, ''); }
+    EM.prot = null;
+  }
+  emPriprav();
+}
 function emStahni(f) { const u = URL.createObjectURL(f), a = document.createElement('a'); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 AKCE['em-pdf'] = async () => { const f = EM.soubor || await EM.p; if (f) emStahni(f); };
 AKCE['em-kopirovat'] = async () => { try { await navigator.clipboard.writeText($('#emText').value); toast('Text zkopírován'); } catch { toast('Kopírování se nepovedlo', { chyba: true }); } };
