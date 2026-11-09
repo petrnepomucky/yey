@@ -1441,6 +1441,7 @@ POHLEDY.doklad = async t => {
         <button class="btn zl" data-a="email-ed">${ik('mail', 16)}Odeslat e-mailem</button>
         ${d.typ === 'nabidka' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Převést na fakturu</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="zalohova">→ Zálohová faktura</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="protokol">→ Předávací protokol</button>` : ''}
         ${d.typ === 'protokol' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Vystavit fakturu</button>` : ''}
+        ${jeFakt(d.typ) ? `<button class="btn" data-a="isdoc-ed" title="Elektronická faktura ve formátu ISDOC pro účetní programy">${ik('instal', 16)}ISDOC</button>` : ''}
         <button class="btn" data-a="kopie-dok">${ik('kopie', 16)}Duplikovat</button>
         <button class="btn cerv" data-a="smazat-dok">${ik('smaz', 16)}Smazat</button>
         </div>
@@ -1992,6 +1993,79 @@ AKCE['xl-pridat'] = () => {
   toast(`${it.length} položek přidáno z Excelu.`);
 };
 
+/* =================== ISDOC 6.0.2 – elektronická faktura pro účetní programy (Pohoda, Money, ABRA, Helios…) =================== */
+/** UUID dokladu ve tvaru, který ISDOC vyžaduje (id dokladu je UUID; jinak se odvodí z čísla). */
+function isdocUuid(d) {
+  const id = String(d.id || '');
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return id.toUpperCase();
+  let h = ''; for (let i = 0; h.length < 32; i++) { let v = 2166136261 ^ i; for (const c of id + '|' + (d.cislo || '')) { v ^= c.charCodeAt(0); v = Math.imul(v, 16777619); } h += (v >>> 0).toString(16).padStart(8, '0'); }
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`.toUpperCase();
+}
+/** Čistá funkce: z dokladu, položek, firmy, odběratele a odečtených záloh vytvoří XML ISDOC. */
+function isdocXml(d, pol, F, k, zalohy = [], system = 'YeY – Moje kancelář') {
+  const x = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const n = v => { const c = Math.round((Number(v) || 0) * 100) / 100; return String(Object.is(c, -0) ? 0 : c); };
+  const n4 = v => String(Math.round((Number(v) || 0) * 10000) / 10000);
+  const dt = v => (v ? String(v).slice(0, 10) : '');
+  const platce = !!F.platce_dph, pdp = platce && !!d.pdp, zal = d.typ === 'zalohova';
+  const ulice = s => { const m = /^(.*?)[\s,]+(\d[\w/ -]*)$/.exec(String(s || '').trim()); return m ? [m[1], m[2].trim()] : [String(s || '').trim(), '']; };
+  const strana = (o, sDic, kontakt) => {
+    const [ul, cp] = ulice(o.ulice);
+    return `<Party><PartyIdentification><ID>${x(String(o.ico || '').replace(/\s/g, ''))}</ID></PartyIdentification><PartyName><Name>${x(o.nazev)}</Name></PartyName>`
+      + `<PostalAddress><StreetName>${x(ul)}</StreetName><BuildingNumber>${x(cp)}</BuildingNumber><CityName>${x(o.mesto)}</CityName><PostalZone>${x(String(o.psc || '').replace(/\s/g, ''))}</PostalZone><Country><IdentificationCode>CZ</IdentificationCode><Name>Česká republika</Name></Country></PostalAddress>`
+      + (sDic && o.dic ? `<PartyTaxScheme><CompanyID>${x(String(o.dic).replace(/\s/g, ''))}</CompanyID><TaxScheme>VAT</TaxScheme></PartyTaxScheme>` : '')
+      + (kontakt ? `<Contact>${kontakt.jmeno ? `<Name>${x(kontakt.jmeno)}</Name>` : ''}<Telephone>${x(kontakt.tel)}</Telephone><ElectronicMail>${x(kontakt.email)}</ElectronicMail></Contact>` : '')
+      + `</Party>`;
+  };
+  const radky = (pol || []).filter(p => String(p.nazev || '').trim() || Number(p.cena));
+  const sazby = {}; let bez = 0, dan = 0;
+  const lines = radky.map((p, i) => {
+    const mn = Number(p.mnozstvi) || 0, jc = Number(p.cena) || 0, zakl = Math.round(mn * jc * 100) / 100;
+    const pct = platce ? Number(p.dph) || 0 : 0, dph = platce && !pdp ? Math.round(zakl * pct) / 100 : 0;
+    bez += zakl; dan += dph; const kl = pct + (pdp ? 'r' : ''); (sazby[kl] = sazby[kl] || { pct, zakl: 0, dph: 0 }); sazby[kl].zakl += zakl; sazby[kl].dph += dph;
+    return `<InvoiceLine><ID>${i + 1}</ID><InvoicedQuantity unitCode="${x(String(p.mj || 'ks').replace(/²/g, '2').replace(/³/g, '3'))}">${n4(mn)}</InvoicedQuantity>`
+      + `<LineExtensionAmount>${n(zakl)}</LineExtensionAmount><LineExtensionAmountTaxInclusive>${n(zakl + dph)}</LineExtensionAmountTaxInclusive><LineExtensionTaxAmount>${n(dph)}</LineExtensionTaxAmount>`
+      + `<UnitPrice>${n4(jc)}</UnitPrice><UnitPriceTaxInclusive>${n4(pdp || !platce ? jc : jc * (1 + pct / 100))}</UnitPriceTaxInclusive>`
+      + `<ClassifiedTaxCategory><Percent>${pct}</Percent><VATCalculationMethod>0</VATCalculationMethod><VATApplicable>${platce}</VATApplicable>${pdp ? `<LocalReverseCharge><LocalReverseChargeCode>4</LocalReverseChargeCode><LocalReverseChargeQuantity>${n4(mn)}</LocalReverseChargeQuantity></LocalReverseCharge>` : ''}</ClassifiedTaxCategory>`
+      + `<Item><Description>${x(p.nazev)}</Description></Item></InvoiceLine>`;
+  }).join('');
+  const s = bez + dan, zalSum = zalohy.reduce((a, z) => a + (Number(z.castka) || 0), 0), kUhr = Math.round((s - zalSum) * 100) / 100;
+  const taxSub = Object.values(sazby).map(t => `<TaxSubTotal><TaxableAmount>${n(t.zakl)}</TaxableAmount><TaxAmount>${n(t.dph)}</TaxAmount><TaxInclusiveAmount>${n(t.zakl + t.dph)}</TaxInclusiveAmount>`
+    + `<AlreadyClaimedTaxableAmount>0</AlreadyClaimedTaxableAmount><AlreadyClaimedTaxAmount>0</AlreadyClaimedTaxAmount><AlreadyClaimedTaxInclusiveAmount>0</AlreadyClaimedTaxInclusiveAmount>`
+    + `<DifferenceTaxableAmount>${n(t.zakl)}</DifferenceTaxableAmount><DifferenceTaxAmount>${n(t.dph)}</DifferenceTaxAmount><DifferenceTaxInclusiveAmount>${n(t.zakl + t.dph)}</DifferenceTaxInclusiveAmount>`
+    + `<TaxCategory><Percent>${t.pct}</Percent><VATApplicable>${platce}</VATApplicable>${pdp ? '<LocalReverseChargeFlag>true</LocalReverseChargeFlag>' : ''}</TaxCategory></TaxSubTotal>`).join('');
+  const forma = String(d.forma_uhrady || 'převodem').toLowerCase();
+  const kod = /hotov/.test(forma) ? 10 : /kart/.test(forma) ? 48 : /dob[ií]rk/.test(forma) ? 50 : 42;
+  const [cu, banka] = String(F.ucet || '').replace(/\s/g, '').split('/');
+  const vs = String(d.vs || d.cislo || '').replace(/\D/g, '').slice(0, 10);
+  const platba = kUhr > 0 ? `<PaymentMeans><Payment><PaidAmount>${n(kUhr)}</PaidAmount><PaymentMeansCode>${kod}</PaymentMeansCode>`
+    + (kod === 42 ? `<Details><PaymentDueDate>${dt(d.splatnost || d.datum)}</PaymentDueDate><ID>${x(cu || '')}</ID><BankCode>${x(banka || '')}</BankCode><Name>${x(F.banka || '')}</Name><IBAN>${x(String(F.iban || '').replace(/\s/g, ''))}</IBAN><BIC>${x(F.swift || '')}</BIC><VariableSymbol>${x(vs)}</VariableSymbol><ConstantSymbol></ConstantSymbol><SpecificSymbol></SpecificSymbol></Details>` : '')
+    + `</Payment></PaymentMeans>` : '';
+  const pozn = [d.predmet, pdp ? 'Daň odvede zákazník (přenesená daňová povinnost dle § 92e zákona č. 235/2004 Sb.).' : '', zal ? 'Zálohová faktura – nejedná se o daňový doklad.' : '', d.poznamka].filter(Boolean).join(' · ');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.2">`
+    + `<DocumentType>${zal ? 4 : 1}</DocumentType><ID>${x(d.cislo)}</ID><UUID>${isdocUuid(d)}</UUID><IssuingSystem>${x(system)}</IssuingSystem>`
+    + `<IssueDate>${dt(d.datum)}</IssueDate>${platce && !zal ? `<TaxPointDate>${dt(d.duzp || d.datum)}</TaxPointDate>` : ''}<VATApplicable>${platce && !zal}</VATApplicable>`
+    + `<ElectronicPossibilityAgreementReference></ElectronicPossibilityAgreementReference>${pozn ? `<Note>${x(pozn)}</Note>` : ''}`
+    + `<LocalCurrencyCode>CZK</LocalCurrencyCode><CurrRate>1</CurrRate><RefCurrRate>1</RefCurrRate>`
+    + `<AccountingSupplierParty>${strana(F, platce, { tel: F.telefon, email: F.email })}</AccountingSupplierParty>`
+    + `<AccountingCustomerParty>${strana(k || {}, true, k && (k.osoba || k.telefon || k.email) ? { jmeno: k.osoba, tel: k.telefon, email: k.email } : null)}</AccountingCustomerParty>`
+    + (d.objednavka ? `<OrderReferences><OrderReference id="obj1"><SalesOrderID>${x(d.objednavka)}</SalesOrderID></OrderReference></OrderReferences>` : '')
+    + `<InvoiceLines>${lines}</InvoiceLines>`
+    + `<TaxTotal>${taxSub}<TaxAmount>${n(dan)}</TaxAmount></TaxTotal>`
+    + `<LegalMonetaryTotal><TaxExclusiveAmount>${n(bez)}</TaxExclusiveAmount><TaxInclusiveAmount>${n(s)}</TaxInclusiveAmount>`
+    + `<AlreadyClaimedTaxExclusiveAmount>0</AlreadyClaimedTaxExclusiveAmount><AlreadyClaimedTaxInclusiveAmount>0</AlreadyClaimedTaxInclusiveAmount>`
+    + `<DifferenceTaxExclusiveAmount>${n(bez)}</DifferenceTaxExclusiveAmount><DifferenceTaxInclusiveAmount>${n(s)}</DifferenceTaxInclusiveAmount>`
+    + `<PayableRoundingAmount>0</PayableRoundingAmount><PaidDepositsAmount>${n(zalSum)}</PaidDepositsAmount><PayableAmount>${n(kUhr)}</PayableAmount></LegalMonetaryTotal>`
+    + platba + `</Invoice>`;
+}
+/** ISDOC soubor k dokladu (faktura nebo zálohová faktura). */
+function dokladIsdoc(d, pol) {
+  const xml = isdocXml(d, pol, S.firma, kontakt(d.kontakt_id) || {}, zaplaceneZalohy(d).map(z => ({ castka: celkem(z) })));
+  return new File([xml], pdfNazev(d).replace(/\.pdf$/, '.isdoc'), { type: 'application/xml' });
+}
+AKCE['isdoc-ed'] = () => { if (!ED) return; const d = edAktualni(); emStahni(dokladIsdoc(d, ED.pol)); toast('ISDOC stažen – načtete ho v účetním programu (Pohoda, Money, ABRA…).'); };
+
 /* ---- odeslání dokladu e-mailem: návrh textu podle typu dokladu + PDF příloha ---- */
 function pdfSkript(src) { return new Promise((ok, ch) => { if (document.querySelector('script[src="' + src + '"]')) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ch; document.head.appendChild(s); }); }
 /** Aktuální podoba dokladu z editoru (i neuložené změny) se spočtenými součty. */
@@ -2051,7 +2125,8 @@ AKCE['email-ed'] = () => {
   if (!ED) return;
   const d = edAktualni(), n = emailNavrh(d);
   let sdilet = false; try { sdilet = !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] })); } catch { }
-  EM = { soubor: null, d, prot: null };
+  let isdocSdilet = false; try { isdocSdilet = !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.isdoc', { type: 'application/xml' })] })); } catch { }
+  EM = { soubor: null, d, prot: null, isdocSdilet };
   const oznacit = d.stav === 'koncept' && d.typ !== 'protokol';
   const prot = d.typ === 'faktura' ? emNajdiProtokol(d) : null;
   okno(`Odeslat ${TYP[d.typ].toLowerCase()} e-mailem`, `
@@ -2060,11 +2135,14 @@ AKCE['email-ed'] = () => {
     <label class="pole">Text e-mailu<textarea id="emText" style="min-height:240px;line-height:1.5">${esc(n.text)}</textarea></label>
     ${d.typ === 'faktura' ? `<label class="radek karta" style="padding:10px 12px;gap:10px;cursor:pointer;align-items:center"><input type="checkbox" id="emProt" ${prot ? 'checked' : ''} style="width:18px;height:18px">
       <span>${prot ? `Přiložit i <b>předávací protokol ${esc(prot.cislo)}</b> – faktura a protokol v jednom PDF` : 'Vytvořit <b>předávací protokol</b> k této faktuře a přiložit ho do stejného PDF'}</span></label>` : ''}
+    ${jeFakt(d.typ) ? `<label class="radek karta" style="padding:10px 12px;gap:10px;cursor:pointer;align-items:center"><input type="checkbox" id="emIsdoc" checked style="width:18px;height:18px">
+      <span>Přiložit i <b>ISDOC</b> – elektronickou fakturu, kterou si odběratel načte do účetního programu bez přepisování</span></label>` : ''}
     <div class="radek karta" style="padding:10px 12px;gap:10px;align-items:center">📎 <b id="emPdfNazev">${esc(pdfNazev(d))}</b><span class="mal tlumene" id="emPdfStav">PDF dokladu</span><span class="mezera"></span><button class="btn mal" data-a="em-pdf">Stáhnout PDF</button></div>
     ${oznacit ? `<label class="radek mal" style="gap:8px;cursor:pointer"><input type="checkbox" id="emOznacit" checked style="width:18px;height:18px"> Po odeslání označit ${d.typ === 'nabidka' ? 'nabídku' : 'fakturu'} jako odeslanou</label>` : ''}
     <div class="mal tlumene">${sdilet ? '„Sdílet s přílohou“ otevře poštu v telefonu rovnou s PDF. ' : ''}„Otevřít v e-mailu“ stáhne PDF a otevře nový e-mail s vyplněným textem – PDF do něj jen přetáhněte jako přílohu.</div>`,
     `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn" data-a="em-kopirovat">Kopírovat text</button>${sdilet ? `<button class="btn" data-a="em-sdilet">Sdílet s přílohou</button>` : ''}<button class="btn zl" data-a="em-odeslat">${ik('mail', 16)}Otevřít v e-mailu</button>`, { trida: 'siroke' });
   const cb = $('#emProt'); if (cb) cb.onchange = () => emProtokol(cb.checked);
+  const ci = $('#emIsdoc'); if (ci) { emIsdocText(true); ci.onchange = () => emIsdocText(ci.checked); }
   if (prot) emProtokol(true, prot); else emPriprav();
 };
 function emPriprav() {
@@ -2094,6 +2172,13 @@ async function emProtokol(zapnout, prot) {
   }
   emPriprav();
 }
+const EM_ISDOC_TXT = 'Fakturu přikládám také ve formátu ISDOC pro snadné načtení do účetnictví.';
+function emIsdocText(zap) {
+  const tx = $('#emText'); if (!tx) return;
+  if (zap && !tx.value.includes(EM_ISDOC_TXT)) tx.value = tx.value.replace(/\n\n(S pozdravem)/, `\n\n${EM_ISDOC_TXT}\n\n$1`);
+  if (!zap) tx.value = tx.value.replace(`\n\n${EM_ISDOC_TXT}`, '');
+}
+function emPrilohy(pdf, sdileni) { const a = pdf ? [pdf] : []; if ($('#emIsdoc')?.checked && (!sdileni || EM.isdocSdilet)) a.push(dokladIsdoc(EM.d, ED.pol)); return a; }
 function emStahni(f) { const u = URL.createObjectURL(f), a = document.createElement('a'); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 AKCE['em-pdf'] = async () => { const f = EM.soubor || await EM.p; if (f) emStahni(f); };
 AKCE['em-kopirovat'] = async () => { try { await navigator.clipboard.writeText($('#emText').value); toast('Text zkopírován'); } catch { toast('Kopírování se nepovedlo', { chyba: true }); } };
@@ -2106,16 +2191,16 @@ async function emPoOdeslani(komu) {
 }
 AKCE['em-odeslat'] = async () => {
   const komu = $('#emKomu').value.trim(), pr = $('#emPredmet').value, tx = $('#emText').value;
-  const f = EM.soubor || await EM.p; if (f) emStahni(f);
+  const f = EM.soubor || await EM.p; const pril = emPrilohy(f); pril.forEach((x, i) => setTimeout(() => emStahni(x), i * 400));
   const url = 'mailto:' + encodeURIComponent(komu) + '?subject=' + encodeURIComponent(pr) + '&body=' + encodeURIComponent(tx.replace(/\n/g, '\r\n'));
-  setTimeout(() => { location.href = url; }, 300);
-  toast(f ? `PDF ${f.name} je stažené – přiložte ho do e-mailu.` : 'E-mail otevřen – PDF přiložte přes PDF / Tisk.');
+  setTimeout(() => { location.href = url; }, 300 + pril.length * 400);
+  toast(pril.length ? `Staženo: ${pril.map(x => x.name).join(', ')} – přiložte do e-mailu.` : 'E-mail otevřen – PDF přiložte přes PDF / Tisk.');
   await emPoOdeslani(komu);
 };
 AKCE['em-sdilet'] = async () => {
   const komu = $('#emKomu').value.trim(), pr = $('#emPredmet').value, tx = $('#emText').value;
   const f = EM.soubor || await EM.p; if (!f) { toast('PDF není připravené', { chyba: true }); return; }
-  try { await navigator.share({ files: [f], title: pr, text: tx }); } catch (e) { if (e && e.name === 'AbortError') return; toast('Sdílení se nepovedlo', { chyba: true }); return; }
+  try { await navigator.share({ files: emPrilohy(f, true), title: pr, text: tx }); } catch (e) { if (e && e.name === 'AbortError') return; toast('Sdílení se nepovedlo', { chyba: true }); return; }
   await emPoOdeslani(komu);
 };
 
