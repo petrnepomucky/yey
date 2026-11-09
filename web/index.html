@@ -182,6 +182,20 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .papir-obal{container-type:inline-size;width:100%}
 .papir{background:#fff;color:#15233c;width:100%;aspect-ratio:210/297;padding:7.14cqw;font-family:"Arial Narrow",Arial,"Helvetica Neue",sans-serif;font-size:1.51cqw;box-shadow:0 2px 10px rgba(0,0,0,.12);line-height:1.5;display:flex;flex-direction:column;overflow:hidden}
 .papir .p-konec{display:flow-root}
+/* ---- smlouva o dílo ---- */
+.papir.doc .sod-uvod{font-size:1.39cqw;color:#555;margin:0 0 1.5cqw}
+.papir.doc table.doc-items.sod-tab thead{display:none}
+.papir.doc table.doc-items.sod-tab td{border-bottom:0;padding:.45cqw 0 .45cqw 3.2cqw;font-size:1.45cqw;line-height:1.55;text-align:justify}
+.papir.doc table.doc-items.sod-tab td.sod-volny{padding-left:0}
+.papir.doc table.doc-items.sod-tab tr.cat td{text-align:center;color:#15233c;text-transform:none;font-size:1.51cqw;letter-spacing:0;padding:2.2cqw 0 .8cqw;border-bottom:0;font-weight:700}
+.papir.doc table.doc-items.sod-tab tr.cat td span{display:block;color:#8a6a2f;text-transform:uppercase;letter-spacing:.13cqw;font-size:1.26cqw}
+.papir.doc .sod-c{display:inline-block;width:3.2cqw;margin-left:-3.2cqw;font-weight:700}
+.papir.doc .sod-misto{margin-top:3cqw;font-size:1.45cqw}
+.sod-pole{background:#FFF1A8;border-radius:.3cqw;padding:0 .3cqw;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.sod-pole.prazdne{background:#FDE2E1;color:#9a6b6b}
+.pdf-render .sod-pole,#tisk .sod-pole{background:none;padding:0;color:inherit}
+@media print{.sod-pole{background:none!important;padding:0!important;color:inherit!important}}
+#sodText code{background:var(--pod);padding:1px 5px;border-radius:5px;font-size:12px;white-space:nowrap}
 /* ---- doklad ve vzhledu yey.cz (rozměry přepočtené z px na šířku A4: 1 px = 0,126 cqw) ---- */
 .papir.doc .doc-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.25cqw solid #b0894e;padding-bottom:1.76cqw;margin-bottom:2.27cqw}
 .papir.doc .doc-brand{display:flex;gap:1.51cqw;align-items:center}
@@ -443,12 +457,12 @@ const FAZE = [
   { k: 'hotovo', n: 'Hotovo', p: 'zaplaceno' }
 ];
 const FAZE_N = Object.fromEntries(FAZE.map(f => [f.k, f.n])); FAZE_N.zruseno = 'Zrušeno';
-const TYP = { nabidka: 'Nabídka', faktura: 'Faktura', zalohova: 'Zálohová faktura', protokol: 'Předávací protokol' };
-const TYP_MN = { nabidka: 'Nabídky', faktura: 'Faktury', zalohova: 'Zálohové faktury', protokol: 'Protokoly' };
+const TYP = { nabidka: 'Nabídka', faktura: 'Faktura', zalohova: 'Zálohová faktura', protokol: 'Předávací protokol', smlouva: 'Smlouva o dílo' };
+const TYP_MN = { nabidka: 'Nabídky', faktura: 'Faktury', zalohova: 'Zálohové faktury', protokol: 'Protokoly', smlouva: 'Smlouvy o dílo' };
 const STAV = { koncept: 'Koncept', odeslano: 'Odesláno', prijato: 'Přijato', odmitnuto: 'Odmítnuto', zaplaceno: 'Zaplaceno', storno: 'Storno', podepsano: 'Podepsáno' };
 const jeFakt = t => t === 'faktura' || t === 'zalohova';
 const poSplatnosti = d => jeFakt(d.typ) && !['zaplaceno', 'storno', 'koncept'].includes(d.stav) && d.splatnost && dniDo(d.splatnost) < 0;
-const celkem = d => Number(d.celkem_bez || 0) + Number(d.celkem_dph || 0);
+const celkem = d => d.typ === 'smlouva' ? sodCena(d).s : Number(d.celkem_bez || 0) + Number(d.celkem_dph || 0);
 /* Zaplacené zálohové faktury k odečtení od konečné faktury (stejná zakázka, případně odvozené ze stejné nabídky) */
 const zaplaceneZalohy = d => d.typ !== 'faktura' ? [] : S.doklady.filter(x => x.typ === 'zalohova' && x.stav === 'zaplaceno' && x.id !== d.id && (
   (d.zakazka_id && x.zakazka_id === d.zakazka_id) || (!d.zakazka_id && ((d.zdroj_id && x.zdroj_id === d.zdroj_id) || x.id === d.zdroj_id)))).sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
@@ -552,8 +566,9 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
   if (jeFakt(typ)) { o.splatnost = plusDni(dnes(), S.firma.splatnost_dni || 14); o.duzp = dnes(); o.vs = c.replace(/\D/g, ''); }
   if (typ === 'nabidka') o.splatnost = plusDni(dnes(), 30); // platnost nabídky
   if (fPr && fPr.datum && fPr.datum < dnes()) o.datum = fPr.datum;   // protokol nejpozději v den vystavení faktury
+  if (typ === 'smlouva') o.udaje = zdroj?.typ === 'smlouva' ? { ...(zdroj.udaje || {}) } : sodVychozi(zdroj, z || (zdroj?.zakazka_id ? zakazka(zdroj.zakazka_id) : null));
   const d = await db.ins('doklady', o); S.doklady.unshift(d);
-  if (zdroj) {
+  if (zdroj && typ !== 'smlouva') {
     const pol = await nactiPolozky(zdroj.id);
     if (pol.length) {
       const nove = pol.map((p, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev, mnozstvi: p.mnozstvi, mj: p.mj, cena: p.cena, dph: p.dph, kat: p.kat || null }));
@@ -602,7 +617,7 @@ function shell(obsah, opt = {}) {
       ${pol('prehled', 'prehled', 'Přehled')}
       ${pol('zakazky', 'zakazky', 'Zakázky', `<span class="pocet">${aktivni || ''}</span>`)}
       <div class="odd">Doklady</div>
-      ${mpol('nabidka', 'nabidka')}${mpol('faktura', 'faktura')}${mpol('protokol', 'protokol')}
+      ${mpol('nabidka', 'nabidka')}${mpol('smlouva', 'protokol')}${mpol('faktura', 'faktura')}${mpol('protokol', 'protokol')}
       <div class="odd">Nástroje</div>
       ${pol('kontakty', 'kontakty', 'Kontakty', `<span class="pocet">${S.kontakty.length || ''}</span>`)}
       ${pol('kalkulacky', 'kalk', 'Kalkulačky')}
@@ -1157,6 +1172,7 @@ POHLEDY.doklady = t => {
   let s = S.doklady.filter(d => typy.includes(d.typ));
   const filtry = typ === 'nabidka' ? [['vse', 'Vše'], ['koncept', 'Koncepty'], ['odeslano', 'Čekají'], ['prijato', 'Přijaté'], ['odmitnuto', 'Odmítnuté']]
     : typ === 'protokol' ? [['vse', 'Vše'], ['koncept', 'Koncepty'], ['podepsano', 'Podepsané']]
+    : typ === 'smlouva' ? [['vse', 'Vše'], ['koncept', 'Koncepty'], ['odeslano', 'Odeslané'], ['podepsano', 'Podepsané']]
     : [['vse', 'Vše'], ['neuhrazene', 'Neuhrazené'], ['po', 'Po splatnosti'], ['zaplaceno', 'Zaplacené'], ['koncept', 'Koncepty']];
   const fAkt = filtry.some(x => x[0] === f) ? f : 'vse';
   s = s.filter(d => fAkt === 'vse' ? true : fAkt === 'neuhrazene' ? !['zaplaceno', 'storno', 'koncept'].includes(d.stav) : fAkt === 'po' ? poSplatnosti(d) : d.stav === fAkt);
@@ -1174,6 +1190,199 @@ POHLEDY.doklady = t => {
     </div>`, po: () => { const h = $('#hledDok'); h.oninput = debounce(() => { UI.hledatDok = h.value; const p = h.selectionStart; render().then(() => { const n = $('#hledDok'); n.focus(); n.setSelectionRange(p, p); }); }, 200); } };
 };
 AKCE['novy-doklad'] = async el => { const d = await novyDoklad(el.dataset.typ, { zakazka_id: el.dataset.zak || null }); jdi('doklad/' + d.id); };
+
+/* =================== SMLOUVA O DÍLO – univerzální šablona s poli z formuláře =================== */
+/* Syntaxe šablony: „# Název“ = nový článek (číslují se samy), „- text“ = číslovaný odstavec, jiný řádek = odstavec bez čísla,
+   {{pole}} = údaj z formuláře, {{#pole}}…{{/pole}} = jen když je pole vyplněné, {{^pole}}…{{/pole}} = jen když není. */
+const SOD_SABLONA = `# Předmět díla
+- Zhotovitel se zavazuje provést pro objednatele na svůj náklad a nebezpečí dílo: {{predmet}} (dále jen „dílo“) a objednatel se zavazuje dílo převzít a zaplatit za něj sjednanou cenu.
+- Rozsah a specifikace díla: {{rozsah}}.
+- Zhotovitel provede dílo s odbornou péčí, v souladu s touto smlouvou, platnými právními předpisy a technickými normami.
+
+# Místo a doba plnění
+- Místem plnění je: {{misto_plneni}}.
+- Zhotovitel zahájí provádění díla dne {{zahajeni}} a dokončí jej nejpozději dne {{dokonceni}}.
+- Objednatel umožní zhotoviteli přístup na místo plnění a bezplatný odběr vody a elektrické energie, nebude-li dohodnuto jinak.
+- Termín dokončení se přiměřeně prodlužuje o dobu, po kterou zhotovitel nemohl dílo provádět z důvodů na straně objednatele, pro nepříznivé počasí nebo pro jiné okolnosti, které nemohl ovlivnit.
+
+# Cena díla
+- Cena díla je stanovena dohodou smluvních stran ve výši {{cena_bez}} bez DPH.
+{{#dph}}- K ceně bude připočtena DPH v zákonné výši {{sazba}} %, cena díla včetně DPH tedy činí {{cena_s_dph}}.{{/dph}}
+{{#pdp}}- Plnění podléhá režimu přenesené daňové povinnosti podle § 92e zákona č. 235/2004 Sb., o dani z přidané hodnoty; daň přizná a zaplatí objednatel.{{/pdp}}
+{{#neplatce}}- Zhotovitel není plátcem DPH, cena je konečná.{{/neplatce}}
+- Cena díla je pevná a zahrnuje veškeré náklady zhotovitele nutné k provedení díla v rozsahu podle této smlouvy. Práce nad sjednaný rozsah (vícepráce) budou provedeny jen na základě písemné dohody smluvních stran a budou účtovány zvlášť.
+
+# Platební podmínky
+{{#zaloha_proc}}- Objednatel uhradí zálohu ve výši {{zaloha_proc}} % z ceny díla, tj. {{zaloha_castka}}, na základě zálohové faktury před zahájením prací.{{/zaloha_proc}}
+- Cena díla{{#zaloha_proc}} po odečtení zaplacené zálohy{{/zaloha_proc}} bude uhrazena na základě faktury vystavené zhotovitelem po předání a převzetí díla. Splatnost faktury je {{splatnost_dni}} dní ode dne jejího vystavení.
+- Zhotovitel je oprávněn vystavit fakturu nejdříve v den podpisu předávacího protokolu.
+
+# Předání a převzetí díla
+- Dílo je dokončeno, je-li předvedena jeho způsobilost sloužit svému účelu. O předání a převzetí díla sepíší smluvní strany předávací protokol.
+- Objednatel není oprávněn odmítnout převzetí díla pro ojedinělé drobné vady, které samy o sobě ani ve spojení s jinými nebrání užívání díla.
+
+# Odpovědnost za vady a záruka
+- Zhotovitel poskytuje na dílo záruku za jakost v délce {{zaruka_mesice}} měsíců ode dne předání a převzetí díla.
+- Vady díla oznámí objednatel zhotoviteli písemně bez zbytečného odkladu po jejich zjištění. Zhotovitel odstraní reklamované vady bezplatně v přiměřené lhůtě dohodnuté s objednatelem.
+
+# Smluvní pokuty
+- Při prodlení s dokončením díla zaplatí zhotovitel objednateli smluvní pokutu ve výši {{pokuta_zhot}} % z ceny díla za každý den prodlení.
+- Při prodlení s úhradou faktury zaplatí objednatel zhotoviteli smluvní pokutu ve výši {{pokuta_obj}} % z dlužné částky za každý den prodlení.
+
+{{#vlastni}}# Další ujednání
+{{vlastni}}
+
+{{/vlastni}}# Závěrečná ustanovení
+- Práva a povinnosti touto smlouvou výslovně neupravené se řídí zákonem č. 89/2012 Sb., občanský zákoník, zejména ustanoveními § 2586 a násl.
+- Smlouvu lze měnit pouze písemnými dodatky podepsanými oběma smluvními stranami.
+{{#nabidka_cislo}}- Nedílnou součástí této smlouvy je cenová nabídka č. {{nabidka_cislo}} jako příloha č. 1.{{/nabidka_cislo}}
+- Smlouva je vyhotovena ve {{vyhotoveni}} stejnopisech, z nichž každá smluvní strana obdrží jeden.
+- Smlouva nabývá platnosti a účinnosti dnem podpisu oběma smluvními stranami.`;
+const SOD_POLE = [
+  ['predmet', 'Předmět díla'], ['rozsah', 'Rozsah a specifikace'], ['misto_plneni', 'Místo plnění'], ['zahajeni', 'Zahájení'], ['dokonceni', 'Dokončení'],
+  ['cena_bez', 'Cena bez DPH'], ['sazba', 'Sazba DPH'], ['cena_s_dph', 'Cena s DPH'], ['dph', 'je plátce (běžná DPH)'], ['pdp', 'přenesená daň. povinnost'], ['neplatce', 'není plátce DPH'],
+  ['zaloha_proc', 'Záloha %'], ['zaloha_castka', 'Záloha Kč'], ['splatnost_dni', 'Splatnost (dní)'], ['zaruka_mesice', 'Záruka (měsíců)'],
+  ['pokuta_zhot', 'Pokuta zhotovitele %/den'], ['pokuta_obj', 'Pokuta objednatele %/den'], ['vyhotoveni', 'Počet stejnopisů (slovem)'],
+  ['nabidka_cislo', 'Číslo nabídky'], ['vlastni', 'Další ujednání'], ['cislo', 'Číslo smlouvy'], ['misto_uzavreni', 'Místo uzavření'], ['datum_uzavreni', 'Datum uzavření'],
+  ['zhotovitel', 'Zhotovitel'], ['objednatel', 'Objednatel']];
+function sodCena(d) {
+  const u = d.udaje || {}, bez = cislo(u.cena_bez), sazba = u.sazba != null && u.sazba !== '' ? cislo(u.sazba) : 21;
+  const rezim = u.rezim || (S.firma.platce_dph ? 'dph' : 'neplatce');
+  return { bez, sazba, rezim, s: rezim === 'dph' ? Math.round(bez * (1 + sazba / 100) * 100) / 100 : bez };
+}
+/** Hodnoty polí pro šablonu (formátované pro text smlouvy). */
+function sodHodnoty(d) {
+  const u = d.udaje || {}, F = S.firma, k = kontakt(d.kontakt_id) || {}, c = sodCena(d), zp = cislo(u.zaloha_proc);
+  const nab = d.zdroj_id ? doklad(d.zdroj_id) : null;
+  return {
+    predmet: d.predmet || '', rozsah: u.rozsah || '', misto_plneni: u.misto_plneni || '', zahajeni: u.zahajeni ? datum(u.zahajeni) : '', dokonceni: u.dokonceni ? datum(u.dokonceni) : '',
+    cena_bez: c.bez ? kc(c.bez) : '', sazba: c.rezim === 'dph' ? fmtN(c.sazba, 0) : '', cena_s_dph: c.bez ? kc(c.s) : '',
+    dph: c.rezim === 'dph' ? 'ano' : '', pdp: c.rezim === 'pdp' ? 'ano' : '', neplatce: c.rezim === 'neplatce' ? 'ano' : '',
+    zaloha_proc: zp ? fmtN(zp, 0) : '', zaloha_castka: zp && c.bez ? kc(Math.round(c.s * zp) / 100) : '', splatnost_dni: u.splatnost_dni ?? '', zaruka_mesice: u.zaruka_mesice ?? '',
+    pokuta_zhot: u.pokuta_zhot ?? '', pokuta_obj: u.pokuta_obj ?? '', vyhotoveni: u.vyhotoveni || '', nabidka_cislo: nab?.typ === 'nabidka' ? nab.cislo : '',
+    vlastni: d.poznamka || '', cislo: d.cislo || '', misto_uzavreni: u.misto_uzavreni || '', datum_uzavreni: d.datum ? datum(d.datum) : '',
+    zhotovitel: F.nazev || '', objednatel: k.nazev || '' };
+}
+function sodSablona(d) { return (d.udaje && d.udaje.text) || S.firma.sod_sablona || SOD_SABLONA; }
+/** Šablona → řádky tabulky (článek = nadpis, odstavce zvlášť, aby se dobře dělily na stránky). */
+function sodRadky(d) {
+  const h = sodHodnoty(d);
+  let t = sodSablona(d);
+  for (let i = 0; i < 5; i++) t = t.replace(/\{\{([#^])(\w+)\}\}([\s\S]*?)\{\{\/\2\}\}/g, (m, typ, k, obsah) => (typ === '#') === !!String(h[k] ?? '').trim() ? obsah : '');
+  const pole = (txt) => esc(txt).replace(/\{\{(\w+)\}\}/g, (m, k) => { const v = String(h[k] ?? '').trim(); return v ? `<span class="sod-pole">${esc(v).replace(/\n/g, '<br>')}</span>` : `<span class="sod-pole prazdne">……………………</span>`; });
+  const RIM = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+  let cl = 0, od = 0; const rows = [];
+  t.split('\n').forEach(r => {
+    const s = r.trim(); if (!s) return;
+    if (s.startsWith('# ')) { cl++; od = 0; rows.push(`<tr class="cat"><td>Článek ${RIM[cl - 1] || cl}.<br><span>${pole(s.slice(2).trim())}</span></td></tr>`); return; }
+    if (/^[-–•]\s/.test(s)) { od++; rows.push(`<tr><td><span class="sod-c">${od}.</span>${pole(s.replace(/^[-–•]\s+/, ''))}</td></tr>`); return; }
+    rows.push(`<tr><td class="sod-volny">${pole(s)}</td></tr>`);
+  });
+  return rows.join('');
+}
+function papirSmlouva(d) {
+  const F = S.firma, k = kontakt(d.kontakt_id) || {}, u = d.udaje || {};
+  const h = sodHodnoty(d), pole = v => v ? `<span class="sod-pole">${esc(v)}</span>` : `<span class="sod-pole prazdne">……………………</span>`;
+  const zhot = papirDodavatel(F, 'ZHOTOVITEL').replace(/<\/div>$/, `${F.ucet ? `<br>Bankovní spojení: ${esc(F.ucet)}${F.banka ? ', ' + esc(F.banka) : ''}` : ''}</div>`);
+  const obj = papirOdberatel(k, 'OBJEDNATEL').replace(/<\/div>$/, `${k.telefon || k.email ? '<br>' + esc([k.telefon, k.email].filter(Boolean).join(' · ')) : ''}</div>`);
+  return `<div class="papir-obal"><div class="papir doc sod" data-titul="SMLOUVA O DÍLO" data-cislo="${esc(d.cislo || '')}">
+    <div class="p-hlava">${papirHlavicka(F, 'SMLOUVA O DÍLO', d.cislo)}
+      <div class="sod-uvod">uzavřená podle § 2586 a násl. zákona č. 89/2012 Sb., občanský zákoník, mezi smluvními stranami:</div>
+      <div class="doc-parties">${zhot}${obj}</div>
+      <div class="sod-uvod">(dále jen „zhotovitel“ a „objednatel“)</div></div>
+    <table class="dok-pol doc-items sod-tab"><thead><tr><th></th></tr></thead><tbody>${sodRadky(d)}</tbody></table>
+    <div class="p-konec"><div class="sod-misto">V ${pole(u.misto_uzavreni)} dne ${pole(d.datum ? datum(d.datum) : '')}</div>
+      <div class="doc-sign"><div>${podpisBox(F)}<div class="line"${F.podpis ? ' style="margin-top:.3cqw"' : ''}>${esc(F.nazev || '')}</div><div class="who">Zhotovitel</div></div><div><div class="line">${esc(k.osoba || k.nazev || '')}</div><div class="who">Objednatel</div></div></div></div>
+    <div class="pata doc-pata"><span>${esc(['Smlouva o dílo ' + (d.cislo || ''), F.nazev, F.telefon, F.email].filter(Boolean).join(' · '))}</span><span class="yey"><b>YeY.cz</b></span></div>
+  </div></div>`;
+}
+/** Výchozí údaje nové smlouvy – z nabídky, zakázky, odběratele a firmy. */
+function sodVychozi(zdroj, z) {
+  const F = S.firma, k = kontakt(zdroj?.kontakt_id || z?.kontakt_id) || {};
+  const adr = z?.adresa || [k.ulice, [k.psc, k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const nab = zdroj?.typ === 'nabidka' ? zdroj : null;
+  return { misto_uzavreni: F.mesto || '', misto_plneni: adr || '', zahajeni: '', dokonceni: z?.termin || '',
+    cena_bez: nab ? Math.round(Number(nab.celkem_bez || 0) * 100) / 100 : '', sazba: 21,
+    rezim: F.platce_dph ? (nab?.pdp ? 'pdp' : 'dph') : 'neplatce',
+    rozsah: nab ? `podle cenové nabídky č. ${nab.cislo}, která tvoří přílohu č. 1 této smlouvy` : '',
+    zaloha_proc: '', splatnost_dni: F.splatnost_dni || 14, zaruka_mesice: 24, pokuta_zhot: '0,05', pokuta_obj: '0,05', vyhotoveni: 'dvou' };
+}
+/* ---- editor smlouvy ---- */
+function smlouvaPohled(d) {
+  const u = d.udaje || {}, z = zakazka(d.zakazka_id), c = sodCena(d), F = S.firma;
+  const p = (n, l, v, x = '') => `<label class="pole">${l}<input name="u.${n}" value="${esc(v ?? '')}" ${x}></label>`;
+  return { plna: true, html: `<div class="editor">
+    <section class="form">
+      <div class="drobky">${z ? `<a href="#zakazky/${z.id}">← ${esc(z.nazev)}</a>` : `<a href="#doklady?typ=smlouva">← Smlouvy o dílo</a>`}</div>
+      <div class="radek" style="justify-content:space-between;align-items:flex-end">
+        <div><h1>Smlouva o dílo ${esc(d.cislo)}</h1><div class="radek mal" style="margin-top:6px"><span id="edStavCip">${cipStav(d)}</span><span class="ulozeno" id="edUlozeno">✓ Uloženo</span></div></div>
+        <div class="radek"><button class="btn" data-a="tisk-ed">${ik('tisk', 16)}PDF / Tisk</button><button class="btn" data-a="email-ed">${ik('mail', 16)}E-mail</button>
+          ${d.stav !== 'podepsano' ? `<button class="btn zl" data-a="ed-stav" data-s="podepsano">Podepsáno</button>` : ''}</div></div>
+      <div class="hlaska inf">Žlutě zvýrazněné údaje v náhledu se mění z tohoto formuláře. Nevyplněné se vytisknou jako tečky k doplnění rukou.</div>
+      <form id="fDok" class="karta mrizka">
+        <h3>Smluvní strany a předmět</h3>
+        <div class="mrizka m2"><label class="pole">Objednatel<select name="kontakt_id">${edKontaktyOpt(d.kontakt_id)}</select></label>
+          <label class="pole">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label></div>
+        <label class="pole">Předmět díla<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny v bytě č. 12"></label>
+        <label class="pole">Rozsah a specifikace díla<textarea name="u.rozsah" rows="2">${esc(u.rozsah)}</textarea></label>
+        <h3>Místo a termíny</h3>
+        ${p('misto_plneni', 'Místo plnění (adresa stavby)', u.misto_plneni)}
+        <div class="mrizka m2">${p('zahajeni', 'Zahájení prací', u.zahajeni, 'type="date"')}${p('dokonceni', 'Dokončení nejpozději', u.dokonceni, 'type="date"')}</div>
+        <h3>Cena a platby</h3>
+        <div class="mrizka m3">${p('cena_bez', 'Cena díla bez DPH (Kč)', u.cena_bez != null && u.cena_bez !== '' ? fmtN(u.cena_bez) : '', 'inputmode="decimal"')}
+          <label class="pole">Režim DPH<select name="u.rezim">${[['dph', 'Běžná DPH'], ['pdp', 'Přenesená daňová povinnost'], ['neplatce', 'Nejsem plátce DPH']].map(([kk, n]) => `<option value="${kk}" ${c.rezim === kk ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          ${p('sazba', 'Sazba DPH %', u.sazba ?? 21, 'inputmode="decimal" list="dphList"')}</div>
+        <div class="mrizka m3">${p('zaloha_proc', 'Záloha % (prázdné = bez zálohy)', u.zaloha_proc, 'inputmode="decimal"')}${p('splatnost_dni', 'Splatnost faktury (dní)', u.splatnost_dni, 'inputmode="numeric"')}<div class="pole">Cena s DPH<b id="sodCenaS" style="font-size:18px;padding-top:10px">${c.bez ? kc(c.s) : '—'}</b></div></div>
+        <h3>Záruka a sankce</h3>
+        <div class="mrizka m3">${p('zaruka_mesice', 'Záruka (měsíců)', u.zaruka_mesice, 'inputmode="numeric"')}${p('pokuta_zhot', 'Pokuta zhotovitele (% ceny / den)', u.pokuta_zhot, 'inputmode="decimal"')}${p('pokuta_obj', 'Úrok/pokuta objednatele (% / den)', u.pokuta_obj, 'inputmode="decimal"')}</div>
+        <h3>Uzavření smlouvy</h3>
+        <div class="mrizka m4"><label class="pole">Číslo smlouvy<input name="cislo" value="${esc(d.cislo)}"></label><label class="pole">Datum uzavření<input name="datum" type="date" value="${esc(d.datum)}"></label>
+          ${p('misto_uzavreni', 'Místo uzavření', u.misto_uzavreni)}${p('vyhotoveni', 'Počet stejnopisů (slovem)', u.vyhotoveni, 'list="sodVyh"')}</div>
+        <label class="pole">Stav<select name="stav">${['koncept', 'odeslano', 'podepsano'].map(s2 => `<option value="${s2}" ${s2 === d.stav ? 'selected' : ''}>${STAV[s2]}</option>`).join('')}</select></label>
+        <label class="pole">Další ujednání <span class="napoveda">(vloží se jako samostatný článek; prázdné = článek se vynechá)</span><textarea name="poznamka" rows="3">${esc(d.poznamka)}</textarea></label>
+        <datalist id="sodVyh"><option value="dvou"><option value="třech"><option value="čtyřech"></datalist>
+      </form>
+      <details class="karta" id="sodText"><summary class="tuc" style="cursor:pointer">Upravit text smlouvy (šablonu)</summary>
+        <p class="napoveda" style="margin:8px 0">„# Název“ = nový článek (čísluje se sám) · „- text“ = číslovaný odstavec · {{pole}} = údaj z formuláře · {{#pole}}…{{/pole}} = jen když je vyplněné.
+          Pole: ${SOD_POLE.map(([kk, n]) => `<code title="${esc(n)}">{{${kk}}}</code>`).join(' ')}</p>
+        <textarea name="u.text" form="fDok" id="sodSablona" rows="18" style="width:100%;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5">${esc(sodSablona(d))}</textarea>
+        <div class="radek" style="margin-top:8px;flex-wrap:wrap;gap:8px"><button class="btn mal zl" data-a="sod-ulozit-sablonu">Uložit jako šablonu firmy</button><button class="btn mal" data-a="sod-obnovit">Obnovit text ze šablony firmy</button>${F.sod_sablona ? `<button class="btn mal" data-a="sod-vychozi">Vrátit původní znění YeY</button>` : ''}
+          <span class="napoveda">Úprava zde platí jen pro tuto smlouvu, dokud ji neuložíte jako šablonu firmy.</span></div>
+      </details>
+    </section>
+    <aside class="nahled" aria-label="Náhled smlouvy"><div class="ed-akce karta"><div class="tlumene mal tuc" style="text-transform:uppercase;letter-spacing:1px">Další kroky</div><div class="ed-akce-tl">
+      <button class="btn zl" data-a="email-ed">${ik('mail', 16)}Odeslat e-mailem</button>
+      ${d.zdroj_id && doklad(d.zdroj_id) ? `<a class="btn" href="#doklad/${d.zdroj_id}">← ${TYP[doklad(d.zdroj_id).typ]} ${esc(doklad(d.zdroj_id).cislo)}</a>` : ''}
+      <button class="btn" data-a="kopie-dok">${ik('kopie', 16)}Duplikovat</button><button class="btn cerv" data-a="smazat-dok">${ik('smaz', 16)}Smazat</button></div></div>
+      <div class="tlumene mal tuc" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Živý náhled</div><div id="edNahled"></div></aside>
+  </div>`, po: poSmlouva };
+}
+function poSmlouva() {
+  if (!$('#dphList')) document.body.insertAdjacentHTML('beforeend', `<datalist id="dphList"><option value="21"><option value="12"><option value="0"></datalist>`);
+  edNahled();
+  const f = $('#fDok');
+  const nastav = t => { const n = t.name; if (!n) return false; let v = t.type === 'checkbox' ? t.checked : t.value;
+    if (n.startsWith('u.')) { const kk = n.slice(2); if (kk === 'cena_bez') v = v === '' ? '' : cislo(v); if (kk === 'text' && v.trim() === (S.firma.sod_sablona || SOD_SABLONA).trim()) v = null; ED.d.udaje = { ...(ED.d.udaje || {}), [kk]: v }; }
+    else ED.d[n] = v; return true; };
+  const po = () => { const c = sodCena(ED.d), el = $('#sodCenaS'); if (el) el.textContent = c.bez ? kc(c.s) : '—'; edNahled(); edUlozit(); };
+  f.addEventListener('input', e => { if (/^__nov/.test(e.target.value)) return; if (nastav(e.target)) po(); });
+  const sab = $('#sodSablona'); if (sab) sab.addEventListener('input', () => { if (nastav(sab)) po(); });
+  f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
+    if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
+    if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
+    if (nastav(e.target)) po(); });
+}
+AKCE['sod-ulozit-sablonu'] = async () => {
+  const t = $('#sodSablona').value.trim(); const nova = t === SOD_SABLONA.trim() ? null : t;
+  S.firma = await q(sb.from('firmy').update({ sod_sablona: nova }).eq('id', S.firma.id).select().single());
+  ED.d.udaje = { ...(ED.d.udaje || {}), text: null }; edUlozit(); toast('Šablona smlouvy uložena – použije se u všech nových smluv ✓');
+};
+AKCE['sod-obnovit'] = () => { ED.d.udaje = { ...(ED.d.udaje || {}), text: null }; $('#sodSablona').value = sodSablona(ED.d); edNahled(); edUlozit(); toast('Text obnoven ze šablony firmy'); };
+AKCE['sod-vychozi'] = async () => {
+  if (!confirm('Vrátit šablonu firmy na původní znění YeY? Vaše úpravy šablony se ztratí.')) return;
+  S.firma = await q(sb.from('firmy').update({ sod_sablona: null }).eq('id', S.firma.id).select().single());
+  ED.d.udaje = { ...(ED.d.udaje || {}), text: null }; $('#sodSablona').value = SOD_SABLONA; edNahled(); edUlozit(); render(); toast('Obnoveno původní znění');
+};
 
 /* =================== PAPÍR (náhled = tisk) =================== */
 /* =================== DOKLAD – vzhled převzatý z yey.cz (nabídka, faktura, zálohová faktura, předávací protokol) =================== */
@@ -1392,6 +1601,7 @@ function papirPriloha(d, pol) {
 }
 /** Kompletní doklad rozdělený na stránky (a případně s přílohou rozpisu položek). */
 function dokladStrany(d, pol) {
+  if (d.typ === 'smlouva') return papirStrany(papirSmlouva(d));
   return papirStrany(papir(d, pol)) + (d.tisk_rezim === 'souhrn_priloha' && pol.length ? papirStrany(papirPriloha(d, pol)) : '');
 }
 AKCE.tisk = async el => { const d = doklad(el.dataset.id); const pol = await nactiPolozky(d.id); tisk(d, pol); };
@@ -1407,6 +1617,7 @@ POHLEDY.doklad = async t => {
   const d = doklad(t.id); if (!d) return { html: '<div class="prazdno"><b>Doklad nenalezen</b><a href="#doklady">Zpět na doklady</a></div>' };
   const pol = (await nactiPolozky(d.id)).map(p => ({ ...p }));
   ED = { d: { ...d }, pol, puvodniIds: new Set(pol.map(p => p.id)) };
+  if (d.typ === 'smlouva') { ED.d.udaje = { ...(d.udaje || {}) }; return smlouvaPohled(ED.d); }
   const F = S.firma; const dph = F.platce_dph && d.typ !== 'protokol';
   const z = zakazka(d.zakazka_id);
   const stavy = d.typ === 'nabidka' ? ['koncept', 'odeslano', 'prijato', 'odmitnuto'] : d.typ === 'protokol' ? ['koncept', 'podepsano'] : ['koncept', 'odeslano', 'zaplaceno', 'storno'];
@@ -1466,7 +1677,7 @@ POHLEDY.doklad = async t => {
         <div class="tlumene mal tuc" style="text-transform:uppercase;letter-spacing:1px">Další kroky</div>
         <div class="ed-akce-tl">
         <button class="btn zl" data-a="email-ed">${ik('mail', 16)}Odeslat e-mailem</button>
-        ${d.typ === 'nabidka' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Převést na fakturu</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="zalohova">→ Zálohová faktura</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="protokol">→ Předávací protokol</button>` : ''}
+        ${d.typ === 'nabidka' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Převést na fakturu</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="smlouva">→ Smlouva o dílo</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="zalohova">→ Zálohová faktura</button><button class="btn" data-a="prevest" data-id="${d.id}" data-typ="protokol">→ Předávací protokol</button>` : ''}
         ${d.typ === 'protokol' ? `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">→ Vystavit fakturu</button>` : ''}
         ${jeFakt(d.typ) ? `<button class="btn" data-a="isdoc-ed" title="Elektronická faktura ve formátu ISDOC pro účetní programy">${ik('instal', 16)}ISDOC</button>` : ''}
         <button class="btn" data-a="kopie-dok">${ik('kopie', 16)}Duplikovat</button>
@@ -1546,7 +1757,7 @@ function edNahled() {
 const edUlozit = debounce(async () => {
   const st = $('#edUlozeno'); if (st) { st.textContent = 'Ukládám…'; st.style.color = 'var(--ocel)'; }
   try {
-    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, tisk_rezim: d.tisk_rezim || 'polozky', souhrn_text: d.souhrn_text || null, objednavka: d.objednavka || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
+    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, tisk_rezim: d.tisk_rezim || 'polozky', souhrn_text: d.souhrn_text || null, objednavka: d.objednavka || null, ...(d.typ === 'smlouva' ? { udaje: d.udaje || null } : {}), pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
     await q(sb.from('doklady').update(hl).eq('id', d.id));
     const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: (() => { const ref = cenaNizka(p); return ref ? ref.cena : cislo(p.cena); })(), dph: S.firma.platce_dph ? cislo(p.dph) : 0, kat: p.kat || null }));
     const smazane = [...ED.puvodniIds].filter(id => !ED.pol.some(p => p.id === id));
@@ -2175,7 +2386,7 @@ function pdfNazev(d) { return (`${TYP[d.typ]} ${d.cislo}`).normalize('NFD').repl
 async function dokladPdf(d, pol, dalsi = []) {
   await pdfSkript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   await pdfSkript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-  const m = document.createElement('div'); m.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff';
+  const m = document.createElement('div'); m.className = 'pdf-render'; m.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff';
   m.innerHTML = dokladStrany(d, pol) + dalsi.map(x => dokladStrany(x.d, x.pol)).join(''); m.querySelectorAll('.netisk').forEach(e => e.remove());
   document.body.appendChild(m);
   try {
@@ -2203,6 +2414,9 @@ function emailNavrh(d) {
   if (d.typ === 'nabidka') {
     predmet = `Cenová nabídka ${d.cislo}${pred}`;
     text = `${osl}\n\nv příloze Vám zasílám cenovou nabídku č. ${d.cislo}${d.predmet ? ` (${d.predmet})` : ''} v celkové výši ${castka}.${d.splatnost ? `\nNabídka platí do ${datum(d.splatnost)}.` : ''}\n\nPokud budete mít jakékoli dotazy nebo budete chtít něco upravit, rád se Vám ozvu. V případě souhlasu stačí odpovědět na tento e-mail a domluvíme termín.\n\n${podpis}`;
+  } else if (d.typ === 'smlouva') {
+    predmet = `Smlouva o dílo ${d.cislo}${pred}`;
+    text = `${osl}\n\nv příloze Vám zasílám ${d.stav === 'podepsano' ? 'podepsanou smlouvu' : 'návrh smlouvy'} o dílo č. ${d.cislo}${d.predmet ? ` (${d.predmet})` : ''}${sodCena(d).bez ? ` na cenu ${kc(sodCena(d).s)}${sodCena(d).rezim === 'dph' ? ' včetně DPH' : ''}` : ''}.${d.stav === 'podepsano' ? '' : '\n\nProsím o kontrolu. Pokud bude vše v pořádku, smlouvu podepište a pošlete mi ji zpět, případně ji podepíšeme osobně při zahájení prací.'}\n\n${podpis}`;
   } else if (d.typ === 'zalohova') {
     predmet = `Zálohová faktura ${d.cislo}${pred}`;
     text = `${osl}\n\nv příloze Vám zasílám zálohovou fakturu č. ${d.cislo}${d.predmet ? ` (${d.predmet})` : ''} na částku ${castka}.\n\n${plat}\n\nPo připsání zálohy na účet obdržíte daňový doklad. Děkuji.\n\n${podpis}`;
@@ -2233,7 +2447,7 @@ AKCE['email-ed'] = () => {
     ${jeFakt(d.typ) ? `<label class="radek karta" style="padding:10px 12px;gap:10px;cursor:pointer;align-items:center"><input type="checkbox" id="emIsdoc" checked style="width:18px;height:18px">
       <span>Přiložit i <b>ISDOC</b> – elektronickou fakturu, kterou si odběratel načte do účetního programu bez přepisování</span></label>` : ''}
     <div class="radek karta" style="padding:10px 12px;gap:10px;align-items:center">📎 <b id="emPdfNazev">${esc(pdfNazev(d))}</b><span class="mal tlumene" id="emPdfStav">PDF dokladu</span><span class="mezera"></span><button class="btn mal" data-a="em-pdf">Stáhnout PDF</button></div>
-    ${oznacit ? `<label class="radek mal" style="gap:8px;cursor:pointer"><input type="checkbox" id="emOznacit" checked style="width:18px;height:18px"> Po odeslání označit ${d.typ === 'nabidka' ? 'nabídku' : 'fakturu'} jako odeslanou</label>` : ''}
+    ${oznacit ? `<label class="radek mal" style="gap:8px;cursor:pointer"><input type="checkbox" id="emOznacit" checked style="width:18px;height:18px"> Po odeslání označit ${d.typ === 'nabidka' ? 'nabídku' : d.typ === 'smlouva' ? 'smlouvu' : 'fakturu'} jako odeslanou</label>` : ''}
     <div class="mal tlumene">${sdilet ? '„Sdílet s přílohou“ otevře poštu v telefonu rovnou s PDF. ' : ''}„Otevřít v e-mailu“ stáhne PDF a otevře nový e-mail s vyplněným textem – PDF do něj jen přetáhněte jako přílohu.</div>`,
     `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn" data-a="em-kopirovat">Kopírovat text</button>${sdilet ? `<button class="btn" data-a="em-sdilet">Sdílet s přílohou</button>` : ''}<button class="btn zl" data-a="em-odeslat">${ik('mail', 16)}Otevřít v e-mailu</button>`, { trida: 'siroke' });
   const cb = $('#emProt'); if (cb) cb.onchange = () => emProtokol(cb.checked);
@@ -2368,8 +2582,8 @@ async function licStav() { const el = $('#licStav'); if (!el) return;
   el.textContent = t ? `✓ Licence platná${KATT.exp ? ' – katalog odemčen do ' + new Date(KATT.exp * 1000).toLocaleDateString('cs-CZ') : ''}` : '✗ ' + (KATT.chyba || 'Licenci se nepodařilo ověřit.'); }
 
 /* ---------- číselné řady ---------- */
-const CIS_TYPY = [['faktura', 'Faktura'], ['zalohova', 'Zálohová faktura'], ['nabidka', 'Nabídka'], ['protokol', 'Protokol']];
-const CIS_VYCHOZI = { faktura: 'F{RRRR}{NNN}', zalohova: 'Z{RRRR}{NNN}', nabidka: 'N{RRRR}{NNN}', protokol: 'P{RRRR}{NNN}' };
+const CIS_TYPY = [['faktura', 'Faktura'], ['zalohova', 'Zálohová faktura'], ['nabidka', 'Nabídka'], ['protokol', 'Protokol'], ['smlouva', 'Smlouva o dílo']];
+const CIS_VYCHOZI = { faktura: 'F{RRRR}{NNN}', zalohova: 'Z{RRRR}{NNN}', nabidka: 'N{RRRR}{NNN}', protokol: 'P{RRRR}{NNN}', smlouva: 'SOD{RRRR}{NNN}' };
 function formatCislo(mask, n) { const d = new Date(), rrrr = String(d.getFullYear()), mm = String(d.getMonth() + 1).padStart(2, '0');
   return (mask || '{NNN}').replace(/\{RRRR\}/g, rrrr).replace(/\{RR\}/g, rrrr.slice(2)).replace(/\{MM\}/g, mm).replace(/\{(N+)\}/g, (m, g) => String(n).padStart(g.length, '0')); }
 function cisZFormulare() { const puv = S.firma.cisla || {}, o = {};
