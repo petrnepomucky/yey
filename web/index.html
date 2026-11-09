@@ -169,6 +169,8 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .pol-tab td{padding:3px 4px;vertical-align:middle}
 .pol-tab input{width:100%;height:40px;border:1px solid transparent;border-radius:7px;padding:0 8px;background:transparent;font-size:15px}
 .pol-tab tr:hover input{border-color:var(--linka-2);background:#fff}
+.pol-tab select.kat-sel{width:100%;height:40px;border:1px solid transparent;border-radius:7px;padding:0 4px;background:transparent;font-size:13px;color:var(--ocel)}
+.pol-tab select.kat-sel:hover,.pol-tab select.kat-sel:focus{border-color:var(--linka);background:#fff}
 .pol-tab input:focus{outline:0;border-color:var(--inkoust);background:#fff;box-shadow:0 0 0 3px rgba(242,183,5,.3)}
 .pol-tab .c{text-align:right}
 .pol-tab .tah{cursor:grab;color:var(--ocel);width:22px}
@@ -178,46 +180,80 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 
 /* ---------- papír dokladu (náhled + tisk) ---------- */
 .papir-obal{container-type:inline-size;width:100%}
-.papir{background:#fff;color:#1D272F;width:100%;aspect-ratio:210/297;padding:6cqw;box-shadow:0 2px 10px rgba(0,0,0,.12);line-height:1.4;display:flex;flex-direction:column;overflow:hidden}
-.papir .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.4cqw solid var(--metr);padding-bottom:2cqw;margin-bottom:2.5cqw}
-.papir .ph h2{font-size:5.4cqw;font-family:var(--font-c);letter-spacing:.4px}
-.papir .ph .cis{font-size:2.2cqw;color:var(--ocel);text-align:right}
-.papir{font-size:1.85cqw}
-.papir .strany{display:grid;grid-template-columns:1fr 1fr;gap:4cqw;margin-bottom:2.5cqw}
-.papir .strany small{display:block;font-size:1.5cqw;text-transform:uppercase;letter-spacing:.15cqw;color:var(--ocel);font-weight:700;margin-bottom:.6cqw}
-.papir .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(18cqw,1fr));gap:1.5cqw;background:#F4F5F2;padding:1.5cqw 2cqw;border-radius:1cqw;margin-bottom:2.5cqw}
-.papir .info small{display:block;color:var(--ocel);font-size:1.5cqw}
-.papir table{width:100%;border-collapse:collapse}
-.papir th{text-align:left;font-size:1.5cqw;text-transform:uppercase;color:var(--ocel);border-bottom:.3cqw solid #1D272F;padding:1cqw .8cqw}
-.papir td{padding:.75cqw .8cqw;border-bottom:.15cqw solid #E6E9E3}
-.papir .r{text-align:right}
-.papir .celkem{display:flex;justify-content:space-between;align-items:flex-end;margin-top:2.5cqw;gap:3cqw}
-.papir .celkem table{width:auto;min-width:45%}
-.papir .celkem .zap td{font-size:3.2cqw;font-weight:700;border-top:.4cqw solid #1D272F;border-bottom:0}
-.papir .qr{width:16cqw;text-align:center;font-size:1.4cqw;color:var(--ocel)}
-.papir .qr img,.papir .qr svg{width:16cqw;height:16cqw}
+.papir{background:#fff;color:#15233c;width:100%;aspect-ratio:210/297;padding:7.14cqw;font-family:"Arial Narrow",Arial,"Helvetica Neue",sans-serif;font-size:1.51cqw;box-shadow:0 2px 10px rgba(0,0,0,.12);line-height:1.5;display:flex;flex-direction:column;overflow:hidden}
 .papir .p-konec{display:flow-root}
-.papir table.p-pol{table-layout:fixed}
-.papir table.p-pol td:first-child{overflow-wrap:anywhere}
-.papir table.sl5 th:nth-child(2){width:15cqw}.papir table.sl5 th:nth-child(3){width:14cqw}.papir table.sl5 th:nth-child(4){width:9cqw}.papir table.sl5 th:nth-child(5){width:14cqw}
-.papir table.sl4 th:nth-child(2){width:16cqw}.papir table.sl4 th:nth-child(3){width:15cqw}.papir table.sl4 th:nth-child(4){width:15cqw}
-.papir table.sl2 th:nth-child(2){width:20cqw}
-.papir .p-mini{display:flex;justify-content:space-between;align-items:baseline;border-bottom:.4cqw solid var(--metr);padding-bottom:1.5cqw;margin-bottom:2.5cqw;font-size:2cqw;color:var(--ocel)}
-.papir .p-mini b{font-size:2.6cqw;color:#1D272F;font-family:var(--font-c)}
-.papir .p-prenos{display:flex;justify-content:flex-end;gap:3cqw;margin-top:2cqw;font-size:1.8cqw;color:var(--ocel)}
-.papir .p-prenos b{color:#1D272F;min-width:14cqw;text-align:right}
+/* ---- doklad ve vzhledu yey.cz (rozměry přepočtené z px na šířku A4: 1 px = 0,126 cqw) ---- */
+.papir.doc .doc-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.25cqw solid #b0894e;padding-bottom:1.76cqw;margin-bottom:2.27cqw}
+.papir.doc .doc-brand{display:flex;gap:1.51cqw;align-items:center}
+.papir.doc .doc-logo-img{height:6.3cqw;width:auto;max-width:22cqw;object-fit:contain;display:block}
+.papir.doc .doc-name{font-size:2.52cqw;font-weight:700;letter-spacing:.06cqw}
+.papir.doc .doc-sub{font-size:1.26cqw;letter-spacing:.25cqw;text-transform:uppercase;color:#8a6a2f}
+.papir.doc .doc-title{text-align:right}
+.papir.doc .doc-t1{font-size:1.39cqw;letter-spacing:.38cqw;color:#8a6a2f}
+.papir.doc .doc-t2{font-size:3.02cqw;font-weight:700}
+.papir.doc .doc-parties{display:flex;gap:2cqw;margin-bottom:2cqw}
+.papir.doc .doc-box{flex:1;border:1px solid #e6e0d3;border-radius:1cqw;padding:1.51cqw 1.76cqw;font-size:1.45cqw}
+.papir.doc .doc-lbl{font-size:1.13cqw;letter-spacing:.25cqw;color:#8a6a2f;margin-bottom:.63cqw}
+.papir.doc .doc-strong{font-weight:700;font-size:1.64cqw;margin-bottom:.38cqw}
+.papir.doc .doc-rejstrik{font-size:.85em;opacity:.8;margin-top:.38cqw}
+.papir.doc .doc-meta{display:flex;border:1px solid #d9d3c6;border-radius:1cqw;margin-bottom:1.76cqw;overflow:hidden}
+.papir.doc .doc-meta>div{flex:1;padding:1cqw 1.76cqw;border-right:1px solid #eee3d0}
+.papir.doc .doc-meta>div:last-child{border-right:0}
+.papir.doc .doc-meta span{display:block;font-size:1.07cqw;letter-spacing:.19cqw;color:#8a6a2f;text-transform:uppercase;margin-bottom:.25cqw}
+.papir.doc .doc-meta b{font-size:1.58cqw}
+.papir.doc .doc-radek{margin:.25cqw 0 1.51cqw;color:#555;font-size:1.39cqw}
+.papir.doc .doc-predmet{margin:.76cqw 0 1.51cqw;font-size:1.51cqw}
+.papir.doc .doc-predmet span{color:#8a6a2f;font-weight:700}
+.papir.doc table.doc-items{width:100%;border-collapse:collapse;margin-bottom:1.26cqw;table-layout:fixed}
+.papir.doc table.doc-items th{color:#15233c;font-size:1.13cqw;letter-spacing:.13cqw;text-transform:uppercase;padding:1cqw;text-align:left;border-bottom:.25cqw solid #15233c;font-weight:700;line-height:1.3}
+.papir.doc table.doc-items td{padding:.88cqw 1cqw;border-bottom:1px solid #eee;font-size:1.45cqw;overflow-wrap:anywhere}
+.papir.doc table.doc-items .r{text-align:right}
+.papir.doc table.doc-items .c{text-align:center;color:#888}
+.papir.doc table.doc-items tr.cat td{color:#8a6a2f;font-weight:700;text-transform:uppercase;font-size:1.26cqw;letter-spacing:.13cqw;padding:1.26cqw 1cqw .5cqw;border-bottom:1px solid #15233c}
+.papir.doc table.doc-items tr.sub td{font-weight:700;border-top:1px solid #d9d3c6;border-bottom:.25cqw solid #cfc7b5}
+.papir.doc .doc-prazdne{color:#888;text-align:center;padding:4cqw}
+.papir.doc table.nb th:nth-child(2){width:8cqw}.papir.doc table.nb th:nth-child(3){width:11cqw}.papir.doc table.nb th:nth-child(4){width:13cqw}.papir.doc table.nb th:nth-child(5){width:14cqw}
+.papir.doc table.nb6 th:nth-child(2){width:7cqw}.papir.doc table.nb6 th:nth-child(3){width:10cqw}.papir.doc table.nb6 th:nth-child(4){width:12cqw}.papir.doc table.nb6 th:nth-child(5){width:8cqw}.papir.doc table.nb6 th:nth-child(6){width:13cqw}
+.papir.doc table.fa8 th:nth-child(1){width:4.5cqw}.papir.doc table.fa8 th:nth-child(3){width:10cqw}.papir.doc table.fa8 th:nth-child(4){width:6.5cqw}.papir.doc table.fa8 th:nth-child(5){width:11.5cqw}.papir.doc table.fa8 th:nth-child(6){width:12cqw}.papir.doc table.fa8 th:nth-child(7){width:7.5cqw}.papir.doc table.fa8 th:nth-child(8){width:12cqw}
+.papir.doc table.fa6 th:nth-child(1){width:4.5cqw}.papir.doc table.fa6 th:nth-child(3){width:11cqw}.papir.doc table.fa6 th:nth-child(4){width:7cqw}.papir.doc table.fa6 th:nth-child(5){width:13cqw}.papir.doc table.fa6 th:nth-child(6){width:14cqw}
+.papir.doc table.pr th:nth-child(1){width:4.5cqw}.papir.doc table.pr th:nth-child(3){width:8cqw}.papir.doc table.pr th:nth-child(4){width:12cqw}
+.papir.doc table.pr3 th:nth-child(2){width:8cqw}.papir.doc table.pr3 th:nth-child(3){width:12cqw}
+.papir.doc .doc-total{display:flex;justify-content:space-between;align-items:center;border:.25cqw solid #15233c;border-radius:1cqw;padding:1.51cqw 2cqw;margin-top:.76cqw}
+.papir.doc .doc-total b{font-size:2.14cqw}
+.papir.doc .doc-pozn-dph{text-align:right;font-size:1.26cqw;color:#555;margin-top:.5cqw}
+.papir.doc .doc-note{margin-top:1.76cqw;padding:1.26cqw 1.76cqw;border-left:.38cqw solid #b0894e;font-size:1.39cqw}
+.papir.doc .doc-dph{border-collapse:collapse;margin:1cqw 0 0 auto;font-size:1.39cqw;min-width:60%}
+.papir.doc .doc-dph th,.papir.doc .doc-dph td{border:1px solid #e5e3dd;padding:.63cqw 1.26cqw;text-align:right}
+.papir.doc .doc-dph th{font-size:1.07cqw;text-transform:uppercase;letter-spacing:.06cqw}
+.papir.doc .doc-dph .l{text-align:left}
+.papir.doc .doc-zalohy{margin-top:1cqw;font-size:1.51cqw}
+.papir.doc .doc-zalohy>div{display:flex;justify-content:space-between;padding:.5cqw 2cqw}
+.papir.doc .doc-pdp,.papir.doc .doc-declare{margin-top:1.51cqw;border:1px solid #d9d3c6;border-radius:1cqw;padding:1.26cqw 1.76cqw;font-size:1.39cqw}
+.papir.doc .doc-declare{font-size:1.45cqw}
+.papir.doc .doc-varovani{margin-top:.8cqw;color:#B42318;font-size:1.3cqw}
+.papir.doc .doc-zaver{margin-top:2cqw}
+.papir.doc .doc-pay{display:flex;justify-content:space-between;gap:2cqw;border:1px solid #d9d3c6;border-radius:1cqw;padding:1.51cqw 2cqw;align-items:stretch}
+.papir.doc .doc-pay .lbl,.papir.doc .doc-qr-box .lbl{font-size:1.07cqw;letter-spacing:.19cqw;color:#8a6a2f;text-transform:uppercase;margin-bottom:.63cqw}
+.papir.doc .doc-pay table{font-size:1.39cqw;border-collapse:collapse}
+.papir.doc .doc-pay td{padding:.25cqw 1cqw .25cqw 0;vertical-align:top;border:0}
+.papir.doc .doc-qr-box{text-align:center}
+.papir.doc .doc-qr svg,.papir.doc .doc-qr img{width:14cqw;height:14cqw;display:block;margin:0 auto}
+.papir.doc .doc-vystavil{width:25cqw;flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;text-align:center;border-left:1px solid #eee3d0;padding-left:2cqw}
+.papir.doc .doc-vystavil .cara{border-top:1px solid #15233c;padding-top:.76cqw;font-size:1.39cqw;color:#333;margin-top:.3cqw}
+.papir.doc .who{font-size:1.13cqw;letter-spacing:.13cqw;color:#8a6a2f;text-transform:uppercase;text-align:center;margin-top:.25cqw}
+.papir.doc .doc-podpis{height:5.8cqw;display:flex;align-items:flex-end;justify-content:center;overflow:visible}
+.papir.doc .doc-podpis img{max-height:7.3cqw;max-width:29cqw;margin-bottom:-.76cqw}
+.papir.doc .doc-sign{display:flex;gap:6cqw;margin-top:5.5cqw}
+.papir.doc .doc-sign>div{flex:1}
+.papir.doc .doc-sign .line{border-top:1px solid #15233c;margin-top:5.8cqw;padding-top:.76cqw;font-size:1.39cqw;text-align:center;color:#333}
+.papir.doc .doc-pata{display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw;margin-top:auto;padding-top:.9cqw;border-top:1px solid #e6e0d3;font-size:1.13cqw;line-height:1.4;color:#6b7280}
+.papir.doc .doc-pata .yey{white-space:nowrap;text-align:right}
+.papir.doc .doc-pata .yey b{color:#15233c}
+.papir .p-mini{display:flex;justify-content:space-between;align-items:baseline;border-bottom:.25cqw solid #b0894e;padding-bottom:1.2cqw;margin-bottom:2cqw;font-size:1.39cqw;letter-spacing:.2cqw;color:#8a6a2f}
+.papir .p-mini b{font-size:1.64cqw;color:#15233c}
+.papir .p-prenos{display:flex;justify-content:flex-end;gap:3cqw;margin-top:1.5cqw;font-size:1.39cqw;color:#555}
+.papir .p-prenos b{color:#15233c;min-width:14cqw;text-align:right}
 .papir-obal+.papir-obal{margin-top:18px}
-.papir .pata{margin-top:auto;padding-top:2cqw;font-size:1.5cqw;color:var(--ocel);display:flex;justify-content:space-between;gap:2cqw}
-.papir .podpisy{display:grid;grid-template-columns:1fr 1fr;gap:8cqw;margin-top:8cqw}
-.papir .podpisy div{border-top:.2cqw solid #1D272F;padding-top:1cqw;text-align:center;color:var(--ocel);position:relative}
-.papir .podpisy img{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);max-height:9cqw;max-width:30cqw;margin-bottom:-1.5cqw}
-.papir .pl-logo{display:flex;align-items:center;gap:2.2cqw;margin-bottom:2.5cqw}
-.papir .pl-logo img{height:10cqw;max-width:34cqw;object-fit:contain;object-position:left center}
-.papir .pl-logo span{font-size:2cqw;color:#5D6B76;line-height:1.3}
-.papir .pl-podpis{margin-left:auto;margin-top:3cqw;width:38cqw;text-align:center;color:#5D6B76;font-size:1.6cqw}
-.papir .pl-podpis .misto{height:8cqw;display:flex;align-items:flex-end;justify-content:center}
-.papir .pl-podpis img{max-height:10cqw;max-width:36cqw;margin-bottom:-1.5cqw}
-.papir .pl-podpis .cara{border-top:.2cqw solid #1D272F;padding-top:.8cqw}
 .obr-nahled{min-height:84px;border:1px dashed var(--linka);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:8px;margin:6px 0 8px;
   background-color:#fff;background-image:linear-gradient(45deg,#eef0ec 25%,transparent 25%),linear-gradient(-45deg,#eef0ec 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eef0ec 75%),linear-gradient(-45deg,transparent 75%,#eef0ec 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
 .obr-nahled img{max-width:100%;max-height:110px;object-fit:contain}
@@ -343,7 +379,7 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
   #app,#toasty,.zavoj{display:none!important}
   #tisk{display:block}
   #tisk .papir-obal{width:210mm}
-  #tisk .papir{box-shadow:none;padding:6cqw;width:210mm;height:297mm;aspect-ratio:auto;overflow:hidden;break-after:page;page-break-after:always}
+  #tisk .papir{box-shadow:none;padding:7.14cqw;width:210mm;height:297mm;aspect-ratio:auto;overflow:hidden;break-after:page;page-break-after:always}
   #tisk .papir-obal:last-child .papir{break-after:auto;page-break-after:auto}
   #tisk .papir-obal+.papir-obal{margin-top:0}
 }
@@ -487,7 +523,7 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
   const o = {
     typ, cislo: c, zakazka_id, kontakt_id: kontakt_id || z?.kontakt_id || zdroj?.kontakt_id || null,
     predmet: predmet || zdroj?.predmet || z?.nazev || '', datum: dnes(), zdroj_id: zdroj?.id || null, stav: 'koncept',
-    tisk_rezim: zdroj?.tisk_rezim || 'polozky', souhrn_text: zdroj?.souhrn_text || null
+    tisk_rezim: zdroj?.tisk_rezim || 'polozky', souhrn_text: zdroj?.souhrn_text || null, objednavka: zdroj?.objednavka || null
   };
   if (jeFakt(typ)) { o.splatnost = plusDni(dnes(), S.firma.splatnost_dni || 14); o.duzp = dnes(); o.vs = c.replace(/\D/g, ''); }
   if (typ === 'nabidka') o.splatnost = plusDni(dnes(), 30); // platnost nabídky
@@ -495,7 +531,7 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
   if (zdroj) {
     const pol = await nactiPolozky(zdroj.id);
     if (pol.length) {
-      const nove = pol.map((p, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev, mnozstvi: p.mnozstvi, mj: p.mj, cena: p.cena, dph: p.dph }));
+      const nove = pol.map((p, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev, mnozstvi: p.mnozstvi, mj: p.mj, cena: p.cena, dph: p.dph, kat: p.kat || null }));
       await q(sb.from('polozky').insert(nove)); S.polozky[d.id] = nove; await obnovDoklad(d.id);
     } else S.polozky[d.id] = [];
   } else S.polozky[d.id] = [];
@@ -1114,41 +1150,116 @@ POHLEDY.doklady = t => {
 AKCE['novy-doklad'] = async el => { const d = await novyDoklad(el.dataset.typ, { zakazka_id: el.dataset.zak || null }); jdi('doklad/' + d.id); };
 
 /* =================== PAPÍR (náhled = tisk) =================== */
+/* =================== DOKLAD – vzhled převzatý z yey.cz (nabídka, faktura, zálohová faktura, předávací protokol) =================== */
+const KATS = [['material', 'Materiál'], ['prace', 'Práce'], ['doprava', 'Doprava'], ['rezie', 'Režie'], ['ostatni', 'Ostatní']];
+const KAT_N = Object.fromEntries(KATS);
+const normKat = k => KAT_N[k] ? k : 'ostatni';
+function papirAdr(o) { return [esc(o.ulice || ''), esc([o.psc, o.mesto].filter(Boolean).join(' '))].filter(Boolean).join('<br>'); }
+function papirDodavatel(F, lbl, sKontaktem = true) {
+  return `<div class="doc-box"><div class="doc-lbl">${lbl}</div><div class="doc-strong">${esc(F.nazev || '')}</div>${papirAdr(F)}${F.ico || F.dic ? '<br>' : ''}${F.ico ? 'IČ: ' + esc(F.ico) : ''}${F.dic ? (F.ico ? ' · ' : '') + 'DIČ: ' + esc(F.dic) : ''}${sKontaktem && (F.telefon || F.email) ? '<br>' + esc([F.telefon, F.email].filter(Boolean).join(' · ')) : ''}${F.zapis ? `<div class="doc-rejstrik">${esc(F.zapis)}</div>` : ''}</div>`;
+}
+function papirOdberatel(k, lbl, sDic = true) {
+  return `<div class="doc-box"><div class="doc-lbl">${lbl}</div><div class="doc-strong">${esc(k.nazev || '—')}</div>${papirAdr(k)}${k.ico ? '<br>IČ: ' + esc(k.ico) : ''}${sDic && k.dic ? ' · DIČ: ' + esc(k.dic) : ''}${k.osoba ? '<br>' + esc(k.osoba) : ''}</div>`;
+}
+function papirHlavicka(F, t1, cislo) {
+  return `<div class="doc-top"><div class="doc-brand">${F.logo ? `<img class="doc-logo-img" src="${F.logo}" alt="">` : ''}<div><div class="doc-name">${esc(F.nazev || '')}</div>${F.logo_text ? `<div class="doc-sub">${esc(F.logo_text)}</div>` : ''}</div></div>
+    <div class="doc-title"><div class="doc-t1">${t1}</div><div class="doc-t2">${esc(cislo || '')}</div></div></div>`;
+}
+function podpisBox(F) { return F.podpis ? `<div class="doc-podpis"><img src="${F.podpis}" alt="podpis"></div>` : ''; }
+
 function papir(d, pol) {
   const F = S.firma, k = kontakt(d.kontakt_id) || {}, z = zakazka(d.zakazka_id);
-  const dph = F.platce_dph && d.typ !== 'protokol'; const pdp = dph && jeFakt(d.typ) && !!d.pdp;
-  const adr = o => esc([o.ulice, [o.psc, o.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', '));
-  const ids = o => [o.ico ? 'IČO: ' + esc(o.ico) : '', o.dic ? 'DIČ: ' + esc(o.dic) : ''].filter(Boolean).join(' · ');
-  const bez = pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena), 0);
-  const sDph = pdp ? 0 : pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena) * (dph ? cislo(p.dph) : 0) / 100, 0);
-  const sazby = {}; if (dph) pol.forEach(p => { const k2 = cislo(p.dph); sazby[k2] = (sazby[k2] || 0) + cislo(p.mnozstvi) * cislo(p.cena); });
-  const nazev = d.typ === 'faktura' ? (F.platce_dph ? 'Faktura – daňový doklad' : 'Faktura') : TYP[d.typ];
-  const podtitul = d.typ === 'zalohova' ? 'Není daňovým dokladem' : '';
-  const info = d.typ === 'nabidka' ? [['Datum', datum(d.datum)], ['Platnost do', datum(d.splatnost)], ['Zakázka', esc(z?.nazev || d.predmet || '—')]]
-    : d.typ === 'protokol' ? [['Datum předání', datum(d.datum)], ['Místo', esc(z?.adresa || '—')], ['Zakázka', esc(z?.nazev || d.predmet || '—')]]
-    : [['Datum vystavení', datum(d.datum)], ...(F.platce_dph && d.typ === 'faktura' ? [['Datum usk. zdanitelného plnění', datum(d.duzp || d.datum)]] : []), ['Datum splatnosti', '<b>' + datum(d.splatnost) + '</b>'], ['Variabilní symbol', esc(d.vs || d.cislo.replace(/\D/g, ''))], ['Forma úhrady', esc(d.forma_uhrady || 'převodem')]];
-  const zal = zaplaceneZalohy(d);
-  const qr = jeFakt(d.typ) ? qrPlatba(d) : '';
-  return `<div class="papir-obal"><div class="papir">
-    <div class="p-hlava"><div class="ph"><div>${F.logo || F.logo_text ? `<div class="pl-logo">${F.logo ? `<img src="${F.logo}" alt="">` : ''}${F.logo_text ? `<span>${esc(F.logo_text)}</span>` : ''}</div>` : ''}<h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
-    <div class="strany"><div><small>${d.typ === 'protokol' ? 'Zhotovitel' : 'Dodavatel'}</small><b>${esc(F.nazev)}</b><br>${adr(F)}<br>${ids(F)}${F.platce_dph ? '' : '<br>Není plátce DPH.'}${F.zapis ? `<br><span style="color:#5D6B76">${esc(F.zapis)}</span>` : ''}</div>
-      <div><small>${d.typ === 'protokol' ? 'Objednatel' : 'Odběratel'}</small><b>${esc(k.nazev || '—')}</b>${k.osoba ? '<br>' + esc(k.osoba) : ''}<br>${adr(k)}<br>${ids(k)}</div></div>
-    <div class="info">${info.map(([a, b]) => `<div><small>${a}</small>${b}</div>`).join('')}</div>
-    ${d.typ === 'protokol' ? `<p style="margin:0 0 2cqw">Zhotovitel předává a objednatel přebírá níže uvedené dokončené práce${z?.adresa ? ' na adrese ' + esc(z.adresa) : ''}.</p>` : ''}</div>
-    ${papirTabulka(d, d.tisk_rezim && d.tisk_rezim !== 'polozky' ? souhrnRadky(d, pol) : pol, dph)}
-    <div class="p-konec">${d.typ === 'protokol' ? `<p style="margin-top:3cqw">Práce byly provedeny v dohodnutém rozsahu a kvalitě. ${d.poznamka ? '<br>Výhrady / poznámky: ' + esc(d.poznamka) : 'Objednatel nemá výhrady.'}</p>
-      <div class="podpisy"><div>${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}Za zhotovitele</div><div>Za objednatele</div></div>`
-    : `<div class="celkem"><div class="qr">${qr ? qr + '<div>QR platba</div>' : ''}</div><table>
-        ${dph ? Object.entries(sazby).map(([s2, z2]) => `<tr><td>Základ daně ${s2} %</td><td class="r">${fmtN(z2)}</td></tr><tr><td>DPH ${s2} %</td><td class="r">${pdp ? 'odvede odběratel' : fmtN(z2 * s2 / 100)}</td></tr>`).join('') : ''}
-        ${dph ? `<tr><td>Celkem bez DPH</td><td class="r">${kc(bez)}</td></tr><tr><td>DPH celkem</td><td class="r">${kc(sDph)}</td></tr>` : ''}
-        ${zal.length ? `<tr><td>Celkem za dílo</td><td class="r">${kc(bez + sDph)}</td></tr>${zal.map(x => `<tr><td>Odečtená záloha č. ${esc(x.cislo)}</td><td class="r">− ${kc(celkem(x))}</td></tr>`).join('')}` : ''}
-        <tr class="zap"><td>${jeFakt(d.typ) ? 'Celkem k úhradě' : 'Celkem'}</td><td class="r">${kc(bez + sDph - zal.reduce((s2, x) => s2 + celkem(x), 0))}</td></tr></table></div>
-      ${pdp ? `<div style="margin-top:2cqw;font-weight:700">Daň odvede zákazník. Přenesená daňová povinnost podle § 92e zákona č. 235/2004 Sb., o dani z přidané hodnoty.</div>${k.dic ? '' : '<div class="netisk" style="margin-top:1cqw;color:#B42318">Pozor: u odběratele chybí DIČ – při přenesené daňové povinnosti je povinné. (Netiskne se.)</div>'}` : ''}
+  const prot = d.typ === 'protokol', nab = d.typ === 'nabidka', fakt = jeFakt(d.typ), zal = d.typ === 'zalohova';
+  const platce = !!F.platce_dph && !prot, pdp = platce && fakt && !!d.pdp, bezna = platce && !pdp;
+  const rezim = d.tisk_rezim || 'polozky';
+  const radkyPol = (pol || []).filter(p => String(p.nazev || '').trim() || cislo(p.cena));
+  const zakl = p => cislo(p.mnozstvi) * cislo(p.cena);
+  const bez = radkyPol.reduce((s, p) => s + zakl(p), 0);
+  const sazby = {}; if (platce) radkyPol.forEach(p => { const s2 = cislo(p.dph); sazby[s2] = (sazby[s2] || 0) + zakl(p); });
+  const sDph = bezna ? Object.entries(sazby).reduce((s, [s2, z2]) => s + z2 * s2 / 100, 0) : 0;
+  const zalohy = zaplaceneZalohy(d), zalSum = zalohy.reduce((s, x) => s + celkem(x), 0);
+  const kUhrade = bez + sDph - zalSum;
+  const sazbaTxt = arr => { if (pdp) return '0 %'; if (!platce) return '—'; const set = [...new Set(arr.map(p => cislo(p.dph)))]; return set.length === 1 ? set[0] + ' %' : '—'; };
+  const sKat = radkyPol.some(p => p.kat);
 
-      ${jeFakt(d.typ) ? `<div style="margin-top:2cqw">Platba: ${esc(d.forma_uhrady || 'převodem')}${F.ucet ? ` · účet <b>${esc(F.ucet)}</b>` : ''}${F.iban ? ` · IBAN ${esc(F.iban)}` : ''} · VS <b>${esc(d.vs || d.cislo.replace(/\D/g, ''))}</b></div>` : ''}
-      ${d.poznamka ? `<div style="margin-top:2cqw;white-space:pre-line">${esc(d.poznamka)}</div>` : ''}
-      <div class="pl-podpis"><div class="misto">${F.podpis ? `<img src="${F.podpis}" alt="">` : ''}</div><div class="cara">${d.typ === 'nabidka' ? 'Za dodavatele' : 'Vystavil'}: ${esc(F.nazev)}</div></div>`}</div>
-    <div class="pata"><span>${esc([F.telefon, F.email, F.web].filter(Boolean).join(' · '))}</span><span>Vystaveno v YeY</span></div>
+  // ---- řádky tabulky podle typu dokladu a režimu tisku ----
+  let hlavaTab, rows = '', i = 0, tc;
+  const vKat = rezim === 'kategorie' && radkyPol.length;
+  const zdroj = (rezim === 'souhrn' || rezim === 'souhrn_priloha') ? souhrnRadky(d, radkyPol) : radkyPol;
+  const skupiny = () => { const g = {}; KATS.forEach(([kk]) => g[kk] = []); zdroj.forEach(p => g[normKat(p.kat)].push(p)); return KATS.map(([kk, n]) => [kk, n, g[kk]]).filter(x => x[2].length); };
+  if (prot) {
+    tc = 'pr'; hlavaTab = '<th class="c">#</th><th>Popis provedených prací / předané položky</th><th class="c">MJ</th><th class="r">Množství</th>';
+    if (vKat) skupiny().forEach(([, n]) => { i++; rows += `<tr><td class="c">${i}</td><td>${esc(n)}</td><td class="c">kpl</td><td class="r">1</td></tr>`; });
+    else zdroj.forEach(p => { i++; rows += `<tr><td class="c">${i}</td><td>${esc(p.nazev)}</td><td class="c">${esc(p.mj || '')}</td><td class="r">${fmtN(p.mnozstvi, 3)}</td></tr>`; });
+  } else if (nab) {
+    const sSaz = platce && new Set(radkyPol.map(p => cislo(p.dph))).size > 1;
+    tc = sSaz ? 'nb6' : 'nb';
+    hlavaTab = `<th>Popis</th><th class="c">MJ</th><th class="r">Množství</th><th class="r">Cena/MJ${platce ? ' bez DPH' : ''}</th>${sSaz ? '<th class="r">Sazba</th>' : ''}<th class="r">Celkem${platce ? ' bez DPH' : ''}</th>`;
+    const radek = p => `<tr data-z="${zakl(p)}"><td>${esc(p.nazev)}</td><td class="c">${esc(p.mj || '')}</td><td class="r">${fmtN(p.mnozstvi, 3)}</td><td class="r">${fmtN(p.cena)}</td>${sSaz ? `<td class="r">${sazbaTxt([p])}</td>` : ''}<td class="r">${fmtN(zakl(p))}</td></tr>`;
+    if (vKat) skupiny().forEach(([, n, a]) => { const s2 = a.reduce((x, p) => x + zakl(p), 0); rows += `<tr data-z="${s2}"><td>${esc(n)}</td><td class="c">kpl</td><td class="r">1</td><td class="r">${fmtN(s2)}</td>${sSaz ? `<td class="r">${sazbaTxt(a)}</td>` : ''}<td class="r">${fmtN(s2)}</td></tr>`; });
+    else if (sKat && rezim === 'polozky') skupiny().forEach(([, n, a]) => {
+      const s2 = a.reduce((x, p) => x + zakl(p), 0);
+      rows += `<tr class="cat"><td colspan="${sSaz ? 6 : 5}">${esc(n)}</td></tr>` + a.map(radek).join('') + `<tr class="sub"><td colspan="${sSaz ? 5 : 4}" class="r">Mezisoučet ${esc(n.toLowerCase())}</td><td class="r">${fmtN(s2)}</td></tr>`;
+    });
+    else rows = zdroj.map(radek).join('');
+  } else {
+    tc = platce ? 'fa8' : 'fa6';
+    hlavaTab = `<th class="c">#</th><th>Předmět a rozsah plnění</th><th class="r">Množství</th><th class="c">MJ</th><th class="r">J. cena${platce ? ' bez DPH' : ''}</th>${platce ? '<th class="r">Základ daně</th><th class="r">Sazba</th>' : ''}<th class="r">Celkem</th>`;
+    const radek = (nazev, mn, mj, jc, z2, arr) => { i++; const celk = bezna ? arr.reduce((s, p) => s + zakl(p) * (1 + cislo(p.dph) / 100), 0) : z2;
+      return `<tr data-z="${z2}"><td class="c">${i}</td><td>${esc(nazev)}</td><td class="r">${fmtN(mn, 3)}</td><td class="c">${esc(mj || '')}</td><td class="r">${fmtN(jc)}</td>${platce ? `<td class="r">${fmtN(z2)}</td><td class="r">${sazbaTxt(arr)}</td>` : ''}<td class="r">${fmtN(celk)}</td></tr>`; };
+    if (vKat) skupiny().forEach(([, n, a]) => { const z2 = a.reduce((s, p) => s + zakl(p), 0); rows += radek(n, 1, 'kpl', z2, z2, a); });
+    else zdroj.forEach(p => { rows += radek(p.nazev, p.mnozstvi, p.mj, cislo(p.cena), zakl(p), [p]); });
+  }
+  if (!rows) rows = `<tr><td colspan="8" class="doc-prazdne">Zatím žádné položky</td></tr>`;
+
+  // ---- hlavička a údaje ----
+  const t1 = nab ? 'CENOVÁ NABÍDKA' : prot ? 'PŘEDÁVACÍ PROTOKOL' : zal ? 'ZÁLOHOVÁ FAKTURA' : platce ? 'FAKTURA — DAŇOVÝ DOKLAD' : 'FAKTURA';
+  const vs = d.vs || String(d.cislo || '').replace(/\D/g, '');
+  let meta;
+  if (nab) meta = [['Datum vystavení', datum(d.datum)], ['Platnost nabídky do', datum(d.splatnost)], ['Číslo nabídky', esc(d.cislo || '')]];
+  else if (prot) meta = [['Datum předání', datum(d.datum)], ['Místo plnění', esc(z?.adresa || '—')], ['Odkaz', esc(z?.nazev || (doklad(d.zdroj_id) ? TYP[doklad(d.zdroj_id).typ] + ' ' + doklad(d.zdroj_id).cislo : '—'))]];
+  else meta = [['Variabilní symbol', esc(vs)], ['Datum vystavení', datum(d.datum)], ...(zal || !platce ? [] : [['DUZP', datum(d.duzp || d.datum)]]), ['Splatnost', datum(d.splatnost)]];
+
+  const hlava = `<div class="p-hlava">${papirHlavicka(F, t1, d.cislo)}
+    <div class="doc-parties">${papirDodavatel(F, prot ? 'ZHOTOVITEL' : 'DODAVATEL', !prot)}${papirOdberatel(k, prot ? 'OBJEDNATEL' : 'ODBĚRATEL', !prot)}</div>
+    <div class="doc-meta">${meta.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('')}</div>
+    ${fakt ? `<div class="doc-radek">${d.objednavka ? 'Objednávka č.: ' + esc(d.objednavka) + ' &nbsp;·&nbsp; ' : ''}Forma úhrady: ${esc(d.forma_uhrady || 'převodem')} &nbsp;·&nbsp; Měna: CZK</div>` : ''}
+    ${prot && d.objednavka ? `<div class="doc-predmet">Protokol je vyhotoven na základě objednávky č. <b>${esc(d.objednavka)}</b>.</div>` : ''}
+    ${d.predmet ? `<div class="doc-predmet"><span>${prot ? 'Předmět díla:' : 'Předmět:'}</span> ${esc(d.predmet)}</div>` : ''}</div>`;
+
+  // ---- konec dokladu (vždy pohromadě) ----
+  const dphTab = bezna && Object.keys(sazby).length ? `<table class="doc-dph"><thead><tr><th class="l">Sazba DPH</th><th>Základ</th><th>DPH</th><th>Celkem</th></tr></thead><tbody>${Object.keys(sazby).sort((a, b) => b - a).map(s2 => { const z2 = sazby[s2], dp = z2 * s2 / 100; return `<tr><td class="l">${s2} %</td><td>${kc(z2)}</td><td>${kc(dp)}</td><td>${kc(z2 + dp)}</td></tr>`; }).join('')}</tbody></table>` : '';
+  const zalHtml = zalohy.length ? `<div class="doc-zalohy"><div><span>Celkem za plnění</span><b>${kc(bez + sDph)}</b></div>${zalohy.map(x => `<div><span>Zaplaceno zálohou dle zálohové faktury č. ${esc(x.cislo)}</span><b>−${kc(celkem(x))}</b></div>`).join('')}</div>` : '';
+  const podpisy = `<div class="doc-sign"><div>${podpisBox(F)}<div class="line"${F.podpis ? ' style="margin-top:.3cqw"' : ''}>${esc(F.nazev || '')}</div><div class="who">Za zhotovitele</div></div><div><div class="line">${esc(k.osoba || k.nazev || '')}</div><div class="who">Za objednatele</div></div></div>`;
+  let konec;
+  if (prot) {
+    konec = `<div class="doc-declare">${d.poznamka ? `<b>Objednatel dílo převzal s výhradami</b> uvedenými níže.<div style="margin-top:.8cqw">${esc(d.poznamka).replace(/\n/g, '<br>')}</div>` : '<b>Objednatel dílo převzal bez vad a nedodělků.</b>'}</div>${podpisy}`;
+  } else if (nab) {
+    konec = `${dphTab}<div class="doc-total"><span>${bezna ? 'Celkem včetně DPH' : platce ? 'Celkem bez DPH' : 'Celkem'}</span><b>${kc(bez + sDph)}</b></div>
+      ${bezna ? `<div class="doc-pozn-dph">Celkem bez DPH ${kc(bez)} · DPH ${kc(sDph)}</div>` : ''}
+      ${d.poznamka ? `<div class="doc-note">${esc(d.poznamka).replace(/\n/g, '<br>')}</div>` : ''}${podpisy}`;
+  } else {
+    const qr = kUhrade > 0 ? qrPlatba(d) : '';
+    konec = `${dphTab}${zalHtml}<div class="doc-total"><span>${zalSum ? 'Zbývá k úhradě' : 'Celkem k úhradě'}</span><b>${kc(kUhrade)}</b></div>
+      ${zal ? '<div class="doc-pdp"><b>Zálohová faktura – nejedná se o daňový doklad.</b> Daňový doklad bude vystaven po přijetí platby.</div>' : ''}
+      ${pdp ? `<div class="doc-pdp"><b>Přenesená daňová povinnost.</b> Daň odvede zákazník podle § 92e zákona č. 235/2004 Sb., o dani z přidané hodnoty.</div>${k.dic ? '' : '<div class="netisk doc-varovani">Pozor: u odběratele chybí DIČ – při přenesené daňové povinnosti je povinné. (Netiskne se.)</div>'}` : ''}
+      ${!platce ? '<div class="doc-pdp">Dodavatel není plátcem DPH.</div>' : ''}
+      ${d.poznamka ? `<div class="doc-note">${esc(d.poznamka).replace(/\n/g, '<br>')}</div>` : ''}
+      <div class="doc-zaver"><div class="doc-pay"><div><div class="lbl">Platební údaje</div><table>
+        ${F.banka ? `<tr><td>Banka</td><td><b>${esc(F.banka)}</b></td></tr>` : ''}
+        <tr><td>Číslo účtu</td><td><b>${esc(F.ucet || '—')}</b></td></tr>
+        ${F.iban ? `<tr><td>IBAN</td><td>${esc(F.iban)}</td></tr>` : ''}${F.swift ? `<tr><td>SWIFT</td><td>${esc(F.swift)}</td></tr>` : ''}
+        <tr><td>VS</td><td><b>${esc(vs)}</b></td></tr><tr><td>Částka</td><td><b>${kc(kUhrade)}</b></td></tr></table></div>
+        ${qr ? `<div class="doc-qr-box"><div class="doc-qr">${qr}</div><div class="lbl">QR platba</div></div>` : ''}
+        <div class="doc-vystavil">${podpisBox(F)}<div class="cara"${F.podpis ? '' : ' style="margin-top:6cqw"'}>${esc(F.nazev || '')}</div><div class="who">Vystavil</div></div></div></div>`;
+  }
+  const pataL = nab ? `Cenová nabídka${d.splatnost ? ' platná do ' + datum(d.splatnost) : ''}` : prot ? 'Protokol o předání a převzetí díla · vyhotoveno ve dvou stejnopisech'
+    : zal ? 'Zálohová faktura – nejedná se o daňový doklad' : platce ? 'Daňový doklad dle § 29 zákona č. 235/2004 Sb.' : 'Faktura';
+  return `<div class="papir-obal"><div class="papir doc" data-titul="${esc(t1)}" data-cislo="${esc(d.cislo || '')}">
+    ${hlava}
+    <table class="dok-pol doc-items ${tc}"><thead><tr>${hlavaTab}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="p-konec">${konec}</div>
+    <div class="pata doc-pata"><span>${esc([pataL, F.nazev, F.telefon, F.email].filter(Boolean).join(' · '))}</span><span class="yey"><b>YeY.cz</b></span></div>
   </div></div>`;
 }
 /** Rozdělí doklad na stránky A4. Položky se přelévají na další stránky (s mezisoučtem),
@@ -1160,7 +1271,7 @@ function papirStrany(html) {
   try {
     const pa = m.querySelector('.papir'); if (!pa) return html;
     pa.style.aspectRatio = 'auto'; pa.style.height = 'auto'; pa.style.overflow = 'visible';
-    const hl = pa.querySelector('.p-hlava'), tab = pa.querySelector('table.p-pol'), kon = pa.querySelector('.p-konec'), pata = pa.querySelector('.pata');
+    const hl = pa.querySelector('.p-hlava'), tab = pa.querySelector('table.dok-pol'), kon = pa.querySelector('.p-konec'), pata = pa.querySelector('.pata');
     if (!hl || !tab || !kon || !pata) return html;
     const vy = e => e.getBoundingClientRect().height;
     const top0 = hl.getBoundingClientRect().top;
@@ -1171,7 +1282,7 @@ function papirStrany(html) {
     pa.style.aspectRatio = ''; pa.style.height = ''; pa.style.overflow = '';
     pa.style.aspectRatio = 'auto'; pa.style.height = 'auto'; pa.style.overflow = 'visible';
     if (pa.offsetHeight <= vyskaStr - 16) return html;   // vejde se na jednu stránku
-    const titul = (pa.querySelector('.ph h2')?.textContent || '').trim(), cis = (pa.querySelector('.ph .cis b')?.textContent || '').trim();
+    const titul = (pa.dataset.titul || '').trim(), cis = (pa.dataset.cislo || '').trim();
     const sCenou = radky.some(r => r.dataset.z != null) && tab.tHead.rows[0].cells.length > 2;
     const mini = (i, n) => `<div class="p-mini"><b>${esc(titul)}</b><span>č. ${esc(cis)} · strana ${i} z ${n}</span></div>`;
     const prenos = (soucet, dalsi) => `<div class="p-prenos">${sCenou ? `<span>Mezisoučet (převádí se na stranu ${dalsi})</span><b>${fmtN(soucet)}</b>` : `<span>Pokračování na straně ${dalsi}</span>`}</div>`;
@@ -1194,19 +1305,31 @@ function papirStrany(html) {
     str.push(cur);
     // přesné dorovnání: každou stránku sestavit, změřit a případně přesunout řádky na další stránku
     const theadH = tab.tHead.outerHTML, hlavaH = hl.outerHTML, konecH = kon.outerHTML, pataH0 = pata.outerHTML, tc = tab.className;
+    const paTrida = pa.className;
     const rH = radky.map(r => r.outerHTML), rZ = radky.map(r => Number(r.dataset.z || 0));
+    const rT = radky.map(r => r.classList.contains('cat') ? 'cat' : r.classList.contains('sub') ? 'sub' : 'pol');
     const stranka = (i, n, st, posl) => {
       const soucet = rZ.slice(0, st.do).reduce((a2, b2) => a2 + b2, 0);
       const pataH = pataH0.replace(/<\/span>/, `</span><span>Strana ${i + 1} z ${n}</span>`);
-      return `<div class="papir-obal"><div class="papir">${i === 0 ? hlavaH : mini(i + 1, n)}${st.do > st.od ? `<table class="${tc}">${theadH}<tbody>${rH.slice(st.od, st.do).join('')}</tbody></table>` : ''}${posl ? konecH : prenos(soucet, i + 2)}${pataH}</div></div>`;
+      return `<div class="papir-obal"><div class="${paTrida}" data-titul="${esc(titul)}" data-cislo="${esc(cis)}">${i === 0 ? hlavaH : mini(i + 1, n)}${st.do > st.od ? `<table class="${tc}">${theadH}<tbody>${rH.slice(st.od, st.do).join('')}</tbody></table>` : ''}${posl ? konecH : prenos(soucet, i + 2)}${pataH}</div></div>`;
     };
     const sedi = h => { m.innerHTML = h; const p2 = m.querySelector('.papir'); p2.style.aspectRatio = 'auto'; p2.style.height = 'auto'; p2.style.overflow = 'visible'; return p2.offsetHeight <= vyskaStr - 16; };   // 16 px rezerva pro menší náhled
     for (let i = 0, g = 0; i < str.length && g < 2000; g++) {
       const st = str[i], posl = i === str.length - 1;
-      if (sedi(stranka(i, str.length, st, posl))) { i++; continue; }
+      if (sedi(stranka(i, str.length, st, posl))) {
+        // nadpis kategorie nesmí zůstat sám na konci stránky
+        if (!posl && st.do - st.od > 1 && rT[st.do - 1] === 'cat') { st.do--; str[i + 1].od--; continue; }
+        i++; continue;
+      }
       if (!posl) { if (st.do - st.od <= 1) { i++; continue; } st.do--; str[i + 1].od--; continue; }
       // poslední stránka se nevejde i s rekapitulací → oddělit předchozí řádky na samostatnou stránku
-      if (st.do - st.od > 1) { str.splice(i, 0, { od: st.od, do: st.do - 1 }); st.od = st.do - 1; }
+      if (st.do - st.od > 1) {
+        // na poslední stránku s rekapitulací přejde poslední položka (i s mezisoučtem a případně nadpisem své kategorie)
+        let k = st.do - 1; while (k > st.od && rT[k] !== 'pol') k--;
+        if (k > st.od && rT[k - 1] === 'cat') k--;
+        if (k <= st.od) k = st.do - 1;
+        str.splice(i, 0, { od: st.od, do: k }); st.od = k;
+      }
       else if (st.do - st.od === 1) { str.splice(i, 0, { od: st.od, do: st.do }); st.od = st.do; }
       else { i++; }
     }
@@ -1214,13 +1337,6 @@ function papirStrany(html) {
     return str.map((st, i) => stranka(i, n, st, i === n - 1)).join('');
 
   } catch (e) { return html; } finally { m.remove(); }
-}
-/** Tabulka položek dokladu (stejná pro doklad i přílohu s rozpisem). */
-function papirTabulka(d, pol, dph) {
-  const sCenou = d.typ !== 'protokol';
-  return `<table class="p-pol ${sCenou ? (dph ? 'sl5' : 'sl4') : 'sl2'}"><thead><tr><th>Položka</th><th class="r">Množství</th>${sCenou ? `<th class="r">Cena/MJ${dph ? ' bez DPH' : ''}</th>${dph ? '<th class="r">Sazba</th>' : ''}<th class="r">${dph ? 'Základ' : 'Celkem'}</th>` : ''}</tr></thead><tbody>
-      ${pol.length ? pol.map(p => `<tr data-z="${cislo(p.mnozstvi) * cislo(p.cena)}"><td>${esc(p.nazev)}</td><td class="r">${fmtN(p.mnozstvi, 3)} ${esc(p.mj || '')}</td>${sCenou ? `<td class="r">${fmtN(p.cena)}</td>${dph ? `<td class="r">${fmtN(p.dph, 0)} %</td>` : ''}<td class="r">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>` : ''}</tr>`).join('') : `<tr><td colspan="5" style="color:#5D6B76;text-align:center;padding:4cqw">Zatím žádné položky</td></tr>`}
-    </tbody></table>`;
 }
 /** Souhrnný tisk: jeden řádek za každou sazbu DPH (základ daně musí být podle sazeb), text = souhrnný text nebo předmět. */
 function souhrnRadky(d, pol) {
@@ -1232,15 +1348,20 @@ function souhrnRadky(d, pol) {
   const kl = Object.keys(sk);
   return kl.map(k => ({ nazev: text + (kl.length > 1 ? ` (sazba ${k} %)` : '') + pr, mnozstvi: 1, mj: 'kpl', cena: Math.round(sk[k] * 100) / 100, dph: +k }));
 }
-/** Příloha: úplný rozpis položek k souhrnně tištěnému dokladu. */
+/** Příloha: úplný rozpis položek k souhrnně tištěnému dokladu (po kategoriích s mezisoučty). */
 function papirPriloha(d, pol) {
-  const F = S.firma, dph = F.platce_dph && d.typ !== 'protokol';
-  const bez = pol.reduce((s2, p) => s2 + cislo(p.mnozstvi) * cislo(p.cena), 0);
-  return `<div class="papir-obal"><div class="papir">
-    <div class="p-hlava"><div class="ph"><div><h2>Rozpis položek</h2><div style="font-size:2.2cqw;margin-top:1cqw">Příloha k dokladu ${esc(TYP[d.typ].toLowerCase())} č. ${esc(d.cislo)}${d.predmet ? ' – ' + esc(d.predmet) : ''}</div></div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b></div></div></div>
-    ${papirTabulka(d, pol, dph)}
-    <div class="p-konec">${d.typ === 'protokol' ? '' : `<div class="celkem"><div></div><table><tr class="zap"><td>${dph ? 'Celkem bez DPH' : 'Celkem'}</td><td class="r">${kc(bez)}</td></tr></table></div>`}</div>
-    <div class="pata"><span>${esc(F.nazev)}</span><span>Příloha č. 1</span></div>
+  const F = S.firma, platce = F.platce_dph && d.typ !== 'protokol', prot = d.typ === 'protokol';
+  const radkyPol = pol.filter(p => String(p.nazev || '').trim() || cislo(p.cena));
+  const zakl = p => cislo(p.mnozstvi) * cislo(p.cena), bez = radkyPol.reduce((s, p) => s + zakl(p), 0);
+  const sKat = radkyPol.some(p => p.kat), g = {}; KATS.forEach(([kk]) => g[kk] = []); radkyPol.forEach(p => g[normKat(p.kat)].push(p));
+  const ncol = prot ? 3 : 5;
+  const radek = p => `<tr data-z="${zakl(p)}"><td>${esc(p.nazev)}</td><td class="c">${esc(p.mj || '')}</td><td class="r">${fmtN(p.mnozstvi, 3)}</td>${prot ? '' : `<td class="r">${fmtN(p.cena)}</td><td class="r">${fmtN(zakl(p))}</td>`}</tr>`;
+  const rows = sKat ? KATS.filter(([kk]) => g[kk].length).map(([kk, n]) => `<tr class="cat"><td colspan="${ncol}">${esc(n)}</td></tr>${g[kk].map(radek).join('')}${prot ? '' : `<tr class="sub"><td colspan="4" class="r">Mezisoučet ${esc(n.toLowerCase())}</td><td class="r">${fmtN(g[kk].reduce((s, p) => s + zakl(p), 0))}</td></tr>`}`).join('') : radkyPol.map(radek).join('');
+  return `<div class="papir-obal"><div class="papir doc" data-titul="ROZPIS POLOŽEK" data-cislo="${esc(d.cislo || '')}">
+    <div class="p-hlava">${papirHlavicka(F, 'ROZPIS POLOŽEK', d.cislo)}<div class="doc-predmet"><span>Příloha č. 1</span> k dokladu ${esc(TYP[d.typ].toLowerCase())} č. ${esc(d.cislo)}${d.predmet ? ' – ' + esc(d.predmet) : ''}</div></div>
+    <table class="dok-pol doc-items ${prot ? 'pr3' : 'nb'}"><thead><tr><th>Popis</th><th class="c">MJ</th><th class="r">Množství</th>${prot ? '' : `<th class="r">Cena/MJ${platce ? ' bez DPH' : ''}</th><th class="r">Celkem${platce ? ' bez DPH' : ''}</th>`}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="p-konec">${prot ? '' : `<div class="doc-total"><span>${platce ? 'Celkem bez DPH' : 'Celkem'}</span><b>${kc(bez)}</b></div>`}</div>
+    <div class="pata doc-pata"><span>${esc(['Příloha č. 1 – rozpis položek', F.nazev].filter(Boolean).join(' · '))}</span><span class="yey"><b>YeY.cz</b></span></div>
   </div></div>`;
 }
 /** Kompletní doklad rozdělený na stránky (a případně s přílohou rozpisu položek). */
@@ -1286,14 +1407,15 @@ POHLEDY.doklad = async t => {
         </div>
         <label class="pole">Předmět<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny"></label>
         <div class="mrizka m2">
-          <label class="pole">Tisk položek<select name="tisk_rezim">${[['polozky', 'Položkově – všechny položky'], ['souhrn', 'Souhrnně – jeden řádek (za sazbu DPH)'], ['souhrn_priloha', 'Souhrnně + rozpis položek v příloze']].map(([k, n]) => `<option value="${k}" ${k === (d.tisk_rezim || 'polozky') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-          <label class="pole ${(d.tisk_rezim || 'polozky') === 'polozky' ? 'skryt' : ''}" id="edSouhrnText">Text souhrnného řádku<input name="souhrn_text" value="${esc(d.souhrn_text)}" placeholder="${esc(d.predmet || 'např. Rekonstrukce koupelny dle nabídky')}"></label>
+          <label class="pole">Tisk položek<select name="tisk_rezim">${[['polozky', 'Položkově – všechny položky'], ['kategorie', 'Po kategoriích – řádek za kategorii'], ['souhrn', 'Souhrnně – jeden řádek (za sazbu DPH)'], ['souhrn_priloha', 'Souhrnně + rozpis položek v příloze']].map(([k, n]) => `<option value="${k}" ${k === (d.tisk_rezim || 'polozky') ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <label class="pole ${/^souhrn/.test(d.tisk_rezim || '') ? '' : 'skryt'}" id="edSouhrnText">Text souhrnného řádku<input name="souhrn_text" value="${esc(d.souhrn_text)}" placeholder="${esc(d.predmet || 'např. Rekonstrukce koupelny dle nabídky')}"></label>
         </div>
         <div class="mrizka m4">
           <label class="pole">Číslo<input name="cislo" value="${esc(d.cislo)}"></label>
           <label class="pole">${d.typ === 'protokol' ? 'Datum předání' : 'Datum vystavení'}<input name="datum" type="date" value="${esc(d.datum)}"></label>
           ${d.typ === 'protokol' ? '' : `<label class="pole">${d.typ === 'nabidka' ? 'Platnost do' : 'Splatnost'}<input name="splatnost" type="date" value="${esc(d.splatnost)}"></label>`}
           ${jeFakt(d.typ) ? `<label class="pole">Var. symbol<input name="vs" value="${esc(d.vs)}" inputmode="numeric"></label>` : ''}
+          ${d.typ !== 'nabidka' ? `<label class="pole">Objednávka č.<input name="objednavka" value="${esc(d.objednavka)}" placeholder="nepovinné"></label>` : ''}
           ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole">DUZP<input name="duzp" type="date" value="${esc(d.duzp)}"></label>` : ''}
           ${jeFakt(d.typ) ? `<label class="pole">Forma úhrady<select name="forma_uhrady">${['převodem', 'hotově', 'kartou', 'dobírkou'].map(x => `<option ${x === d.forma_uhrady ? 'selected' : ''}>${x}</option>`).join('')}</select></label>` : ''}
           ${jeFakt(d.typ) && F.platce_dph ? `<label class="pole" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:10px;display:flex"><input type="checkbox" name="pdp" ${d.pdp ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--inkoust)"> Přenesená daňová povinnost (§ 92e – stavební a montážní práce pro plátce DPH)</label>` : ''}
@@ -1306,7 +1428,7 @@ POHLEDY.doklad = async t => {
           <button class="btn mal" data-a="z-katalogu">${ik('hledat', 16)}Z katalogu</button>
           <button class="btn mal" data-a="z-excelu">${ik('plus', 16)}Z Excelu</button>
           ${d.typ !== 'protokol' ? `<a class="btn mal" href="#kalkulacky?doklad=${d.id}">${ik('kalk', 16)}Z kalkulačky</a>` : ''}</div></div>
-        <div class="obal-tab"><table class="pol-tab"><thead><tr><th>Název</th><th class="c" style="width:92px">Množství</th><th style="width:70px">MJ</th>${d.typ === 'protokol' ? '' : `<th class="c" style="width:100px">Cena/MJ</th>${dph ? '<th class="c" style="width:64px">DPH %</th>' : ''}<th class="c" style="width:100px">Celkem</th>`}<th></th></tr></thead>
+        <div class="obal-tab"><table class="pol-tab"><thead><tr><th>Název</th><th class="c" style="width:92px">Množství</th><th style="width:70px">MJ</th><th style="width:104px">Kategorie</th>${d.typ === 'protokol' ? '' : `<th class="c" style="width:100px">Cena/MJ</th>${dph ? '<th class="c" style="width:64px">DPH %</th>' : ''}<th class="c" style="width:100px">Celkem</th>`}<th></th></tr></thead>
           <tbody id="edPol"></tbody></table></div>
         <button class="btn mal" data-a="pridat-pol" style="margin-top:8px">${ik('plus', 16)}Přidat řádek</button>
         ${d.typ === 'protokol' ? '' : `<div class="souhrn" id="edSouhrn"></div>`}
@@ -1375,11 +1497,12 @@ function edRadky() {
     <td><input data-k="nazev" value="${esc(p.nazev)}" placeholder="Popis práce nebo materiálu" aria-label="Název"></td>
     <td><input data-k="mnozstvi" class="c" value="${esc(fmtN(p.mnozstvi, 3))}" inputmode="decimal" aria-label="Množství"></td>
     <td><input data-k="mj" value="${esc(p.mj)}" list="mjList" aria-label="Jednotka"></td>
+    <td><select data-k="kat" aria-label="Kategorie" class="kat-sel"><option value="">—</option>${KATS.map(([kk, n]) => `<option value="${kk}" ${p.kat === kk ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
     ${d.typ === 'protokol' ? '' : `<td><input data-k="cena" class="c" value="${esc(fmtN(p.cena))}" inputmode="decimal" aria-label="Cena za jednotku"></td>
     ${dph ? `<td><input data-k="dph" class="c" value="${esc(fmtN(p.dph, 0))}" inputmode="decimal" list="dphList" aria-label="DPH"></td>` : ''}
     <td class="c num tuc" style="padding-right:10px">${fmtN(cislo(p.mnozstvi) * cislo(p.cena))}</td>`}
     <td><button type="button" class="btn prazdne mal ikona" data-a="smaz-pol" data-i="${i}" aria-label="Odebrat řádek">${ik('smaz', 16)}</button></td></tr>`).join('')
-    || `<tr><td colspan="7" class="tlumene" style="padding:14px 6px">Zatím žádné položky – přidejte řádek, vyberte z ceníku nebo vložte výměru z kalkulačky.</td></tr>`;
+    || `<tr><td colspan="8" class="tlumene" style="padding:14px 6px">Zatím žádné položky – přidejte řádek, vyberte z ceníku nebo vložte výměru z kalkulačky.</td></tr>`;
   $('#edPol').classList.add('edpol'); oznacCeny();
   if (!$('#mjList')) document.body.insertAdjacentHTML('beforeend', `<datalist id="mjList">${['ks', 'm', 'm²', 'm³', 'hod', 'kg', 't', 'bm', 'kpl', 'bal', 'l', 'den', 'km'].map(x => `<option value="${x}">`).join('')}</datalist><datalist id="dphList"><option value="21"><option value="12"><option value="0"></datalist>`);
 }
@@ -1394,9 +1517,9 @@ function edNahled() {
 const edUlozit = debounce(async () => {
   const st = $('#edUlozeno'); if (st) { st.textContent = 'Ukládám…'; st.style.color = 'var(--ocel)'; }
   try {
-    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, tisk_rezim: d.tisk_rezim || 'polozky', souhrn_text: d.souhrn_text || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
+    const d = ED.d; const hl = { kontakt_id: d.kontakt_id || null, zakazka_id: d.zakazka_id || null, predmet: d.predmet || null, cislo: d.cislo, datum: d.datum || dnes(), splatnost: d.splatnost || null, duzp: d.duzp || null, vs: d.vs || null, forma_uhrady: d.forma_uhrady || null, stav: d.stav, poznamka: d.poznamka || null, tisk_rezim: d.tisk_rezim || 'polozky', souhrn_text: d.souhrn_text || null, objednavka: d.objednavka || null, pdp: !!d.pdp && !!S.firma.platce_dph && jeFakt(d.typ) };
     await q(sb.from('doklady').update(hl).eq('id', d.id));
-    const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: (() => { const ref = cenaNizka(p); return ref ? ref.cena : cislo(p.cena); })(), dph: S.firma.platce_dph ? cislo(p.dph) : 0 }));
+    const rows = ED.pol.map((p, i) => ({ id: p.id, doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev || '', mnozstvi: cislo(p.mnozstvi), mj: p.mj || null, cena: (() => { const ref = cenaNizka(p); return ref ? ref.cena : cislo(p.cena); })(), dph: S.firma.platce_dph ? cislo(p.dph) : 0, kat: p.kat || null }));
     const smazane = [...ED.puvodniIds].filter(id => !ED.pol.some(p => p.id === id));
     if (smazane.length) await q(sb.from('polozky').delete().in('id', smazane));
     if (rows.length) await q(sb.from('polozky').upsert(rows));
@@ -1416,23 +1539,24 @@ function poEditor() {
   f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
     if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
-    ED.d[n] = hod(e.target); if (n === 'tisk_rezim') $('#edSouhrnText').classList.toggle('skryt', e.target.value === 'polozky');
+    ED.d[n] = hod(e.target); if (n === 'tisk_rezim') $('#edSouhrnText').classList.toggle('skryt', !/^souhrn/.test(e.target.value));
     edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
   tb.addEventListener('input', e => {
-    const i = +e.target.closest('tr').dataset.i; const k = e.target.dataset.k; if (k == null) return;
+    const i = +e.target.closest('tr').dataset.i; const k = e.target.dataset.k; if (k == null || k === 'kat') return;
     ED.pol[i][k] = ['mnozstvi', 'cena', 'dph'].includes(k) ? cislo(e.target.value) : e.target.value;
     const celk = e.target.closest('tr').querySelector('td.num'); if (celk) celk.textContent = fmtN(cislo(ED.pol[i].mnozstvi) * cislo(ED.pol[i].cena));
     edNahled(); edUlozit();
   });
   tb.addEventListener('input', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') oznacCeny(); });
-  tb.addEventListener('change', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') hlidejCenu(+e.target.closest('tr').dataset.i); });
+  tb.addEventListener('change', e => { if (e.target.dataset.k === 'cena' || e.target.dataset.k === 'nazev') hlidejCenu(+e.target.closest('tr').dataset.i);
+    if (e.target.dataset.k === 'kat') { ED.pol[+e.target.closest('tr').dataset.i].kat = e.target.value || null; edNahled(); edUlozit(); } });
   tb.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); const tr = e.target.closest('tr'); if (!tr.nextElementSibling) AKCE['pridat-pol'](); else tr.nextElementSibling.querySelector('input').focus(); } });
   if (!ED.pol.length && ED.d.stav === 'koncept') { /* prázdný doklad – rovnou připravit řádek */ AKCE['pridat-pol'](true); }
 }
 AKCE['pridat-pol'] = (tiho) => {
-  ED.pol.push({ id: uid(), nazev: '', mnozstvi: 1, mj: 'ks', cena: 0, dph: S.firma.platce_dph ? 21 : 0 });
+  ED.pol.push({ id: uid(), nazev: '', mnozstvi: 1, mj: 'ks', cena: 0, dph: S.firma.platce_dph ? 21 : 0, kat: null });
   edRadky(); edNahled(); if (tiho !== true) { const r = $$('#edPol tr'); r[r.length - 1].querySelector('input').focus(); edUlozit(); }
 };
 AKCE['smaz-pol'] = el => { ED.pol.splice(+el.dataset.i, 1); edRadky(); edNahled(); edUlozit(); };
@@ -1448,7 +1572,7 @@ AKCE['z-ceniku'] = () => {
   const kresli = () => { const h = $('#cenHled').value.toLowerCase(); $('#cenSez').innerHTML = S.cenik.filter(c => !h || (c.nazev + ' ' + (c.kategorie || '')).toLowerCase().includes(h)).map(c => `<button class="dokl" data-a="vloz-cenik" data-id="${c.id}"><span><b>${esc(c.nazev)}</b> <span class="tlumene mal">${esc(c.kategorie || '')}</span></span><span class="num tuc">${kc(c.cena)}/${esc(c.mj)}</span></button>`).join('') || '<div class="tlumene">Nic nenalezeno.</div>'; };
   $('#cenHled').oninput = kresli; kresli();
 };
-AKCE['vloz-cenik'] = el => { const c = S.cenik.find(x => x.id === el.dataset.id); ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena)); ED.pol.push({ id: uid(), nazev: c.nazev, mnozstvi: 1, mj: c.mj, cena: c.cena, dph: S.firma.platce_dph ? c.dph : 0 }); edRadky(); edNahled(); edUlozit(); toast('Přidáno: ' + c.nazev); };
+AKCE['vloz-cenik'] = el => { const c = S.cenik.find(x => x.id === el.dataset.id); ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena)); ED.pol.push({ id: uid(), nazev: c.nazev, mnozstvi: 1, mj: c.mj, cena: c.cena, dph: S.firma.platce_dph ? c.dph : 0, kat: 'prace' }); edRadky(); edNahled(); edUlozit(); toast('Přidáno: ' + c.nazev); };
 
 /* ---- nová zakázka přímo z dokladu ---- */
 function zakOpt(vyb) { return `<option value="">— bez zakázky —</option><option value="__nova_zak">+ Nová zakázka…</option>${S.zakazky.map(zz => `<option value="${zz.id}" ${zz.id === vyb ? 'selected' : ''}>${esc(zz.nazev)}</option>`).join('')}`; }
@@ -1544,7 +1668,7 @@ function edPridejPol(o) {
 AKCE['kat-vloz'] = el => {
   const i = +el.dataset.i, p = KV.rows[i]; if (!p) return;
   const m = cislo($(`[data-km="${i}"]`)?.value) || 1;
-  edPridejPol({ nazev: p.nazev, mnozstvi: m, mj: p.mj || 'ks', cena: katProdej(p), dph: S.firma.platce_dph ? p.sazba : 0 });
+  edPridejPol({ nazev: p.nazev, mnozstvi: m, mj: p.mj || 'ks', cena: katProdej(p), dph: S.firma.platce_dph ? p.sazba : 0, kat: 'material' });
   el.textContent = '✓ Přidáno'; toast('Přidáno: ' + p.nazev);
 };
 /* Hobbymarkety a srovnávač – adresy hledání ověřené 9. 11. 2026. */
@@ -1595,7 +1719,7 @@ AKCE['kat-rucne'] = () => {
   if (!nazev) { toast('Vyplňte název', { chyba: true }); return; }
   const nakup = S.firma.platce_dph ? c / 1.21 : c;
   const cena = Math.round(nakup * (1 + katPrirazka() / 100) * 100) / 100;
-  edPridejPol({ nazev, mnozstvi: cislo($('#krMn').value) || 1, mj: ($('#krMj').value || 'ks').trim(), cena });
+  edPridejPol({ nazev, mnozstvi: cislo($('#krMn').value) || 1, mj: ($('#krMj').value || 'ks').trim(), cena, kat: 'material' });
   ['krNazev', 'krCena', 'krUrl'].forEach(id => { const x = $('#' + id); if (x) x.value = ''; }); $('#krMn').value = '1'; $('#krStav').innerHTML = '';
   toast(`Přidáno: ${nazev} za ${kc(cena)}`);
 };
@@ -1862,7 +1986,7 @@ AKCE['xl-pridat'] = () => {
   const it = xlVybrane(); if (!it.length || !ED) return;
   const platce = !!S.firma.platce_dph;
   ED.pol = ED.pol.filter(p => p.nazev || cislo(p.cena));
-  it.forEach(p => ED.pol.push({ id: uid(), nazev: String(p.nazev || ''), mnozstvi: Math.round(cislo(p.mnozstvi) * 1000) / 1000, mj: p.mj || 'ks', cena: Math.round(cislo(p.cena) * 100) / 100, dph: platce ? 21 : 0 }));
+  it.forEach(p => ED.pol.push({ id: uid(), nazev: String(p.nazev || ''), mnozstvi: Math.round(cislo(p.mnozstvi) * 1000) / 1000, mj: p.mj || 'ks', cena: Math.round(cislo(p.cena) * 100) / 100, dph: platce ? 21 : 0, kat: KAT_N[p.kat] ? p.kat : null }));
   if (XL.X && XL.X.predmet && !ED.d.predmet) { ED.d.predmet = XL.X.predmet; const i = $('#fDok [name=predmet]'); if (i) i.value = XL.X.predmet; }
   zavriOkno(); edRadky(); edNahled(); edUlozit();
   toast(`${it.length} položek přidáno z Excelu.`);
@@ -2030,6 +2154,7 @@ POHLEDY.firma = () => { const F = S.firma; return { html: `
     <div class="mrizka m2"><label class="pole">Město<input name="mesto" value="${esc(F.mesto)}"></label><label class="pole">PSČ<input name="psc" value="${esc(F.psc)}"></label></div>
     <div class="mrizka m3"><label class="pole">Telefon<input name="telefon" type="tel" value="${esc(F.telefon)}"></label><label class="pole">E-mail<input name="email" type="email" value="${esc(F.email)}"></label><label class="pole">Web<input name="web" value="${esc(F.web)}"></label></div>
     <div class="mrizka m2"><label class="pole">Číslo účtu<input name="ucet" value="${esc(F.ucet)}" placeholder="123456789/0800"><span class="napoveda">Z čísla účtu vytvoříme QR platbu na fakturách.</span></label><label class="pole">IBAN <span class="napoveda">(nepovinné)</span><input name="iban" value="${esc(F.iban)}"></label></div>
+    <div class="mrizka m2"><label class="pole">Banka <span class="napoveda">(nepovinné, tiskne se v platebních údajích)</span><input name="banka" value="${esc(F.banka)}" placeholder="např. Fio banka"></label><label class="pole">SWIFT <span class="napoveda">(nepovinné)</span><input name="swift" value="${esc(F.swift)}"></label></div>
     <div class="mrizka m2"><label class="pole">Splatnost faktur (dní)<input name="splatnost_dni" type="number" min="0" value="${esc(F.splatnost_dni)}"></label><label class="pole">Zápis v rejstříku <span class="napoveda">(§ 435 OZ, tiskne se na doklady)</span><input name="zapis" value="${esc(F.zapis)}" placeholder="doplní se z ARES tlačítkem u IČO"></label></div>
     <div class="pole">Číselné řady dokladů <span class="napoveda">Značky: {RRRR} rok (2026), {RR} rok (26), {MM} měsíc, {NNN} pořadí (počet N = počet míst). „Další číslo“ prázdné = pokračuje za posledním dokladem. Při změně roku začne řada od 1.</span>
       <table class="cis-tab"><thead><tr><th>Doklad</th><th>Tvar čísla</th><th style="width:110px">Další číslo</th><th style="width:120px">Náhled</th></tr></thead><tbody>
@@ -2354,7 +2479,7 @@ const kalkAdapter = {
     const pol = await nactiPolozky(d.id, true);
     const platce = !!S.firma.platce_dph;
     const rows = radky.map((r, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: pol.length + i, nazev: r.nazev || '', mnozstvi: Math.round((Number(r.mnozstvi) || 0) * 1000) / 1000, mj: r.mj || null,
-      cena: Math.round((Number(r.cena) || 0) * 100) / 100, dph: platce ? ((r.sazba_dph != null && r.sazba_dph !== '') ? Number(r.sazba_dph) : 21) : 0 }));
+      cena: Math.round((Number(r.cena) || 0) * 100) / 100, dph: platce ? ((r.sazba_dph != null && r.sazba_dph !== '') ? Number(r.sazba_dph) : 21) : 0, kat: r.kod ? 'material' : (r.typ === 'prace' || r.typ === 'práce' ? 'prace' : 'material') }));
     if (rows.length) await q(sb.from('polozky').insert(rows));
     await nactiPolozky(d.id, true); await obnovDoklad(d.id);
     UI.kalkCil = null;
