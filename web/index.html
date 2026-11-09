@@ -385,6 +385,10 @@ const STAV = { koncept: 'Koncept', odeslano: 'Odesláno', prijato: 'Přijato', o
 const jeFakt = t => t === 'faktura' || t === 'zalohova';
 const poSplatnosti = d => jeFakt(d.typ) && !['zaplaceno', 'storno', 'koncept'].includes(d.stav) && d.splatnost && dniDo(d.splatnost) < 0;
 const celkem = d => Number(d.celkem_bez || 0) + Number(d.celkem_dph || 0);
+/* Zaplacené zálohové faktury k odečtení od konečné faktury (stejná zakázka, případně odvozené ze stejné nabídky) */
+const zaplaceneZalohy = d => d.typ !== 'faktura' ? [] : S.doklady.filter(x => x.typ === 'zalohova' && x.stav === 'zaplaceno' && x.id !== d.id && (
+  (d.zakazka_id && x.zakazka_id === d.zakazka_id) || (!d.zakazka_id && ((d.zdroj_id && x.zdroj_id === d.zdroj_id) || x.id === d.zdroj_id)))).sort((a, b) => String(a.datum).localeCompare(String(b.datum)));
+const kUhrade = d => celkem(d) - zaplaceneZalohy(d).reduce((s, x) => s + celkem(x), 0);
 const cipStav = d => poSplatnosti(d) ? `<span class="cip c-po">Po splatnosti ${-dniDo(d.splatnost)} d</span>` : `<span class="cip c-${d.stav}">${STAV[d.stav] || d.stav}</span>`;
 
 /* ---------- ikony (čárové SVG) ---------- */
@@ -639,7 +643,7 @@ function ibanZUctu(u) {
 }
 function qrPlatba(d) {
   const iban = S.firma.iban?.replace(/\s/g, '') || ibanZUctu(S.firma.ucet); if (!iban || typeof qrcode === 'undefined') return '';
-  const castka = Math.round(celkem(d) * 100) / 100; if (castka <= 0) return '';
+  const castka = Math.round(kUhrade(d) * 100) / 100; if (castka <= 0) return '';
   const spd = `SPD*1.0*ACC:${iban}*AM:${castka.toFixed(2)}*CC:CZK${d.vs ? '*X-VS:' + d.vs.replace(/\D/g, '').slice(0, 10) : ''}*MSG:${(TYP[d.typ] + ' ' + d.cislo).normalize('NFD').replace(/[̀-ͯ*]/g, '').slice(0, 60)}`;
   try { const qr = qrcode(0, 'M'); qr.addData(spd); qr.make(); return qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); } catch { return ''; }
 }
@@ -730,6 +734,17 @@ async function nactiFirmu() {
   const cl = await q(sb.from('clenove').select('firma_id').eq('user_id', S.user.id).limit(1));
   if (!cl.length) { S.firma = null; return; }
   S.firma = await q(sb.from('firmy').select('*').eq('id', cl[0].firma_id).single());
+  doplnZapis();
+}
+/* Chybí-li u firmy zápis v rejstříku, doplní se z ARES a uloží (jednou za relaci, tiše) */
+let zapisZkusen = false;
+async function doplnZapis() {
+  const F = S.firma; if (zapisZkusen || !F || F.zapis || !F.ico) return; zapisZkusen = true;
+  try {
+    const d = await ares(String(F.ico).replace(/\D/g, '')); const z = await aresZapis(F.ico, d._ares); if (!z || S.firma !== F || S.firma.zapis) return;
+    S.firma = await q(sb.from('firmy').update({ zapis: z }).eq('id', F.id).select().single());
+    if (ED) edNahled();
+  } catch { }
 }
 
 AKCE.ucet = () => okno('Účet', `<div><div class="tuc">${esc(S.user.email)}</div><div class="tlumene mal">Data se ukládají automaticky do cloudu.</div></div>
@@ -1067,6 +1082,7 @@ function papir(d, pol) {
   const info = d.typ === 'nabidka' ? [['Datum', datum(d.datum)], ['Platnost do', datum(d.splatnost)], ['Zakázka', esc(z?.nazev || d.predmet || '—')]]
     : d.typ === 'protokol' ? [['Datum předání', datum(d.datum)], ['Místo', esc(z?.adresa || '—')], ['Zakázka', esc(z?.nazev || d.predmet || '—')]]
     : [['Datum vystavení', datum(d.datum)], ...(F.platce_dph && d.typ === 'faktura' ? [['Datum usk. zdanitelného plnění', datum(d.duzp || d.datum)]] : []), ['Datum splatnosti', '<b>' + datum(d.splatnost) + '</b>'], ['Variabilní symbol', esc(d.vs || d.cislo.replace(/\D/g, ''))], ['Forma úhrady', esc(d.forma_uhrady || 'převodem')]];
+  const zal = zaplaceneZalohy(d);
   const qr = jeFakt(d.typ) ? qrPlatba(d) : '';
   return `<div class="papir-obal"><div class="papir">
     <div class="ph"><div>${F.logo || F.logo_text ? `<div class="pl-logo">${F.logo ? `<img src="${F.logo}" alt="">` : ''}${F.logo_text ? `<span>${esc(F.logo_text)}</span>` : ''}</div>` : ''}<h2>${nazev}</h2>${podtitul ? `<div style="font-size:1.8cqw;color:#5D6B76;margin-top:.5cqw">${podtitul}</div>` : ''}${d.predmet ? `<div style="font-size:2.2cqw;margin-top:1cqw">${esc(d.predmet)}</div>` : ''}</div><div class="cis">č. <b style="color:#1D272F;font-size:2.8cqw">${esc(d.cislo)}</b>${jeFakt(d.typ) && F.platce_dph ? `<br>VS: ${esc(d.vs || '')}` : ''}</div></div>
@@ -1082,7 +1098,8 @@ function papir(d, pol) {
     : `<div class="celkem"><div class="qr">${qr ? qr + '<div>QR platba</div>' : ''}</div><table>
         ${dph ? Object.entries(sazby).map(([s2, z2]) => `<tr><td>Základ daně ${s2} %</td><td class="r">${fmtN(z2)}</td></tr><tr><td>DPH ${s2} %</td><td class="r">${pdp ? 'odvede odběratel' : fmtN(z2 * s2 / 100)}</td></tr>`).join('') : ''}
         ${dph ? `<tr><td>Celkem bez DPH</td><td class="r">${kc(bez)}</td></tr><tr><td>DPH celkem</td><td class="r">${kc(sDph)}</td></tr>` : ''}
-        <tr class="zap"><td>${jeFakt(d.typ) ? 'Celkem k úhradě' : 'Celkem'}</td><td class="r">${kc(bez + sDph)}</td></tr></table></div>
+        ${zal.length ? `<tr><td>Celkem za dílo</td><td class="r">${kc(bez + sDph)}</td></tr>${zal.map(x => `<tr><td>Odečtená záloha č. ${esc(x.cislo)}</td><td class="r">− ${kc(celkem(x))}</td></tr>`).join('')}` : ''}
+        <tr class="zap"><td>${jeFakt(d.typ) ? 'Celkem k úhradě' : 'Celkem'}</td><td class="r">${kc(bez + sDph - zal.reduce((s2, x) => s2 + celkem(x), 0))}</td></tr></table></div>
       ${pdp ? `<div style="margin-top:2cqw;font-weight:700">Daň odvede zákazník. Přenesená daňová povinnost podle § 92e zákona č. 235/2004 Sb., o dani z přidané hodnoty.</div>${k.dic ? '' : '<div class="netisk" style="margin-top:1cqw;color:#B42318">Pozor: u odběratele chybí DIČ – při přenesené daňové povinnosti je povinné. (Netiskne se.)</div>'}` : ''}
 
       ${jeFakt(d.typ) ? `<div style="margin-top:2cqw">Platba: ${esc(d.forma_uhrady || 'převodem')}${F.ucet ? ` · účet <b>${esc(F.ucet)}</b>` : ''}${F.iban ? ` · IBAN ${esc(F.iban)}` : ''} · VS <b>${esc(d.vs || d.cislo.replace(/\D/g, ''))}</b></div>` : ''}
@@ -1207,8 +1224,9 @@ function edNahled() {
   const d = { ...ED.d }; const dph = S.firma.platce_dph;
   d.celkem_bez = ED.pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena), 0);
   d.celkem_dph = dph ? ED.pol.reduce((s, p) => s + cislo(p.mnozstvi) * cislo(p.cena) * cislo(p.dph) / 100, 0) : 0;
+  const zal = zaplaceneZalohy(d);
   $('#edNahled').innerHTML = papir(d, ED.pol);
-  const so = $('#edSouhrn'); if (so) so.innerHTML = `<table>${dph ? `<tr><td class="tlumene">Bez DPH</td><td class="r num">${kc(d.celkem_bez)}</td></tr><tr><td class="tlumene">DPH</td><td class="r num">${kc(d.celkem_dph)}</td></tr>` : ''}<tr class="cel"><td>Celkem</td><td class="r num">${kc(d.celkem_bez + d.celkem_dph)}</td></tr></table>`;
+  const so = $('#edSouhrn'); if (so) so.innerHTML = `<table>${dph ? `<tr><td class="tlumene">Bez DPH</td><td class="r num">${kc(d.celkem_bez)}</td></tr><tr><td class="tlumene">DPH</td><td class="r num">${kc(d.celkem_dph)}</td></tr>` : ''}${zal.map(x => `<tr><td class="tlumene">Záloha č. ${esc(x.cislo)}</td><td class="r num">− ${kc(celkem(x))}</td></tr>`).join('')}<tr class="cel"><td>${zal.length ? 'K úhradě' : 'Celkem'}</td><td class="r num">${kc(d.celkem_bez + d.celkem_dph - zal.reduce((s, x) => s + celkem(x), 0))}</td></tr></table>`;
 }
 const edUlozit = debounce(async () => {
   const st = $('#edUlozeno'); if (st) { st.textContent = 'Ukládám…'; st.style.color = 'var(--ocel)'; }
@@ -1675,6 +1693,8 @@ sb.auth.onAuthStateChange((ev, session) => {
   if (ev === 'SIGNED_IN' && !S.user && !startBezi) setTimeout(start, 0);
   if (ev === 'SIGNED_OUT') { Object.assign(S, { user: null, firma: null, nacteno: false }); render(); }
 });
+/* Při vstupu do číselného pole se celý obsah označí, takže počáteční 0 (nebo jakákoli hodnota) se rovnou přepíše */
+document.addEventListener('focusin', e => { const t = e.target; if (t.matches?.('input[inputmode=decimal], input[type=number], input[name=dph]')) setTimeout(() => { try { t.select(); } catch { } }, 0); });
 start();
 </script>
 </body>
