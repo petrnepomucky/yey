@@ -102,6 +102,8 @@ h1{font-size:30px;line-height:1.1}h2{font-size:20px}h3{font-size:17px}
 .filtry button{border:1px solid var(--linka);background:#fff;border-radius:20px;padding:6px 13px;font-size:14px;font-weight:600;cursor:pointer;min-height:36px}
 .filtry button{color:var(--inkoust)}
 .filtry button.akt{background:var(--inkoust);border-color:var(--inkoust);color:#fff}
+.filtry .kon-n{font-weight:500;opacity:.65;margin-left:2px}
+.p-seznam .filtry button{padding:5px 11px;font-size:13px;min-height:34px}
 .prazdno{text-align:center;padding:40px 20px;color:var(--ocel)}
 .prazdno b{display:block;color:var(--inkoust);font-size:18px;margin-bottom:6px;font-family:var(--font-c)}
 table.tab{width:100%;border-collapse:collapse;font-size:15px}
@@ -487,7 +489,7 @@ const kat = window.supabase.createClient(KAT_URL, KAT_KEY, { auth: { persistSess
 
 /* ---------- stav ---------- */
 const S = { user: null, firma: null, kontakty: [], zakazky: [], doklady: [], cenik: [], denik: {}, polozky: {}, nacteno: false };
-const UI = { filtrZak: 'aktivni', hledatZak: '', filtrDok: 'vse', hledatDok: '', typDok: 'faktura', firmaTab: 'udaje', kosik: false, kosikSbalen: false, filtrKon: '', vybranyDoklad: {}, kalk: 'sdk_pricka', kalkVals: {}, kalkCeny: {}, kalkVyber: {}, kalkCil: null, prihlRezim: 'prihlasit' };
+const UI = { filtrZak: 'aktivni', hledatZak: '', filtrDok: 'vse', hledatDok: '', typDok: 'faktura', firmaTab: 'udaje', kosik: false, kosikSbalen: false, filtrKon: '', typKon: 'vse', vybranyDoklad: {}, kalk: 'sdk_pricka', kalkVals: {}, kalkCeny: {}, kalkVyber: {}, kalkCil: null, prihlRezim: 'prihlasit' };
 
 /* ---------- pomocníci ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -1208,7 +1210,7 @@ AKCE.krok = async el => {
 function formZakazky(z = {}) {
   return `<form id="fZak" class="mrizka">
     <label class="pole">Název zakázky<input name="nazev" required value="${esc(z.nazev)}" placeholder="např. Koupelna Novákovi" autofocus></label>
-    <label class="pole">Klient<select name="kontakt_id"><option value="">— bez klienta —</option><option value="__novy">+ Nový klient…</option>${S.kontakty.map(k => `<option value="${k.id}" ${k.id === z.kontakt_id ? 'selected' : ''}>${esc(k.nazev)}</option>`).join('')}</select></label>
+    <label class="pole">Klient<select name="kontakt_id"><option value="">— bez klienta —</option><option value="__novy">+ Nový klient…</option>${kontaktyOpt(z.kontakt_id)}</select></label>
     <div id="novyKl" class="mrizka m2 skryt" style="background:var(--pod);padding:12px;border-radius:10px"><label class="pole">Jméno / firma klienta<input name="kl_nazev"></label><label class="pole">Telefon<input name="kl_telefon" type="tel"></label><label class="pole">E-mail<input name="kl_email" type="email"></label><label class="pole">Město<input name="kl_mesto"></label></div>
     <label class="pole">Adresa stavby<input name="adresa" value="${esc(z.adresa)}" placeholder="kde se pracuje"></label>
     <div class="mrizka m2"><label class="pole">Termín<input name="termin" type="date" value="${esc(z.termin)}"></label>
@@ -1248,19 +1250,24 @@ AKCE['smazat-zak'] = async el => {
 /* =================== KONTAKTY =================== */
 POHLEDY.kontakty = t => {
   const hl = UI.filtrKon.toLowerCase();
-  const sez = S.kontakty.filter(k => !hl || [k.nazev, k.osoba, k.mesto, k.telefon, k.email, k.ico].join(' ').toLowerCase().includes(hl));
+  const pocty = { vse: S.kontakty.length, klient: 0, dodavatel: 0, jiny: 0 }; S.kontakty.forEach(x => pocty[konTyp(x)]++);
+  if (UI.typKon !== 'vse' && UI.typKon !== 'klient' && UI.typKon !== 'dodavatel' && !pocty.jiny) UI.typKon = 'vse';
+  const tk = UI.typKon;
+  const sez = S.kontakty.filter(k => (tk === 'vse' || konTyp(k) === tk) && (!hl || [k.nazev, k.osoba, k.mesto, k.telefon, k.email, k.ico].join(' ').toLowerCase().includes(hl)));
+  const prepinac = [['vse', 'Vše'], ['klient', 'Zákazníci'], ['dodavatel', 'Dodavatelé'], ...(pocty.jiny ? [['jiny', 'Ostatní']] : [])];
   const k = t.id ? kontakt(t.id) : null;
   const obrat = kk => S.doklady.filter(d => d.kontakt_id === kk.id && jeFakt(d.typ) && d.stav !== 'storno').reduce((s, d) => s + celkem(d), 0);
-  const levy = `<section class="p-seznam" aria-label="Seznam kontaktů"><div class="hlavicka"><div class="radek"><h2 style="font-size:22px">Kontakty</h2><span class="mezera"></span><button class="btn zl mal" data-a="novy-kontakt">${ik('plus', 16)}Nový</button></div>
+  const levy = `<section class="p-seznam" aria-label="Seznam kontaktů"><div class="hlavicka"><div class="radek"><h2 style="font-size:22px">Kontakty</h2><span class="mezera"></span><button class="btn zl mal" data-a="novy-kontakt" data-typ="${tk === 'vse' ? 'klient' : tk}">${ik('plus', 16)}${tk === 'dodavatel' ? 'Nový dodavatel' : tk === 'klient' ? 'Nový zákazník' : 'Nový'}</button></div>
+    <div class="filtry" role="group" aria-label="Zobrazit kontakty">${prepinac.map(([v, n]) => `<button type="button" class="${tk === v ? 'akt' : ''}" aria-pressed="${tk === v}" data-a="kon-typ" data-t="${v}">${n} <span class="kon-n">${pocty[v]}</span></button>`).join('')}</div>
     <input type="search" class="vstup" id="hledKon" placeholder="Jméno, město, telefon, IČO…" value="${esc(UI.filtrKon)}" aria-label="Hledat kontakty"></div>
-    <div class="polozky">${sez.map(kk => `<a class="p-pol ${kk.id === t.id ? 'akt' : ''}" href="#kontakty/${kk.id}" style="text-decoration:none;color:inherit"><div class="t"><b>${esc(kk.nazev)}</b><span class="mal num tlumene">${obrat(kk) ? kc0(obrat(kk)) : ''}</span></div><div class="s"><span>${esc([kk.osoba, kk.mesto].filter(Boolean).join(' · ') || kk.telefon || '')}</span><span>${S.zakazky.filter(z => z.kontakt_id === kk.id).length || ''} ${S.zakazky.some(z => z.kontakt_id === kk.id) ? 'zak.' : ''}</span></div></a>`).join('')
-      || `<div class="prazdno"><b>${S.kontakty.length ? 'Nic nenalezeno' : 'Zatím žádné kontakty'}</b>Klienty můžete přidávat i rovnou při zakládání zakázky.</div>`}</div></section>`;
+    <div class="polozky">${sez.map(kk => `<a class="p-pol ${kk.id === t.id ? 'akt' : ''}" href="#kontakty/${kk.id}" style="text-decoration:none;color:inherit"><div class="t"><b>${esc(kk.nazev)}</b>${tk === 'vse' && konTyp(kk) !== 'klient' ? `<span class="cip c-koncept">${KON_TYP[konTyp(kk)].toLowerCase()}</span>` : `<span class="mal num tlumene">${obrat(kk) ? kc0(obrat(kk)) : ''}</span>`}</div><div class="s"><span>${esc([kk.osoba, kk.mesto].filter(Boolean).join(' · ') || kk.telefon || '')}</span><span>${S.zakazky.filter(z => z.kontakt_id === kk.id).length || ''} ${S.zakazky.some(z => z.kontakt_id === kk.id) ? 'zak.' : ''}</span></div></a>`).join('')
+      || `<div class="prazdno"><b>${!S.kontakty.length ? 'Zatím žádné kontakty' : hl ? 'Nic nenalezeno' : tk === 'dodavatel' ? 'Zatím žádní dodavatelé' : 'Nic tu není'}</b>${tk === 'dodavatel' && !hl ? 'Přidejte dodavatele tlačítkem nahoře, nebo u existujícího kontaktu přepněte typ.' : 'Zákazníky můžete přidávat i rovnou při zakládání zakázky.'}</div>`}</div></section>`;
   let detail = `<section class="p-detail"><div class="prazdno" style="margin-top:12vh"><b>Vyberte kontakt</b>nebo přidejte nový – s IČO doplníme údaje z ARES.</div></section>`;
   if (k) {
     const zak = S.zakazky.filter(z => z.kontakt_id === k.id); const dok = S.doklady.filter(d => d.kontakt_id === k.id);
     detail = `<section class="p-detail"><div class="drobky"><a href="#kontakty">← Kontakty</a></div>
-      <div class="radek" style="justify-content:space-between;align-items:flex-end"><div><h1>${esc(k.nazev)}</h1><div class="tlumene">${esc([k.osoba, k.ico ? 'IČO ' + k.ico : '', k.dic ? 'DIČ ' + k.dic : ''].filter(Boolean).join(' · '))}</div></div>
-      <div class="radek">${k.telefon ? `<a class="btn" href="tel:${esc(k.telefon)}">${ik('tel')}Zavolat</a>` : ''}${k.email ? `<a class="btn" href="mailto:${esc(k.email)}">${ik('mail')}E-mail</a>` : ''}<button class="btn" data-a="upravit-kontakt" data-id="${k.id}">Upravit</button><button class="btn zl" data-a="nova-zakazka" data-kontakt="${k.id}">${ik('plus')}Zakázka</button></div></div>
+      <div class="radek" style="justify-content:space-between;align-items:flex-end"><div><h1>${esc(k.nazev)}</h1><div class="filtry" role="group" aria-label="Typ kontaktu" style="margin:6px 0">${Object.entries(KON_TYP).map(([v, n]) => `<button type="button" class="${konTyp(k) === v ? 'akt' : ''}" aria-pressed="${konTyp(k) === v}" data-a="kon-zmen-typ" data-id="${k.id}" data-t="${v}">${n}</button>`).join('')}</div><div class="tlumene">${esc([k.osoba, k.ico ? 'IČO ' + k.ico : '', k.dic ? 'DIČ ' + k.dic : ''].filter(Boolean).join(' · '))}</div></div>
+      <div class="radek">${k.telefon ? `<a class="btn" href="tel:${esc(k.telefon)}">${ik('tel')}Zavolat</a>` : ''}${k.email ? `<a class="btn" href="mailto:${esc(k.email)}">${ik('mail')}E-mail</a>` : ''}<button class="btn" data-a="upravit-kontakt" data-id="${k.id}">Upravit</button>${konTyp(k) === 'dodavatel' ? '' : `<button class="btn zl" data-a="nova-zakazka" data-kontakt="${k.id}">${ik('plus')}Zakázka</button>`}</div></div>
       <div class="mrizka m3"><div class="karta"><div class="tlumene mal tuc">Telefon</div><div>${esc(k.telefon || '—')}</div></div><div class="karta"><div class="tlumene mal tuc">E-mail</div><div style="word-break:break-all">${esc(k.email || '—')}</div></div><div class="karta"><div class="tlumene mal tuc">Adresa</div><div>${esc([k.ulice, [k.psc, k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '—')}</div></div></div>
       <section class="karta"><div class="karta-h"><h3>Zakázky (${zak.length})</h3></div>${zak.map(z => `<a class="dokl" href="#zakazky/${z.id}" style="margin-bottom:6px"><b>${esc(z.nazev)}</b><span class="cip c-${z.faze}">${FAZE_N[z.faze]}</span></a>`).join('') || '<div class="tlumene">Žádné zakázky.</div>'}</section>
       <section class="karta"><div class="karta-h"><h3>Doklady (${dok.length})</h3></div><div class="obal-tab"><table class="tab"><tbody>${dok.map(d => `<tr class="klik" data-a="otevrit-dok" data-id="${d.id}"><td>${TYP[d.typ]}</td><td class="tuc">${esc(d.cislo)}</td><td>${datum(d.datum)}</td><td>${cipStav(d)}</td><td class="r num tuc">${d.typ === 'protokol' ? '' : kc0(celkem(d))}</td></tr>`).join('') || '<tr><td class="tlumene">Žádné doklady.</td></tr>'}</tbody></table></div></section>
@@ -1271,9 +1278,21 @@ POHLEDY.kontakty = t => {
   } };
 };
 AKCE['otevrit-dok'] = el => jdi('doklad/' + el.dataset.id);
+/* kontakty: zákazník / dodavatel / jiný (sloupec typ; starší záznamy bez typu jsou zákazníci) */
+const KON_TYP = { klient: 'Zákazník', dodavatel: 'Dodavatel', jiny: 'Jiný' };
+const konTyp = k => KON_TYP[k?.typ] ? k.typ : 'klient';
+/** <option> kontaktů pro výběr v zakázce a dokladu – zákazníci nahoře, dodavatelé a ostatní pod nimi. */
+function kontaktyOpt(id) {
+  const o = k => `<option value="${k.id}" ${k.id === id ? 'selected' : ''}>${esc(k.nazev)}</option>`;
+  const zak = S.kontakty.filter(k => konTyp(k) === 'klient'), ost = S.kontakty.filter(k => konTyp(k) !== 'klient');
+  return ost.length ? `<optgroup label="Zákazníci">${zak.map(o).join('')}</optgroup><optgroup label="Dodavatelé a ostatní">${ost.map(o).join('')}</optgroup>` : zak.map(o).join('');
+}
+AKCE['kon-typ'] = el => { UI.typKon = el.dataset.t; const t = trasa(); if (t.id && UI.typKon !== 'vse' && konTyp(kontakt(t.id)) !== UI.typKon) return jdi('kontakty'); render(); };
+AKCE['kon-zmen-typ'] = async el => { const k = kontakt(el.dataset.id); if (!k || konTyp(k) === el.dataset.t) return;
+  Object.assign(k, await db.upd('kontakty', k.id, { typ: el.dataset.t })); if (UI.typKon !== 'vse') UI.typKon = el.dataset.t; toast(`${k.nazev}: ${KON_TYP[el.dataset.t].toLowerCase()} ✓`); render(); };
 function formKontaktu(k = {}) {
   return `<form id="fKon" class="mrizka">
-    <div class="filtry" role="group" aria-label="Typ">${[['klient', 'Klient'], ['dodavatel', 'Dodavatel'], ['jiny', 'Jiný']].map(([v, n]) => `<label style="cursor:pointer"><input type="radio" name="typ" value="${v}" ${(k.typ || 'klient') === v ? 'checked' : ''} style="accent-color:var(--inkoust)"> ${n}</label>`).join(' &nbsp; ')}</div>
+    <div class="filtry" role="group" aria-label="Typ">${Object.entries(KON_TYP).map(([v, n]) => `<label style="cursor:pointer"><input type="radio" name="typ" value="${v}" ${(k.typ || 'klient') === v ? 'checked' : ''} style="accent-color:var(--inkoust)"> ${n}</label>`).join(' &nbsp; ')}</div>
     ${aresHledaniHtml()}
     <label class="pole">IČO <span class="napoveda">firmu doplníme z ARES</span><div class="radek"><input name="ico" class="vstup" style="flex:1" inputmode="numeric" maxlength="8" value="${esc(k.ico)}"><button type="button" class="btn" data-a="ares">Načíst z ARES</button></div></label>
     <label class="pole">Jméno / název firmy<input name="nazev" required value="${esc(k.nazev)}" autofocus></label>
@@ -1284,11 +1303,11 @@ function formKontaktu(k = {}) {
     <label class="pole">Poznámka<textarea name="poznamka">${esc(k.poznamka)}</textarea></label></form>`;
 }
 const dataKontaktu = () => { const f = formData($('#fKon')); if (!f.nazev) { toast('Vyplňte jméno', { chyba: true }); return null; } for (const k in f) if (f[k] === '') f[k] = null; return f; };
-AKCE['novy-kontakt'] = () => { okno('Nový kontakt', formKontaktu(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-kontakt">Uložit kontakt</button>`); $('#fKon').onsubmit = e => { e.preventDefault(); AKCE['ulozit-kontakt'](); }; aresEnter($('#fKon')); };
+AKCE['novy-kontakt'] = el => { const typ = KON_TYP[el?.dataset?.typ] ? el.dataset.typ : 'klient'; okno(typ === 'dodavatel' ? 'Nový dodavatel' : 'Nový kontakt', formKontaktu({ typ }), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-kontakt">Uložit kontakt</button>`); $('#fKon').onsubmit = e => { e.preventDefault(); AKCE['ulozit-kontakt'](); }; aresEnter($('#fKon')); };
 function aresEnter(form) { form?.querySelectorAll('[data-ares]').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); AKCE['ares-hledat'](form.querySelector('[data-a=ares-hledat]')); } })); }
-AKCE['ulozit-kontakt'] = async () => { const o = dataKontaktu(); if (!o) return; const k = await db.ins('kontakty', o); S.kontakty.push(k); S.kontakty.sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs')); zavriOkno(); toast('Kontakt uložen ✓'); jdi('kontakty/' + k.id); };
+AKCE['ulozit-kontakt'] = async () => { const o = dataKontaktu(); if (!o) return; const k = await db.ins('kontakty', o); S.kontakty.push(k); if (UI.typKon !== 'vse') UI.typKon = konTyp(k); S.kontakty.sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs')); zavriOkno(); toast('Kontakt uložen ✓'); jdi('kontakty/' + k.id); };
 AKCE['upravit-kontakt'] = el => { const k = kontakt(el.dataset.id); okno('Upravit kontakt', formKontaktu(k), `<button class="btn cerv" data-a="smazat-kontakt" data-id="${k.id}" style="margin-right:auto">${ik('smaz', 16)}Smazat</button><button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-upr-kontakt" data-id="${k.id}">Uložit</button>`); aresEnter($('#fKon')); };
-AKCE['ulozit-upr-kontakt'] = async el => { const o = dataKontaktu(); if (!o) return; Object.assign(kontakt(el.dataset.id), await db.upd('kontakty', el.dataset.id, o)); zavriOkno(); toast('Uloženo ✓'); render(); };
+AKCE['ulozit-upr-kontakt'] = async el => { const o = dataKontaktu(); if (!o) return; const k = Object.assign(kontakt(el.dataset.id), await db.upd('kontakty', el.dataset.id, o)); if (UI.typKon !== 'vse') UI.typKon = konTyp(k); zavriOkno(); toast('Uloženo ✓'); render(); };
 AKCE['smazat-kontakt'] = async el => { const k = kontakt(el.dataset.id); if (!confirm(`Smazat kontakt „${k.nazev}“? Zakázky a doklady zůstanou.`)) return; await db.del('kontakty', k.id); S.kontakty = S.kontakty.filter(x => x.id !== k.id); zavriOkno(); toast('Kontakt smazán'); jdi('kontakty'); };
 /* =================== SEZNAM DOKLADŮ =================== */
 POHLEDY.doklady = t => {
@@ -1923,7 +1942,7 @@ async function hlidejCenu(i) {
   if (ano) ED.ok[p.id] = cislo(p.cena); else p.cena = ref.cena;
   edRadky(); edNahled(); edUlozit();
 }
-const edKontaktyOpt = id => `<option value="">— vyberte —</option><option value="__novy">+ Nový odběratel…</option>${S.kontakty.map(k => `<option value="${k.id}" ${k.id === id ? 'selected' : ''}>${esc(k.nazev)}</option>`).join('')}`;
+const edKontaktyOpt = id => `<option value="">— vyberte —</option><option value="__novy">+ Nový klient…</option>${kontaktyOpt(id)}`;
 function edNovyKontakt() {
   okno('Nový odběratel', formKontaktu(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-kontakt-dok">Uložit a vybrat</button>`);
   $('#fKon').onsubmit = e => { e.preventDefault(); AKCE['ulozit-kontakt-dok'](); }; aresEnter($('#fKon'));
