@@ -190,13 +190,33 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .nas-pol small{display:block;color:var(--ocel);font-size:12px}
 .nas-pol .num{white-space:nowrap;font-weight:600}
 .nas-pol.akt,.nas-pol:hover{background:var(--metr-bg)}
-#webPanel{position:fixed;right:16px;bottom:16px;z-index:55;width:340px;max-width:calc(100vw - 32px);background:#fff;border:2px solid var(--metr);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.2);padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:14px}
-#webPanel .wp-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}#webPanel .wp-h b{font-size:15px;white-space:nowrap}
-#webPanel .wp-x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--ocel)}
-#webPanel .wp-kroky summary{cursor:pointer;font-weight:600;font-size:13px}#webPanel ol{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5}
+/* ---------- košík z obchodů (plovoucí panel) ---------- */
+#webPanel{position:fixed;right:16px;bottom:16px;z-index:55;width:392px;max-width:calc(100vw - 32px);max-height:min(80vh,740px);background:#fff;border:2px solid var(--metr);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.22);display:flex;flex-direction:column;font-size:14px;overflow:hidden}
+#webPanel .wp-h{display:flex;align-items:center;gap:8px;padding:10px 8px 10px 14px;background:#fff6d6;cursor:pointer;user-select:none}
+#webPanel .wp-h b{font-size:15px;white-space:nowrap}
+#webPanel .wp-n{background:var(--inkoust);color:#fff;border-radius:10px;font-size:12px;font-weight:700;padding:1px 8px}
+#webPanel .wp-cil{color:var(--ocel);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+#webPanel .wp-x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--ocel);width:36px;height:36px;border-radius:8px;flex:none}
+#webPanel .wp-x:hover{background:rgba(0,0,0,.06)}
+#webPanel .wp-t{display:flex;flex-direction:column;gap:10px;padding:12px 14px;overflow:auto}
+#webPanel.sbal{width:auto;border-radius:24px}#webPanel.sbal .wp-t{display:none}#webPanel.sbal .wp-h{padding:8px 6px 8px 14px}#webPanel.sbal .wp-cil{display:none}
+#webPanel .wp-p{border:1px solid var(--linka);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:7px}
+#webPanel .wp-p.nova{border-color:var(--metr);box-shadow:0 0 0 3px rgba(245,184,0,.22)}
+#webPanel .wp-pn{display:flex;gap:8px;align-items:flex-start}
+#webPanel .wp-pn img{width:42px;height:42px;object-fit:contain;border-radius:6px;background:#fff;flex:none}
+#webPanel .wp-pn div{flex:1;min-width:0}#webPanel .wp-pn b{display:block;line-height:1.25;overflow-wrap:anywhere}
+#webPanel .wp-pn a{color:var(--ocel);font-size:12px}
+#webPanel .wp-pr{display:flex;gap:6px;align-items:flex-end}
+#webPanel .wp-pr label{display:flex;flex-direction:column;font-size:11px;color:var(--ocel);font-weight:600;flex:1;min-width:0}
+#webPanel .wp-pr input,#webPanel .wp-odkaz input{height:36px;border:1px solid var(--linka);border-radius:8px;padding:0 8px;font:inherit;font-size:14px;min-width:0;width:100%;color:var(--inkoust)}
+#webPanel .wp-pr input.chybi{border-color:var(--pozor);background:#fff5f4}
+#webPanel .wp-pr .btn{height:36px;flex:none}
+#webPanel .wp-odkaz{display:flex;gap:6px}#webPanel .wp-odkaz .btn{height:36px;flex:none;white-space:nowrap}
+#webPanel .wp-obch{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#webPanel .wp-kroky summary{cursor:pointer;font-weight:600;font-size:13px}#webPanel .wp-kroky p{margin:8px 0 0;font-size:13px;line-height:1.45}
 #webPanel .wp-zal{display:inline-block;background:var(--metr);color:#15233c;font-weight:700;padding:3px 10px;border-radius:7px;text-decoration:none;cursor:grab;white-space:nowrap}
-#webPanel .wp-odkaz{display:flex;gap:6px}#webPanel .wp-odkaz input{flex:1;min-width:0;height:36px;border:1px solid var(--linka);border-radius:8px;padding:0 10px;font:inherit}
-#webPanel .wp-log{font-size:12px;color:#1e7a3c;display:flex;flex-direction:column;gap:2px}
+#webPanel .wp-tip{background:var(--pod);border-radius:9px;padding:9px 11px;font-size:13px;display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+@media (max-width:980px){#webPanel{right:8px;left:8px;width:auto;max-width:none;bottom:calc(66px + env(safe-area-inset-bottom));max-height:70vh}#webPanel.sbal{left:auto}}
 .papir .p-konec{display:flow-root}
 .papir .p-hlava{position:relative}
 .papir.doc .doc-storno{position:absolute;left:50%;top:18cqw;transform:translateX(-50%) rotate(-14deg);font-size:9cqw;font-weight:800;letter-spacing:1.5cqw;color:rgba(179,38,30,.28);border:.6cqw solid rgba(179,38,30,.28);border-radius:1.5cqw;padding:.5cqw 3cqw;pointer-events:none;z-index:2}
@@ -467,7 +487,7 @@ const kat = window.supabase.createClient(KAT_URL, KAT_KEY, { auth: { persistSess
 
 /* ---------- stav ---------- */
 const S = { user: null, firma: null, kontakty: [], zakazky: [], doklady: [], cenik: [], denik: {}, polozky: {}, nacteno: false };
-const UI = { filtrZak: 'aktivni', hledatZak: '', filtrDok: 'vse', hledatDok: '', typDok: 'faktura', firmaTab: 'udaje', filtrKon: '', vybranyDoklad: {}, kalk: 'sdk_pricka', kalkVals: {}, kalkCeny: {}, kalkVyber: {}, kalkCil: null, prihlRezim: 'prihlasit' };
+const UI = { filtrZak: 'aktivni', hledatZak: '', filtrDok: 'vse', hledatDok: '', typDok: 'faktura', firmaTab: 'udaje', kosik: false, kosikSbalen: false, filtrKon: '', vybranyDoklad: {}, kalk: 'sdk_pricka', kalkVals: {}, kalkCeny: {}, kalkVyber: {}, kalkCil: null, prihlRezim: 'prihlasit' };
 
 /* ---------- pomocníci ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -725,8 +745,7 @@ async function render() {
     const v = await fn(t);
     app.innerHTML = shell(v.html, v);
     v.po && v.po();
-    // plovoucí panel vkládání z obchodu žije jen v editoru dokladu
-    if ($('#webPanel')) { if (t.c === 'doklad' && ED) webPanel(); else $('#webPanel').remove(); }
+    kosikPrijmi();   // košík z obchodů: převezme nově došlé zboží a překreslí plovoucí panel
   } catch (e) { chyba(e, 'Chyba zobrazení'); }
 }
 
@@ -1807,6 +1826,7 @@ POHLEDY.doklad = async t => {
             <div class="rozb-menu" role="menu">
               ${S.cenik.length ? `<button type="button" role="menuitem" data-a="z-ceniku">${ik('cenik')}Z ceníku prací</button>` : `<a role="menuitem" href="#cenik">${ik('cenik')}Z ceníku prací <span class="tlumene mal">– zatím prázdný</span></a>`}
               <button type="button" role="menuitem" data-a="z-katalogu">${ik('hledat')}Z katalogu materiálu</button>
+              <button type="button" role="menuitem" data-a="kosik-otevri">${ik('zakazky')}Z obchodu <span class="tlumene mal">– Hornbach, OBI, Bauhaus…</span></button>
               ${d.typ !== 'protokol' ? `<a role="menuitem" href="#kalkulacky?doklad=${d.id}">${ik('kalk')}Z kalkulačky</a>` : ''}
               <button type="button" role="menuitem" data-a="z-excelu">${ik('nabidka')}Z Excelu</button>
             </div></div></div>
@@ -2175,7 +2195,7 @@ AKCE['z-katalogu'] = async () => {
       <select class="vstup" id="katTema" style="flex:1 1 180px;max-width:260px"><option value="">Všechny kategorie</option></select>
       <label class="mal radek" style="gap:6px;white-space:nowrap">Přirážka <input class="vstup" id="katPrir" inputmode="decimal" style="width:64px;height:38px" value="${fmtN(katPrirazka(), 0)}"> %</label>
     </div>
-    <div class="radek mal" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="tlumene">Hledat i v obchodech:</span>
+    <div class="radek mal" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="tlumene">Hledat i v obchodech (nová karta):</span>
       ${OBCHODY.map(o => `<button class="btn mal" data-a="ext-hledat" data-kde="${o.k}" title="Hledat v ${esc(o.n)}">${esc(o.n)} ↗</button>`).join('')}
       <span id="katInfo" class="tlumene"></span></div>
     <div id="katSez" style="max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>
@@ -2252,55 +2272,210 @@ AKCE['ext-hledat'] = el => {
   const q = katDotaz() || ($('#krNazev')?.value || '').trim();
   const o = OBCHODY.find(x => x.k === el.dataset.kde) || OBCHODY[0];
   const url = q ? o.hledat(q) : o.web;
-  obchodOtevri(url, o.n);
+  obchodOtevri(url);
 };
 /* ---- obchod v okně vedle aplikace + záložka „YeY ⇢ vložit“ s plovoucím okénkem přímo na stránce obchodu ---- */
-const ZALOZKA_SRC = "(function () {var APP = '__APP__';var old = document.getElementById('yey-vlozit'); if (old) { old.remove(); return; }var q = function (s) { return document.querySelector(s); };var meta = function (k) { var e = q('meta[property=\"' + k + '\"],meta[name=\"' + k + '\"],meta[itemprop=\"' + k + '\"]'); return e ? e.getAttribute('content') : ''; };var num = function (v) { if (v == null || v === '') return null; v = String(v).replace(/\\s| |Kč|CZK|,-/gi, ''); if (v.indexOf(',') > -1 && v.indexOf('.') > -1) v = v.replace(/\\./g, '').replace(',', '.'); else v = v.replace(',', '.'); var n = parseFloat(v); return isFinite(n) ? n : null; };var prod = function (x) {if (!x || typeof x !== 'object') return null;if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) { var r = prod(x[i]); if (r) return r; } return null; }var t = [].concat(x['@type'] || []).join(' ');if (/Product/i.test(t)) return x;return prod(x['@graph']) || prod(x.mainEntity);};var nazev = '', cena = null, foto = '', kod = '';document.querySelectorAll('script[type=\"application/ld+json\"]').forEach(function (s) {if (nazev && cena != null) return;try {var p = prod(JSON.parse(s.textContent)); if (!p) return;nazev = nazev || p.name || '';var o = p.offers; if (Array.isArray(o)) o = o[0];if (o && cena == null) cena = num(o.price != null ? o.price : (o.lowPrice != null ? o.lowPrice : (o.priceSpecification && o.priceSpecification.price)));foto = foto || [].concat(p.image || [])[0] || ''; if (foto && typeof foto === 'object') foto = foto.url || '';kod = kod || p.sku || p.gtin13 || p.mpn || '';} catch (e) { }});if (!nazev) nazev = meta('og:title') || ((q('h1') || {}).innerText || document.title || '').trim();if (cena == null) cena = num(meta('product:price:amount') || meta('og:price:amount') || meta('price') || ((q('[itemprop=price]') || {}).getAttribute ? (q('[itemprop=price]').getAttribute('content') || q('[itemprop=price]').textContent) : ''));nazev = String(nazev).replace(/\\s*[|–-]\\s*(HORNBACH|BAUHAUS|OBI|UNI HOBBY)[^|]*$/i, '').replace(/\\s+/g, ' ').trim().slice(0, 300);var spojeno = window.opener && !window.opener.closed;var d = document.createElement('div'); d.id = 'yey-vlozit';d.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:2147483647;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#15233c;border:2px solid #F5B800;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);font:14px/1.4 Arial,Helvetica,sans-serif;padding:14px;text-align:left');var inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #cfd6dc;border-radius:8px;padding:0 10px;font:inherit;color:#15233c;background:#fff;margin:3px 0 8px';var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>\"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]; }); };d.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:8px\"><b style=\"font-size:15px\">YeY – vložit do dokladu</b><button type=\"button\" data-x style=\"border:0;background:none;font-size:20px;cursor:pointer;color:#5d6b76;line-height:1\">×</button></div>' + (foto ? '<img src=\"' + esc(foto) + '\" alt=\"\" style=\"width:56px;height:56px;object-fit:contain;float:right;margin:0 0 6px 8px\">' : '') + '<label style=\"font-size:12px;color:#5d6b76\">Název<input data-n style=\"' + inp + '\" value=\"' + esc(nazev) + '\"></label>' + '<div style=\"display:flex;gap:8px\"><label style=\"flex:1.3;font-size:12px;color:#5d6b76\">Cena s DPH<input data-c inputmode=\"decimal\" style=\"' + inp + '\" value=\"' + (cena != null ? String(cena).replace('.', ',') : '') + '\"></label>' + '<label style=\"flex:.8;font-size:12px;color:#5d6b76\">MJ<input data-j style=\"' + inp + '\" value=\"ks\"></label>' + '<label style=\"flex:1;font-size:12px;color:#5d6b76\">Množství<input data-m inputmode=\"decimal\" style=\"' + inp + '\" value=\"1\"></label></div>' + '<button type=\"button\" data-v style=\"width:100%;height:40px;border:0;border-radius:9px;background:#F5B800;color:#15233c;font:inherit;font-weight:700;cursor:pointer\">Vložit do dokladu</button>' + '<div data-s style=\"font-size:12px;color:#5d6b76;margin-top:8px\">' + (spojeno ? (cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : 'Zkontrolujte údaje a vložte.') : '<b style=\"color:#b3261e\">Okno obchodu není spojené s aplikací YeY.</b> Otevřete obchod z aplikace (Z katalogu → tlačítko obchodu) a záložku použijte znovu.') + '</div>';document.body.appendChild(d);var st = d.querySelector('[data-s]');d.querySelector('[data-x]').onclick = function () { d.remove(); };d.querySelector('[data-v]').onclick = function () {if (!window.opener || window.opener.closed) { st.innerHTML = '<b style=\"color:#b3261e\">Aplikace YeY není otevřená.</b> Otevřete obchod znovu z aplikace.'; return; }var data = { typ: 'yey-produkt', v: 1, nazev: d.querySelector('[data-n]').value.trim(), cena: num(d.querySelector('[data-c]').value), mj: d.querySelector('[data-j]').value.trim() || 'ks',mnozstvi: num(d.querySelector('[data-m]').value) || 1, odkaz: location.href, obchod: location.hostname.replace(/^www\\./, ''), kod: String(kod || '') };if (!data.nazev) { st.textContent = 'Vyplňte název.'; return; }if (data.cena == null) { st.textContent = 'Vyplňte cenu.'; return; }window.opener.postMessage(data, APP); st.textContent = 'Odesílám…';};window.addEventListener('message', function (e) {if (e.origin !== APP || !e.data || e.data.typ !== 'yey-ok') return;st.innerHTML = e.data.ok ? '<b style=\"color:#1e7a3c\">✓ ' + esc(e.data.text) + '</b>' : '<b style=\"color:#b3261e\">' + esc(e.data.text) + '</b>';});})();";
-const zalozkaHref = () => 'javascript:' + encodeURIComponent(ZALOZKA_SRC.replace('__APP__', location.origin));
-let OBCH = { win: null, nazev: '', log: [] };
-function obchodOtevri(url, nazev) {
-  const w = Math.min(1200, Math.round(screen.availWidth * 0.55)), h = Math.round(screen.availHeight * 0.92);
-  const l = Math.max(0, (screen.availLeft || 0) + screen.availWidth - w);
-  // bez noopener: stránka obchodu pak může přes záložku poslat produkt zpět do aplikace (window.opener)
-  const okn = window.open(url, 'yey-obchod', `popup=yes,width=${w},height=${h},left=${l},top=0`);
-  if (okn) { OBCH.win = okn; try { okn.focus(); } catch { } }
-  OBCH.nazev = nazev; zavriOkno(); webPanel();
+const ZALOZKA_SRC = "(function () {var APP = '__APP__';var old = document.getElementById('yey-vlozit'); if (old) { old.remove(); return; }var q = function (s) { return document.querySelector(s); };var meta = function (k) { var e = q('meta[property=\"' + k + '\"],meta[name=\"' + k + '\"],meta[itemprop=\"' + k + '\"]'); return e ? e.getAttribute('content') : ''; };var num = function (v) { if (v == null || v === '') return null; v = String(v).replace(/\\s| |Kč|CZK|,-/gi, ''); if (v.indexOf(',') > -1 && v.indexOf('.') > -1) v = v.replace(/\\./g, '').replace(',', '.'); else v = v.replace(',', '.'); var n = parseFloat(v); return isFinite(n) ? n : null; };var prod = function (x) {if (!x || typeof x !== 'object') return null;if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) { var r = prod(x[i]); if (r) return r; } return null; }var t = [].concat(x['@type'] || []).join(' ');if (/Product/i.test(t)) return x;return prod(x['@graph']) || prod(x.mainEntity);};var nazev = '', cena = null, foto = '', kod = '';document.querySelectorAll('script[type=\"application/ld+json\"]').forEach(function (s) {if (nazev && cena != null) return;try {var p = prod(JSON.parse(s.textContent)); if (!p) return;nazev = nazev || p.name || '';var o = p.offers; if (Array.isArray(o)) o = o[0];if (o && cena == null) cena = num(o.price != null ? o.price : (o.lowPrice != null ? o.lowPrice : (o.priceSpecification && o.priceSpecification.price)));foto = foto || [].concat(p.image || [])[0] || ''; if (foto && typeof foto === 'object') foto = foto.url || '';kod = kod || p.sku || p.gtin13 || p.mpn || '';} catch (e) { }});if (!nazev) nazev = meta('og:title') || ((q('h1') || {}).innerText || document.title || '').trim();if (cena == null) cena = num(meta('product:price:amount') || meta('og:price:amount') || meta('price') || ((q('[itemprop=price]') || {}).getAttribute ? (q('[itemprop=price]').getAttribute('content') || q('[itemprop=price]').textContent) : ''));nazev = String(nazev).replace(/\\s*[|–-]\\s*(HORNBACH|BAUHAUS|OBI|UNI HOBBY)[^|]*$/i, '').replace(/\\s+/g, ' ').trim().slice(0, 300);var TOKEN = '__TOKEN__';var d = document.createElement('div'); d.id = 'yey-vlozit';d.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:2147483647;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#15233c;border:2px solid #F5B800;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);font:14px/1.4 Arial,Helvetica,sans-serif;padding:14px;text-align:left');var inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #cfd6dc;border-radius:8px;padding:0 10px;font:inherit;color:#15233c;background:#fff;margin:3px 0 8px';var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>\"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]; }); };d.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:8px\"><b style=\"font-size:15px\">YeY – vložit do dokladu</b><button type=\"button\" data-x style=\"border:0;background:none;font-size:20px;cursor:pointer;color:#5d6b76;line-height:1\">×</button></div>' + (foto ? '<img src=\"' + esc(foto) + '\" alt=\"\" style=\"width:56px;height:56px;object-fit:contain;float:right;margin:0 0 6px 8px\">' : '') + '<label style=\"font-size:12px;color:#5d6b76\">Název<input data-n style=\"' + inp + '\" value=\"' + esc(nazev) + '\"></label>' + '<div style=\"display:flex;gap:8px\"><label style=\"flex:1.3;font-size:12px;color:#5d6b76\">Cena s DPH<input data-c inputmode=\"decimal\" style=\"' + inp + '\" value=\"' + (cena != null ? String(cena).replace('.', ',') : '') + '\"></label>' + '<label style=\"flex:.8;font-size:12px;color:#5d6b76\">MJ<input data-j style=\"' + inp + '\" value=\"ks\"></label>' + '<label style=\"flex:1;font-size:12px;color:#5d6b76\">Množství<input data-m inputmode=\"decimal\" style=\"' + inp + '\" value=\"1\"></label></div>' + '<button type=\"button\" data-v style=\"width:100%;height:40px;border:0;border-radius:9px;background:#F5B800;color:#15233c;font:inherit;font-weight:700;cursor:pointer\">Vložit do YeY</button>' + '<div data-s style=\"font-size:12px;color:#5d6b76;margin-top:8px\">' + (cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : 'Zkontrolujte údaje a vložte.') + '</div>';document.body.appendChild(d);var st = d.querySelector('[data-s]');d.querySelector('[data-x]').onclick = function () { d.remove(); };d.querySelector('[data-v]').onclick = function () {var data = { typ: 'yey-produkt', v: 1, nazev: d.querySelector('[data-n]').value.trim(), cena: num(d.querySelector('[data-c]').value), mj: d.querySelector('[data-j]').value.trim() || 'ks',mnozstvi: num(d.querySelector('[data-m]').value) || 1, odkaz: location.href, obchod: location.hostname.replace(/^www\\./, ''), kod: String(kod || '') };if (!data.nazev) { st.textContent = 'Vyplňte název.'; return; }if (data.cena == null) { st.textContent = 'Vyplňte cenu.'; return; }data.foto = /^https:/.test(foto) ? String(foto).slice(0, 500) : ''; data.token = TOKEN; data.odkaz = String(data.odkaz).slice(0, 600);var u = APP + '/vloz.html#d=' + encodeURIComponent(JSON.stringify(data));var w = window.open(u, 'yey-prijem', 'popup=yes,width=440,height=320,top=60,left=' + Math.max(0, (screen.availWidth || 1200) - 470));st.innerHTML = w ? '<b style=\"color:#1e7a3c\">✓ Odesláno do YeY.</b> Můžete pokračovat dalším zbožím.' : '<a href=\"' + esc(u) + '\" target=\"_blank\" style=\"color:#b3261e;font-weight:700\">Prohlížeč zablokoval okno – klikněte sem a zboží se odešle do YeY.</a>';};window.addEventListener('message', function (e) {if (e.origin !== APP || !e.data || e.data.typ !== 'yey-ok') return;st.innerHTML = e.data.ok ? '<b style=\"color:#1e7a3c\">✓ ' + esc(e.data.text) + '</b>' : '<b style=\"color:#b3261e\">' + esc(e.data.text) + '</b>';});})();";
+function zalToken() { try { let t = localStorage.getItem('yey-zal-token'); if (!t) { t = uid() + uid(); localStorage.setItem('yey-zal-token', t); } return t; } catch { return ''; } }
+const zalozkaHref = () => 'javascript:' + encodeURIComponent(ZALOZKA_SRC.replace('__APP__', location.origin).replace('__TOKEN__', zalToken()));
+let OBCH = { win: null };
+/* ================= KOŠÍK Z OBCHODŮ =================
+   Zboží z e-shopů se sbírá do košíku v úložišti prohlížeče (localStorage), odkud ho vidí každé okno aplikace –
+   karta v prohlížeči i nainstalovaná aplikace. Do košíku vedou čtyři cesty:
+   1) záložka „YeY ⇢ vložit“ na stránce obchodu → /vloz.html (běží na adrese aplikace, proto není potřeba spojení oken),
+   2) Sdílet → YeY z telefonu (share_target v manifestu), 3) odkaz ze schránky, 4) ručně vložená adresa.
+   Z košíku jde zboží jedním klikem do otevřeného dokladu; ze záložky rovnou, pokud je doklad otevřený. */
+const KOSIK_KLIC = 'yey-kosik', KOSIK_ACK = 'yey-kosik-ack';
+const KOS = { videno: new Set(), nove: new Set(), hleda: new Set(), otisk: '', bezi: false, znovu: false };
+function kosikCti() { try { const a = JSON.parse(localStorage.getItem(KOSIK_KLIC) || '[]'); return Array.isArray(a) ? a.filter(p => p && p.id) : []; } catch { return []; } }
+function kosikPis(a) { try { localStorage.setItem(KOSIK_KLIC, JSON.stringify(a.slice(-50))); } catch { } }
+function kosikUprav(id, zmena) { const a = kosikCti(), p = a.find(x => x.id === id); if (!p) return null; Object.assign(p, zmena); kosikPis(a); return p; }
+function kosikAck(id, ok, text) { try { localStorage.setItem(KOSIK_ACK, JSON.stringify({ id, ok, text, t: Date.now() })); } catch { } }
+/** Doklad, do kterého se právě vkládá – otevřený editor nabídky, faktury nebo protokolu. */
+function kosikCil() { return S.nacteno && trasa().c === 'doklad' && ED && ED.d && ED.d.typ !== 'smlouva' && location.hash.includes(ED.d.id) ? ED.d : null; }
+function odkazZTextu(t) { const m = String(t || '').match(/https:\/\/[^\s<>"']+/i); return m ? m[0].replace(/[),.;]+$/, '').slice(0, 600) : ''; }
+const obchodZOdkazu = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
+
+/** Převezme nové zboží (z jiného okna, ze sdílení) a překreslí panel. Volá se po vykreslení, při návratu do okna a při změně úložiště. */
+async function kosikPrijmi() {
+  if (!S.nacteno || !S.firma) return;
+  if (KOS.bezi) { KOS.znovu = true; return; } KOS.bezi = true;
+  try {
+    sdileniZpracuj();
+    const prace = () => {
+      let a = kosikCti(), zmena = false; const cil = kosikCil();
+      for (const p of [...a]) {
+        const nova = !KOS.videno.has(p.id); KOS.videno.add(p.id);
+        if (p.primo && cil && p.nazev && p.cena != null) {            // ze záložky rovnou do otevřeného dokladu
+          const prodej = webVloz(p); a = a.filter(x => x.id !== p.id); zmena = true;
+          kosikAck(p.id, true, `Vloženo do dokladu ${cil.cislo}: ${fmtN(p.mnozstvi || 1)} ${p.mj || 'ks'} × ${kc(prodej)}`);
+          continue;
+        }
+        if (p.primo) { p.primo = false; zmena = true; kosikAck(p.id, false, cil ? 'Zboží čeká v košíku – doplňte cenu a vložte ho.' : 'V aplikaci není otevřený doklad. Zboží čeká v košíku z obchodů.'); }
+        if (nova && (Date.now() - (p.cas || 0)) < 60000) { KOS.nove.add(p.id); UI.kosik = true; UI.kosikSbalen = false; }
+        if (!p.nazev && p.odkaz && !p.chyba) kosikDohledej(p.id);
+      }
+      if (zmena) kosikPis(a);
+    };
+    if (navigator.locks?.request) await navigator.locks.request('yey-kosik', prace); else prace();   // dvě okna aplikace nesmí vložit totéž dvakrát
+  } catch (e) { console.warn('košík', e); }
+  finally { KOS.bezi = false; if (KOS.znovu) { KOS.znovu = false; kosikPrijmi(); } else kosikPanel(); }
+}
+/** K odkazu dohledá název a cenu (funkce zbozi-z-odkazu). Když obchod stránku nevydá, zůstane název z adresy a cena k doplnění. */
+async function kosikDohledej(id) {
+  if (KOS.hleda.has(id)) return; const p0 = kosikCti().find(x => x.id === id); if (!p0 || (p0.hleda && Date.now() - p0.hleda < 30000)) return;
+  KOS.hleda.add(id); kosikUprav(id, { hleda: Date.now() });
+  let r = null; try { const { data, error } = await sb.functions.invoke('zbozi-z-odkazu', { body: { url: p0.odkaz } }); r = data || (error && await error.context?.json?.().catch(() => null)) || null; } catch { }
+  KOS.hleda.delete(id);
+  if (r && r.ok && r.nazev) kosikUprav(id, { nazev: r.nazev, cena: r.cena ?? null, mj: r.mj || 'ks', obchod: r.obchod || p0.obchod, foto: /^https:\/\//.test(r.foto || '') ? r.foto : '', hleda: 0, chyba: r.cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : '' });
+  else kosikUprav(id, { nazev: nazevZOdkazu(p0.odkaz) || p0.napoveda || 'Zboží z ' + (p0.obchod || 'obchodu'), hleda: 0, chyba: (r && r.chyba) || 'Obchod stránku nevydal – doplňte cenu ručně, nebo použijte záložku YeY ⇢ vložit.' });
+  kosikPanel(true);
+}
+function kosikPridejOdkaz(u, napoveda) {
+  u = odkazZTextu(u); if (!u) return 'Vložte adresu stránky produktu (začíná https://).';
+  try { if (new URL(u).origin === location.origin) return 'To je adresa aplikace YeY, ne obchodu.'; } catch { return 'Adresa není platná.'; }
+  const a = kosikCti(); if (a.some(p => p.odkaz === u)) { UI.kosik = true; UI.kosikSbalen = false; return 'Tohle zboží už v košíku je.'; }
+  a.push({ id: 'k' + uid(), nazev: '', cena: null, mj: 'ks', mnozstvi: 1, odkaz: u, obchod: obchodZOdkazu(u), foto: '', cas: Date.now(), napoveda: String(napoveda || '').slice(0, 200) });
+  kosikPis(a); UI.kosik = true; UI.kosikSbalen = false; kosikPrijmi(); return '';
+}
+/* ---- Sdílet → YeY (telefon, nainstalovaná aplikace): adresa přijde v parametrech sdil_*; schová se do relace a zpracuje po přihlášení ---- */
+function sdileniZachyt(adresa) {
+  try {
+    const u = new URL(adresa, location.href), p = u.searchParams; if (!['sdil_u', 'sdil_x', 'sdil_t'].some(k => p.has(k))) return false;
+    const fronta = JSON.parse(sessionStorage.getItem('yey-sdileno') || '[]');
+    fronta.push({ odkaz: odkazZTextu([p.get('sdil_u'), p.get('sdil_x'), p.get('sdil_t')].filter(Boolean).join(' ')), nazev: (p.get('sdil_t') || '').slice(0, 200) });
+    sessionStorage.setItem('yey-sdileno', JSON.stringify(fronta.slice(-10)));
+    if (u.origin === location.origin && u.pathname === location.pathname && u.search === location.search) { ['sdil_u', 'sdil_x', 'sdil_t'].forEach(k => p.delete(k)); history.replaceState(null, '', u.pathname + (p.toString() ? '?' + p : '') + location.hash); }
+    return true;
+  } catch { return false; }
+}
+function sdileniZpracuj() {
+  let fronta = []; try { fronta = JSON.parse(sessionStorage.getItem('yey-sdileno') || '[]'); sessionStorage.removeItem('yey-sdileno'); } catch { }
+  if (!fronta.length) return;
+  let pridano = 0; for (const x of fronta) { if (x.odkaz) { const ch = kosikPridejOdkazTise(x.odkaz, x.nazev); if (!ch) pridano++; } }
+  UI.kosik = true; UI.kosikSbalen = false;
+  if (!pridano) { toast('Ve sdíleném obsahu jsem nenašel nový odkaz na produkt.'); return; }
+  if (!kosikCil()) { const d = poslDoklad(); if (d) { toast(`Zboží je v košíku – otevírám ${TYP[d.typ].toLowerCase()} ${d.cislo}`); jdi('doklad/' + d.id); } }
+}
+function kosikPridejOdkazTise(u, napoveda) {   // jako kosikPridejOdkaz, ale bez opětovného volání kosikPrijmi (volá se zevnitř)
+  u = odkazZTextu(u); if (!u) return 'x'; try { if (new URL(u).origin === location.origin) return 'x'; } catch { return 'x'; }
+  const a = kosikCti(); if (a.some(p => p.odkaz === u)) return 'x';
+  a.push({ id: 'k' + uid(), nazev: '', cena: null, mj: 'ks', mnozstvi: 1, odkaz: u, obchod: obchodZOdkazu(u), foto: '', cas: Date.now(), napoveda: String(napoveda || '').slice(0, 200) }); kosikPis(a); return '';
+}
+function poslDoklad() { try { const d = doklad(localStorage.getItem('yey-posl-doklad')); return d && d.typ !== 'smlouva' && d.stav !== 'storno' ? d : null; } catch { return null; } }
+sdileniZachyt(location.href);
+if ('launchQueue' in window) { try { window.launchQueue.setConsumer(lp => { if (lp && lp.targetURL && sdileniZachyt(lp.targetURL)) kosikPrijmi(); }); } catch { } }
+
+function obchodOtevri(url) {
+  // běžná nová karta: má lištu záložek (záložka YeY ⇢ vložit) a u nainstalované aplikace se otevře ve výchozím prohlížeči
+  const okn = window.open(url, '_blank'); if (okn) OBCH.win = okn;
+  UI.kosik = true; UI.kosikSbalen = false; zavriOkno(); kosikPanel(true);
+}
+function kosikPolozkaHtml(p, cil) {
+  const hleda = !p.nazev && p.odkaz && !p.chyba;
+  return `<div class="wp-p ${KOS.nove.has(p.id) ? 'nova' : ''}" data-kid="${esc(p.id)}">
+    <div class="wp-pn">${p.foto ? `<img src="${esc(p.foto)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : ''}<div><b>${hleda ? 'Načítám název a cenu…' : esc(p.nazev)}</b>${p.odkaz ? `<a href="${esc(p.odkaz)}" target="_blank" rel="noopener noreferrer">${esc(p.obchod || 'odkaz')} ↗</a>` : `<span class="tlumene mal">${esc(p.obchod || '')}</span>`}</div>
+      <button type="button" class="wp-x" data-a="kosik-smaz" data-id="${esc(p.id)}" aria-label="Odebrat z košíku" title="Odebrat z košíku">×</button></div>
+    ${hleda ? '' : `<div class="wp-pr"><label>Cena s DPH<input data-kp="cena" inputmode="decimal" class="${p.cena == null ? 'chybi' : ''}" value="${p.cena == null ? '' : esc(fmtN(p.cena))}" placeholder="Kč"></label>
+      <label style="flex:.6">MJ<input data-kp="mj" list="mjList" value="${esc(p.mj || 'ks')}"></label>
+      <label style="flex:.8">Množství<input data-kp="mnozstvi" inputmode="decimal" value="${esc(fmtN(p.mnozstvi || 1))}"></label>
+      <button type="button" class="btn mal zl" data-a="kosik-vloz" data-id="${esc(p.id)}" ${cil ? '' : 'title="Nejdřív otevřete doklad"'}>Vložit</button></div>
+    ${p.chyba ? `<div class="mal" style="color:var(--pozor)">${esc(p.chyba)}</div>` : ''}`}</div>`;
+}
+/** Plovoucí panel košíku. Překreslí se jen při změně obsahu (aby při psaní neutíkal kurzor); `vynutit` překreslí vždy. */
+function kosikPanel(vynutit) {
+  let el = $('#webPanel');
+  const a = S.nacteno && S.firma ? kosikCti() : [], cil = kosikCil();
+  if (cil) { try { localStorage.setItem('yey-posl-doklad', cil.id); } catch { } }
+  if (!S.nacteno || !S.firma || (!a.length && !UI.kosik)) { el?.remove(); KOS.otisk = ''; return; }
+  const sbal = UI.kosikSbalen, posl = cil ? null : poslDoklad();
+  const otisk = JSON.stringify([a, cil?.id, sbal, posl?.id, S.firma.platce_dph, [...KOS.nove]]);
+  if (el && !vynutit && otisk === KOS.otisk) return; KOS.otisk = otisk;
+  if (!el) { el = document.createElement('div'); el.id = 'webPanel'; el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Košík z obchodů'); document.body.appendChild(el);
+    el.addEventListener('change', e => { const i = e.target.closest('[data-kp]'), r = e.target.closest('[data-kid]'); if (!i || !r) return;
+      const k = i.dataset.kp, v = k === 'mj' ? (i.value.trim().slice(0, 12) || 'ks') : (i.value.trim() === '' ? null : cislo(i.value)); kosikUprav(r.dataset.kid, { [k]: v, ...(k === 'cena' && v != null ? { chyba: '' } : {}) }); KOS.otisk = ''; if (k === 'cena') i.classList.toggle('chybi', v == null); });
+    el.addEventListener('keydown', e => { if (e.key !== 'Enter') return; if (e.target.classList.contains('wp-h')) { e.preventDefault(); return AKCE['kosik-sbal'](); } const r = e.target.closest('[data-kid]'); if (r) { e.preventDefault(); e.target.dispatchEvent(new Event('change', { bubbles: true })); AKCE['kosik-vloz']({ dataset: { id: r.dataset.kid } }); } else if (e.target.id === 'wpUrl') { e.preventDefault(); AKCE['kosik-odkaz'](); } });
+    el.addEventListener('paste', e => { if (e.target.id === 'wpUrl') setTimeout(() => AKCE['kosik-odkaz'](), 30); }); }
+  const fokus = document.activeElement && el.contains(document.activeElement) ? { kid: document.activeElement.closest('[data-kid]')?.dataset.kid, kp: document.activeElement.dataset.kp, id: document.activeElement.id } : null;
+  const stavTxt = $('#wpStav')?.textContent || '', urlTxt = $('#wpUrl')?.value || '';
+  el.classList.toggle('sbal', sbal);
+  const pripravene = a.filter(p => p.nazev && p.cena != null).length;
+  el.innerHTML = `<div class="wp-h" data-a="kosik-sbal" role="button" tabindex="0" aria-expanded="${!sbal}" title="${sbal ? 'Rozbalit košík' : 'Sbalit košík'}">${ik('zakazky', 18)}<b>Košík z obchodů</b>${a.length ? `<span class="wp-n">${a.length}</span>` : ''}
+      <span class="wp-cil">${cil ? `→ ${esc(TYP[cil.typ])} ${esc(cil.cislo)}` : 'není otevřený doklad'}</span>
+      <button type="button" class="wp-x" data-a="kosik-zavrit" aria-label="${a.length ? 'Sbalit košík' : 'Zavřít košík'}">${sbal || a.length ? (sbal ? '▴' : '▾') : '×'}</button></div>
+    <div class="wp-t">
+      ${!cil && a.length ? `<div class="wp-tip"><span>Zboží vložíte do <b>nabídky nebo faktury</b>, kterou máte otevřenou.</span>${posl ? `<button type="button" class="btn mal zl" data-a="kosik-posl">Otevřít ${esc(TYP[posl.typ].toLowerCase())} ${esc(posl.cislo)}</button>` : `<button type="button" class="btn mal zl" data-a="kosik-nova-nab">Založit novou nabídku</button>`}</div>` : ''}
+      ${a.length ? a.slice().reverse().map(p => kosikPolozkaHtml(p, cil)).join('') : `<div class="tlumene">Košík je prázdný. Otevřete obchod, najděte zboží a pošlete ho sem – záložkou <b>YeY ⇢ vložit</b>, přes <b>Sdílet → YeY</b> v telefonu, nebo zkopírujte adresu produktu a vložte ji níže.</div>`}
+      ${cil && pripravene > 1 ? `<button type="button" class="btn zl" data-a="kosik-vloz-vse">Vložit vše do dokladu (${pripravene})</button>` : ''}
+      <div class="wp-odkaz"><input id="wpUrl" placeholder="Adresa produktu z obchodu…" inputmode="url" aria-label="Adresa produktu z obchodu" value="${esc(urlTxt)}"><button type="button" class="btn mal" data-a="kosik-schranka" title="Vloží odkaz, který máte zkopírovaný ve schránce">Ze schránky</button></div>
+      <div id="wpStav" class="mal tlumene" aria-live="polite">${esc(stavTxt)}</div>
+      <div class="wp-obch"><span class="tlumene mal">Otevřít obchod:</span>${OBCHODY.map(o => `<button type="button" class="btn mal" data-a="kosik-obchod" data-kde="${o.k}">${esc(o.n)}</button>`).join('')}</div>
+      <details class="wp-kroky" ${zalozkaMa() || a.length ? '' : 'open'}><summary>Jak dostat zboží z obchodu do košíku</summary>
+        <p><b>Na počítači:</b> přetáhněte tlačítko <a class="wp-zal" href="${zalozkaHref()}" onclick="event.preventDefault();toast('Tlačítko přetáhněte myší na lištu záložek prohlížeče (Ctrl+Shift+B ji zobrazí).')">⭐ YeY ⇢ vložit</a> na lištu záložek (stačí jednou). Na stránce produktu na záložku klikněte – zboží přiskočí sem, i když máte YeY nainstalované jako aplikaci.</p>
+        <p><b>V telefonu s Androidem:</b> mějte YeY nainstalované a na stránce produktu zvolte <b>Sdílet → YeY</b>.</p>
+        <p><b>Kdekoli:</b> zkopírujte adresu stránky produktu a klikněte na <b>Ze schránky</b>.</p></details>
+    </div>`;
+  if (fokus) { const n = fokus.kid ? el.querySelector(`[data-kid="${CSS.escape(fokus.kid)}"] [data-kp="${fokus.kp}"]`) : fokus.id ? el.querySelector('#' + fokus.id) : null; n?.focus(); }
+  if (KOS.nove.size) setTimeout(() => { KOS.nove.clear(); }, 4000);
 }
 function zalozkaMa() { try { return localStorage.getItem('yey-zalozka') === '1'; } catch { return false; } }
-function webPanel() {
-  let el = $('#webPanel');
-  if (!ED || ED.d.typ === 'smlouva') { el?.remove(); return; }
-  if (!el) { el = document.createElement('div'); el.id = 'webPanel'; document.body.appendChild(el); }
-  const ma = zalozkaMa();
-  el.innerHTML = `<div class="wp-h"><b>Vkládání z obchodu</b><span class="tlumene mal">→ ${esc(TYP[ED.d.typ])} ${esc(ED.d.cislo)}</span><button type="button" class="wp-x" data-a="web-panel-zavrit" aria-label="Zavřít">×</button></div>
-    <details ${ma ? '' : 'open'} class="wp-kroky"><summary>${ma ? 'Jak na to' : '1× nastavení – záložka do prohlížeče'}</summary>
-      <ol><li>Přetáhněte tlačítko <a class="wp-zal" href="${zalozkaHref()}" onclick="event.preventDefault();toast('Tlačítko přetáhněte myší na lištu záložek prohlížeče (Ctrl+Shift+B ji zobrazí).')">⭐ YeY ⇢ vložit</a> na lištu záložek prohlížeče (stačí jednou).</li>
-      <li>V okně ${esc(OBCH.nazev || 'obchodu')} otevřete stránku produktu a klikněte na záložku <b>YeY ⇢ vložit</b>.</li>
-      <li>Na stránce se objeví okénko s názvem a cenou – zadejte množství a <b>Vložit do dokladu</b>.</li></ol></details>
-    <div class="wp-odkaz"><input id="wpUrl" placeholder="…nebo sem vložte odkaz na produkt" inputmode="url"><button type="button" class="btn mal zl" data-a="web-odkaz">Vložit</button></div>
-    <div id="wpStav" class="mal tlumene"></div>
-    ${OBCH.log.length ? `<div class="wp-log">${OBCH.log.slice(-4).reverse().map(x => `<div>✓ ${esc(x)}</div>`).join('')}</div>` : ''}`;
-  const u = $('#wpUrl'); u.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); AKCE['web-odkaz'](); } };
-  u.addEventListener('paste', () => setTimeout(() => AKCE['web-odkaz'](), 30));
+AKCE['kosik-otevri'] = () => { UI.kosik = true; UI.kosikSbalen = false; kosikPanel(true); };
+AKCE['kosik-sbal'] = () => { UI.kosikSbalen = !UI.kosikSbalen; kosikPanel(true); };
+AKCE['kosik-zavrit'] = () => { if (kosikCti().length) UI.kosikSbalen = !UI.kosikSbalen; else UI.kosik = false; kosikPanel(true); };
+AKCE['kosik-obchod'] = el => { const o = OBCHODY.find(x => x.k === el.dataset.kde) || OBCHODY[0]; obchodOtevri(o.web); };
+AKCE['kosik-smaz'] = el => { kosikPis(kosikCti().filter(p => p.id !== el.dataset.id)); kosikPanel(true); };
+AKCE['kosik-posl'] = () => { const d = poslDoklad(); if (d) jdi('doklad/' + d.id); };
+AKCE['kosik-nova-nab'] = () => AKCE['novy-doklad']({ dataset: { typ: 'nabidka' } });
+function kosikVlozJednu(p) {
+  if (!p.nazev) return 'Počkejte, až se načte název zboží.';
+  if (p.cena == null || !(p.cena >= 0)) return `Doplňte cenu u „${p.nazev}“.`;
+  webVloz(p); return '';
 }
-AKCE['web-panel-zavrit'] = () => $('#webPanel')?.remove();
+AKCE['kosik-vloz'] = el => {
+  const st = t => { const s = $('#wpStav'); if (s) s.textContent = t; };
+  if (!kosikCil()) { st('Nejdřív otevřete nabídku nebo fakturu, do které chcete zboží vložit.'); return; }
+  const p = kosikCti().find(x => x.id === el.dataset.id); if (!p) return;
+  const ch = kosikVlozJednu(p); if (ch) { st(ch); $(`#webPanel [data-kid="${CSS.escape(p.id)}"] [data-kp="cena"]`)?.focus(); return; }
+  kosikPis(kosikCti().filter(x => x.id !== p.id)); st(''); kosikPanel(true);
+};
+AKCE['kosik-vloz-vse'] = () => {
+  if (!kosikCil()) return; const vlozene = [];
+  for (const p of kosikCti()) if (!kosikVlozJednu(p)) vlozene.push(p.id);
+  kosikPis(kosikCti().filter(x => !vlozene.includes(x.id)));
+  const zbyva = kosikCti().length, s = $('#wpStav'); kosikPanel(true); if ($('#wpStav')) $('#wpStav').textContent = zbyva ? 'Zbývající zboží potřebuje doplnit cenu.' : '';
+};
+AKCE['kosik-odkaz'] = () => { const i = $('#wpUrl'), s = $('#wpStav'); if (!i) return; const ch = kosikPridejOdkaz(i.value); if (!ch) { i.value = ''; if ($('#wpUrl')) $('#wpUrl').value = ''; } if ($('#wpStav')) $('#wpStav').textContent = ch; kosikPanel(true); };
+AKCE['kosik-schranka'] = async () => {
+  const i = $('#wpUrl'); if (i && i.value.trim()) return AKCE['kosik-odkaz']();
+  const st = t => { const s = $('#wpStav'); if (s) s.textContent = t; };
+  let t = ''; try { t = await navigator.clipboard.readText(); } catch { st('Prohlížeč nedovolil číst schránku – vložte adresu do políčka (Ctrl+V).'); i?.focus(); return; }
+  const u = odkazZTextu(t); if (!u) { st('Ve schránce není adresa produktu. V obchodě zkopírujte adresu stránky zboží.'); return; }
+  try { sessionStorage.setItem('yey-schranka', u); } catch { }
+  st(kosikPridejOdkaz(u)); kosikPanel(true);
+};
+/* Návrat do okna aplikace: převezmi zboží z jiných oken; má-li aplikace povolenou schránku, vezmi i právě zkopírovaný odkaz z obchodu. */
+async function kosikSchrankaAuto() {
+  if (!UI.kosik || !S.nacteno || !navigator.permissions?.query || !navigator.clipboard?.readText || !document.hasFocus()) return;
+  try {
+    const p = await navigator.permissions.query({ name: 'clipboard-read' }); if (p.state !== 'granted') return;
+    const u = odkazZTextu(await navigator.clipboard.readText()); if (!u || sessionStorage.getItem('yey-schranka') === u) return;
+    sessionStorage.setItem('yey-schranka', u);
+    const h = obchodZOdkazu(u); if (!OBCHODY.some(o => h.endsWith(obchodZOdkazu(o.web)))) return;   // samo bere jen odkazy ze známých obchodů
+    if (!kosikPridejOdkaz(u)) toast('Odkaz ze schránky je v košíku z obchodů');
+  } catch { }
+}
+window.addEventListener('storage', e => { if (e.key === KOSIK_KLIC) kosikPrijmi(); });
+window.addEventListener('focus', () => { kosikPrijmi(); kosikSchrankaAuto(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) kosikPrijmi(); });
 /** Přidá produkt z obchodu do otevřeného dokladu: cena s DPH → (u plátce bez DPH) + přirážka. */
-function webVloz({ nazev, cena, mj, mnozstvi, obchod }) {
+function webVloz({ nazev, cena, mj, mnozstvi }) {
   const nakup = S.firma.platce_dph ? cena / 1.21 : cena;
   const prodej = Math.round(nakup * (1 + katPrirazka() / 100) * 100) / 100;
   edPridejPol({ nazev, mnozstvi: mnozstvi || 1, mj: mj || 'ks', cena: prodej, kat: 'material' });
-  const t = `${nazev} – ${fmtN(mnozstvi || 1)} ${mj || 'ks'} × ${kc(prodej)}${obchod ? ' (' + obchod + ')' : ''}`;
-  OBCH.log.push(t); toast('Vloženo: ' + nazev); webPanel();
+  toast('Vloženo: ' + nazev);
   return prodej;
 }
-AKCE['web-odkaz'] = async () => {
-  const u = ($('#wpUrl')?.value || '').trim(), st = $('#wpStav'); if (!u || !ED) return;
-  if (!/^https?:\/\//i.test(u)) { st.textContent = 'Odkaz musí začínat https://'; return; }
-  st.textContent = 'Načítám produkt…';
-  let r = null; try { const { data, error } = await sb.functions.invoke('zbozi-z-odkazu', { body: { url: u } }); r = data || (error && await error.context?.json?.().catch(() => null)) || null; } catch { }
-  if (r && r.ok && r.nazev && r.cena != null) { webVloz({ nazev: r.nazev, cena: r.cena, mj: r.mj || 'ks', mnozstvi: 1, obchod: r.obchod }); $('#wpStav') && ($('#wpStav').textContent = 'Vloženo – množství upravte v položkách.'); }
-  else { st.textContent = (r && r.chyba) || 'Z odkazu se nepodařilo načíst cenu – použijte záložku YeY ⇢ vložit přímo na stránce produktu.'; }
-};
+/* starší záložka (do 10. 11. 2026) posílala zboží přes window.opener – necháváme kvůli zpětné kompatibilitě */
 window.addEventListener('message', e => {
   const m = e.data; if (!m || m.typ !== 'yey-produkt' || m.v !== 1) return;
   const odpoved = (ok, text) => { try { e.source?.postMessage({ typ: 'yey-ok', ok, text }, e.origin); } catch { } };

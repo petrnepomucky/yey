@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1D272F">
+<title>YeY – příjem zboží</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f3f3f1;color:#1d272f;min-height:100vh;display:flex;flex-direction:column}
+  header{background:#1d272f;color:#f5b800;font-weight:800;font-size:22px;padding:12px 18px;border-bottom:6px solid #f5b800;letter-spacing:-.5px}
+  header small{color:#c5cdd3;font-weight:600;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;margin-left:10px}
+  main{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .stav{font-weight:700;font-size:17px}
+  .ok{color:#1e7a3c}.chyba{color:#b3261e}
+  .zbozi{background:#fff;border:1px solid #dfe3e6;border-radius:10px;padding:10px 12px;font-size:14px}
+  .zbozi b{display:block}
+  .tl{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  a.btn,button{font:inherit;font-weight:700;border-radius:9px;height:42px;padding:0 16px;display:inline-flex;align-items:center;cursor:pointer;text-decoration:none;border:1px solid #cfd6dc;background:#fff;color:#1d272f}
+  a.btn.zl{background:#f5b800;border-color:#f5b800}
+  p{margin:0;color:#5d6b76;font-size:14px}
+</style>
+</head>
+<body>
+<header>YeY<small>příjem zboží z obchodu</small></header>
+<main>
+  <div class="stav" id="stav">Předávám zboží do aplikace…</div>
+  <div class="zbozi" id="zbozi" hidden></div>
+  <p id="pozn"></p>
+  <div class="tl"><a class="btn zl" id="otevrit" href="/" target="_blank" hidden>Otevřít YeY</a><button type="button" id="zavrit">Zavřít okno</button></div>
+</main>
+<script>
+/* Přijímač zboží: otevírá ho záložka „YeY ⇢ vložit“ ze stránky obchodu. Běží na adrese aplikace, takže vidí stejné
+   úložiště jako aplikace – ať je otevřená v kartě, nebo nainstalovaná. Zboží zapíše do košíku (localStorage),
+   aplikace si ho převezme přes událost storage a potvrdí. Nic se neposílá na server. */
+(function () {
+  'use strict';
+  var KOSIK = 'yey-kosik', ACK = 'yey-kosik-ack', TOKEN = 'yey-zal-token';
+  var $ = function (id) { return document.getElementById(id); };
+  var stav = function (t, tr) { $('stav').textContent = t; $('stav').className = 'stav ' + (tr || ''); };
+  $('zavrit').onclick = function () { window.close(); };
+  var d = null;
+  try { var m = /[#&]d=([^&]+)/.exec(location.hash); if (m) d = JSON.parse(decodeURIComponent(m[1])); } catch (e) { d = null; }
+  try { history.replaceState(null, '', location.pathname); } catch (e) { }
+  var txt = function (v, n) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n); };
+  var num = function (v) { var n = Number(v); return isFinite(n) ? n : null; };
+  if (!d || typeof d !== 'object') { stav('Nepřišlo žádné zboží.', 'chyba'); $('pozn').textContent = 'Tuto stránku otevírá záložka „YeY ⇢ vložit“ ze stránky produktu v obchodě.'; $('otevrit').hidden = false; return; }
+  var cena = num(d.cena), mn = num(d.mnozstvi) || 1, nazev = txt(d.nazev, 300), odkaz = txt(d.odkaz, 600);
+  if (!/^https:\/\//i.test(odkaz)) odkaz = '';
+  if ((!nazev && !odkaz) || (cena != null && (cena < 0 || cena > 1e7)) || mn <= 0 || mn > 1e6) { stav('Údaje o zboží nejsou platné.', 'chyba'); return; }
+  var uloz = '', overeno = false;
+  try { uloz = localStorage.getItem(TOKEN) || ''; overeno = !!uloz && uloz === String(d.token || ''); } catch (e) { }
+  var polozka = {
+    id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), nazev: nazev, cena: cena, mj: txt(d.mj, 12) || 'ks', mnozstvi: mn,
+    odkaz: odkaz, obchod: txt(d.obchod, 60), foto: /^https:\/\//i.test(d.foto || '') ? txt(d.foto, 500) : '', cas: Date.now(),
+    primo: overeno   // rovnou do otevřeného dokladu jen ze záložky vydané touto aplikací; jinak čeká v košíku na potvrzení
+  };
+  var z = $('zbozi'); z.hidden = false; z.textContent = '';
+  var b = document.createElement('b'); b.textContent = nazev || odkaz; z.appendChild(b);
+  z.appendChild(document.createTextNode((cena != null ? cena.toLocaleString('cs-CZ') + ' Kč s DPH · ' : '') + mn.toLocaleString('cs-CZ') + ' ' + polozka.mj + (polozka.obchod ? ' · ' + polozka.obchod : '')));
+  try {
+    var a = []; try { a = JSON.parse(localStorage.getItem(KOSIK) || '[]'); if (!Array.isArray(a)) a = []; } catch (e) { a = []; }
+    a.push(polozka); localStorage.setItem(KOSIK, JSON.stringify(a.slice(-50)));
+  } catch (e) { stav('Prohlížeč nedovolil uložit zboží.', 'chyba'); $('pozn').textContent = 'Zkuste to v běžném (ne anonymním) okně prohlížeče.'; return; }
+  var hotovo = false, zavri = function (ms) { setTimeout(function () { window.close(); }, ms); };
+  var potvrd = function (raw) {
+    if (hotovo) return; var k = null; try { k = JSON.parse(raw || 'null'); } catch (e) { }
+    if (!k || k.id !== polozka.id) return; hotovo = true;
+    if (k.ok) { stav('✓ ' + (k.text || 'Vloženo do dokladu'), 'ok'); zavri(1100); }
+    else { stav('✓ V košíku aplikace YeY', 'ok'); $('pozn').textContent = k.text || 'Otevřete v aplikaci nabídku nebo fakturu a zboží do ní vložíte jedním klikem.'; zavri(2600); }
+  };
+  window.addEventListener('storage', function (e) { if (e.key === ACK) potvrd(e.newValue); });
+  setTimeout(function () {
+    if (hotovo) return; hotovo = true;
+    stav('✓ Uloženo do košíku YeY', 'ok');
+    $('pozn').textContent = 'Aplikace YeY teď není otevřená. Až ji otevřete, zboží najdete v košíku z obchodů a vložíte ho do dokladu.';
+    $('otevrit').hidden = false; zavri(6000);
+  }, 1800);
+})();
+</script>
+</body>
+</html>
