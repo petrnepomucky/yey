@@ -1660,6 +1660,51 @@ function naProdejniMj(m) {
 function zKatalogu(p) {
   return naProdejniMj(zKataloguSurove(p));
 }
+/** Zboží z hobbymarketu (košík aplikace): cena je s DPH, plátce počítá bez DPH. */
+function cisloObchod(v) { if (v == null || v === '') return null; const n = parseFloat(String(v).replace(/\s|Kč/gi, '').replace(',', '.')); return isFinite(n) ? n : null; }
+function zObchodu(p) {
+  const cena = Number(p.cena) || 0, nakup = A.platceDph && A.platceDph() ? Math.round(cena / 1.21 * 100) / 100 : cena;
+  return { src: 'obchod', kod: null, nazev: String(p.nazev || '').slice(0, 300), mj: p.mj || 'ks', nakup, cenaSDph: cena, obchod: p.obchod || '', odkaz: p.odkaz || '', foto: p.foto || '' };
+}
+/** Záložka Hobbymarket v dialogu: hledání v obchodech, odkaz na produkt a zboží z košíku. */
+function hledejObchod(el, q) {
+  const r = R.radky.find(x => x.klic === R.dlg.klic), dotaz = q || (r && (stav().dotazy[R.dlg.klic] || r.q || r.nazev)) || '';
+  const kos = (A.kosik ? A.kosik() : []).slice().reverse();
+  R.vysledky = kos.map(p => ({ obchod: p }));
+  const platce = A.platceDph && A.platceDph();
+  const polozka = (p, i) => {
+    const hleda = !p.nazev && p.odkaz && !p.chyba;
+    const bez = p.cena != null ? (platce ? p.cena / 1.21 : p.cena) : null;
+    return `<div class="kk-v kk-v-obchod">
+      <span class="kk-r-foto">${p.foto ? `<img src="${esc(p.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</span>
+      <span class="kk-v-telo"><b>${hleda ? 'Načítám název a cenu…' : esc(p.nazev)}</b>
+        <span class="kk-v-meta">${p.odkaz ? `<a href="${esc(p.odkaz)}" target="_blank" rel="noopener noreferrer">${esc(p.obchod || 'odkaz')} ↗</a>` : esc(p.obchod || '')}${p.chyba ? ` · <span style="color:#b3261e">${esc(p.chyba)}</span>` : ''}</span></span>
+      ${hleda ? '<span class="kk-v-cena"><span class="kk-spinner"></span></span>' : `<span class="kk-v-cena">
+        ${p.cena == null ? `<input class="kk-in kk-kcena" data-kcena="${esc(p.id)}" inputmode="decimal" placeholder="Cena s DPH" aria-label="Cena s DPH">`
+          : `<b>${kc(bez)}</b><small>/ ${esc(mjHezky(p.mj || 'ks'))} ${platce ? `bez DPH (${kc(p.cena)} s DPH)` : 's DPH'}</small>`}
+        <button type="button" class="kk-btn" data-vyber="${i}" style="margin-top:.35rem;min-height:36px;padding:.4rem .8rem">Použít</button></span>`}
+    </div>`;
+  };
+  el.innerHTML = `<div class="kk-obchod-hlava">
+      <div class="kk-obchod-t">Hledat <b>„${esc(dotaz)}“</b> v obchodě: ${A.obchody().map(o => `<button type="button" class="kk-btn kk-tichy kk-obchod-b" data-obchod="${esc(o.k)}">${esc(o.n)} ↗</button>`).join('')}</div>
+      <div class="kk-obchod-odkaz"><input class="kk-in" data-kk="obchod-url" placeholder="Nebo vlož adresu produktu z obchodu…" inputmode="url" aria-label="Adresa produktu"><button type="button" class="kk-btn" data-akce="obchod-odkaz">Načíst</button></div>
+      <div class="kk-obchod-tip">Na stránce produktu klikni na záložku ${A.zalozkaHref ? `<a class="kk-zal" href="${esc(A.zalozkaHref())}" title="Přetáhni na lištu záložek prohlížeče (stačí jednou)">⭐ YeY ⇢ vložit</a>` : '<b>YeY ⇢ vložit</b>'} – zboží se rovnou dosadí do tohoto řádku. Záložku si jednou přetáhni myší na lištu záložek. Nebo zkopíruj adresu produktu a vlož ji sem.</div>
+      <div class="kk-obchod-stav" data-kk="obchod-stav" aria-live="polite"></div>
+    </div>
+    ${kos.length ? '<div class="kk-obchod-sez">Zboží z obchodů</div>' + kos.map(polozka).join('') : '<div class="kk-prazdno">Zatím tu není žádné zboží z obchodů.</div>'}`;
+  R.dlg.obchodDotaz = dotaz;
+}
+/** Ze záložky přišlo zboží a je otevřený výběr materiálu → dosadí ho do řádku. Vrátí text potvrzení, nebo null. */
+function vlozZObchodu(p) {
+  if (!R.dlg || R.dlg.rozmer || !p || !p.nazev || p.cena == null) return null;
+  const cil = R.dlg, st = stav(), r = R.radky.find(x => x.klic === cil.klic);
+  const m = zObchodu(p);
+  st.mat[cil.klic] = m; delete st.rucne[cil.klic]; delete st.vyp[cil.klic];
+  zavriVyber(); prepocitej();
+  const c = cenaMaterialu(m).cena;
+  A.toast('Dosazeno: ' + m.nazev);
+  return `Dosazeno do kalkulačky (${r ? r.nazev : 'materiál'}): ${kc(c)} / ${mjHezky(m.mj)}`;
+}
 function zKataloguSurove(p) {
   return { src: 'katalog', kod: p.kod, nazev: p.nazev, mj: (p.mj || 'ks'), nakup: p.cena != null ? Number(p.cena) : null,
     hmotnost: p.hmotnost || null, naPalete: p.naPalete || null, vBaleni: p.vBaleni || null, foto: p.foto || '', ean: p.ean || '',
@@ -1680,7 +1725,7 @@ function cenaMaterialu(m) {
   let nakup = null, zdroj = '';
   if (cenaProdejny(z?.malesice) != null) { nakup = cenaProdejny(z.malesice); zdroj = 'aktuální cena Stavimex Malešice'; }
   else if (cenaProdejny(z?.liben) != null) { nakup = cenaProdejny(z.liben); zdroj = 'aktuální cena Stavimex Libeň'; }
-  else if (m.nakup != null) { nakup = Number(m.nakup); zdroj = A.cenaPopis || (m.sv ? 'ceník Stavimex' : 'průměrná cena trhu'); }
+  else if (m.nakup != null) { nakup = Number(m.nakup); zdroj = m.src === 'obchod' ? 'cena ' + (m.obchod || 'obchodu') : A.cenaPopis || (m.sv ? 'ceník Stavimex' : 'průměrná cena trhu'); }
   if (nakup == null) return { cena: 0, popis: 'bez ceny – doplň', nakup: null };
   const p = Number(S.prirazka) || 0;
   return { cena: zaok(nakup * (1 + p / 100)), popis: `${zdroj} ${kc(nakup)}${p ? ` + ${f3(p)} %` : ''}`, nakup, aktualni: /aktuální|ceník/.test(zdroj) };
@@ -1854,7 +1899,7 @@ function kostra() {
       <div class="kk-hledat-tip">Tip: slovo s mínusem z výsledků vyřadíš, např. <b>lepidlo -flex</b>.</div>
       <div class="kk-dlg-sort" data-kk="dlg-sort"></div>
       <div class="kk-dlg-filtry">
-        <div class="kk-seg" data-kk="dlg-zdroj"><button type="button" data-zdroj="sv">Suchá výstavba</button><button type="button" data-zdroj="katalog">Katalog</button><button type="button" data-zdroj="cenik">Můj ceník</button></div>
+        <div class="kk-seg" data-kk="dlg-zdroj"><button type="button" data-zdroj="sv">Suchá výstavba</button><button type="button" data-zdroj="katalog">Katalog</button><button type="button" data-zdroj="cenik">Můj ceník</button>${A.obchody ? '<button type="button" data-zdroj="obchod">Hobbymarket</button>' : ''}</div>
         <div class="kk-seg kk-seg-sklad" data-kk="dlg-filtr"><button type="button" data-dfiltr="malesice">Skladem Malešice</button><button type="button" data-dfiltr="obe">+ Libeň</button><button type="button" data-dfiltr="stavimex">Stavimex</button>${A.jenStavimex ? '' : '<button type="button" data-dfiltr="vse">Celý katalog</button>'}</div>
       </div>
       <div class="kk-dlg-seznam" data-kk="dlg-seznam"></div>
@@ -2245,7 +2290,7 @@ function zavriVyber() { const d = $k('dlg'); if (d.close) d.close(); else d.remo
 function vykresliDlgFiltry() {
   root.querySelectorAll('[data-zdroj]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.zdroj === R.dlg.zdroj)));
   root.querySelectorAll('[data-dfiltr]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.dfiltr === R.dlg.filtr)));
-  $k('dlg-filtr').hidden = R.dlg.zdroj === 'cenik' || !!A.bezStavimexu;
+  $k('dlg-filtr').hidden = R.dlg.zdroj === 'cenik' || R.dlg.zdroj === 'obchod' || !!A.bezStavimexu;
   const r = R.radky.find(x => x.klic === R.dlg.klic);
   root.querySelector('[data-zdroj="sv"]').hidden = !(r && r.sv);
   root.querySelector('[data-akce="bez-materialu"]').hidden = !!R.dlg.rozmer;
@@ -2294,6 +2339,7 @@ function hledejVDialogu() {
     return;
   }
   if (R.dlg.zdroj === 'sv') return hledejSV(seq, el, q, minus);
+  if (R.dlg.zdroj === 'obchod') return hledejObchod(el, q);
   if (!A.katalogDostupny()) { el.innerHTML = '<div class="kk-prazdno">Katalog není připojený.</div>'; return; }
   const sort = R.dlg.jenSort ? sortRadku(R.dlg.klic) : null;
   if (q.length < 2 && !sort) { el.innerHTML = '<div class="kk-prazdno">Napiš aspoň 2 znaky – název, značku, kód nebo EAN.</div>'; return; }
@@ -2375,7 +2421,14 @@ function radekVyberu(p, i, zdrojText, stitek) {
 async function vybrano(i) {
   const v = R.vysledky[i]; if (!v || !R.dlg) return;
   const cil = R.dlg, st = stav();
-  const m = v.cenik ? zCeniku(v.cenik) : v.sv ? zSortimentu(v.katalog) : zKatalogu(v.katalog);
+  let m;
+  if (v.obchod) {
+    const inp = [...root.querySelectorAll('[data-kcena]')].find(x => x.dataset.kcena === v.obchod.id);
+    const cena = inp ? cisloObchod(inp.value) : v.obchod.cena;
+    if (cena == null || !(cena >= 0)) { A.toast('Doplň cenu s DPH.', true); inp?.focus(); return; }
+    m = zObchodu({ ...v.obchod, cena });
+    if (A.kosikOdeber) A.kosikOdeber(v.obchod.id);
+  } else m = v.cenik ? zCeniku(v.cenik) : v.sv ? zSortimentu(v.katalog) : zKatalogu(v.katalog);
   zavriVyber();
   if (v.katalog && !v.sv && !vSortimentu(v.katalog, { ...sortRadku(cil.klic), skupina: null })) m.mimoRucne = true;
   if (cil.rozmer) {
@@ -2429,7 +2482,7 @@ async function doDokladu(btn) {
   const prace = sestavPraci().filter(p => p.pouzit && p.cena > 0);
   const vystup = radky.map(r => ({
     typ: 'material', nazev: r.m ? r.m.nazev : r.nazev, mj: mjHezky(r.mjProdej), mnozstvi: r.mnProdej,
-    cena: r.cena, nakup: r.nakup ?? null, prirazka: r.m && r.m.src === 'katalog' && !r.cenikId ? Number(S.prirazka) || 0 : null,
+    cena: r.cena, nakup: r.nakup ?? null, prirazka: r.m && (r.m.src === 'katalog' || r.m.src === 'obchod') && !r.cenikId ? Number(S.prirazka) || 0 : null,
     katKod: r.m?.kod || null, cenikId: r.cenikId, sazba_dph: 21,
     tema: r.m?.tema || '', skupina: r.m?.skupina || '', ean: r.m?.ean || '', foto: r.m?.foto || '',
     mnozstviPozor: !!r.prevodNejde,
@@ -2519,6 +2572,7 @@ function pripojUdalosti() {
       A.toast(`Zaokrouhleno na ${pal} ${pal === 1 ? 'celou paletu' : pal < 5 ? 'celé palety' : 'celých palet'}.`);
       prepocitej(); return;
     }
+    if (d.obchod && R.dlg) { A.obchodHledat(d.obchod, R.dlg.obchodDotaz || ''); return; }
     if (d.zdroj) { R.dlg.zdroj = d.zdroj; vykresliDlgFiltry(); hledejVDialogu(); return; }
     if (d.dfiltr) { R.dlg.filtr = d.dfiltr; vykresliDlgFiltry(); hledejVDialogu(); return; }
     if (d.dsv !== undefined) { R.dlg.jenVhodne = d.dsv === '1'; vykresliDlgSort(); hledejVDialogu(); return; }
@@ -2546,6 +2600,7 @@ function pripojUdalosti() {
       case 'rozmer-z-katalogu': otevriVyber({ klic: HLAVNI_S_ROZMEREM[S.druh].klic, rozmer: true }); break;
       case 'predvyber': Object.keys(R.nenalezeno).forEach(k => delete R.nenalezeno[k]); predvyber(true); break;
       case 'zavrit': zavriVyber(); break;
+      case 'obchod-odkaz': if (R.dlg) { const i = $k('obchod-url'), ch = A.kosikOdkaz(i ? i.value : ''); if (ch) { const s = $k('obchod-stav'); if (s) s.textContent = ch; } else hledejVDialogu(); } break;
       case 'bez-materialu': if (R.dlg) { const st = stav(); delete st.mat[R.dlg.klic]; delete st.rucne[R.dlg.klic]; R.nenalezeno[S.druh + '|' + (R.radky.find(x => x.klic === R.dlg.klic)?.q) + '|' + S.filtr] = 1; } zavriVyber(); prepocitej(); break;
       case 'novy': {
         const k = KALK[S.druh], st = S.d[S.druh];
@@ -2578,10 +2633,14 @@ function pripojUdalosti() {
     const t = e.target, d = t.dataset, st = stav();
     if (d.pole && t.type === 'checkbox') { st.pole[d.pole] = t.checked ? '1' : '0'; st.sablona = null; vykresliPole(); prepocitej(); return; }
     if (d.zap) { if (t.checked) delete st.vyp[d.zap]; else st.vyp[d.zap] = true; prepocitej(); return; }
+    if (d.kcena && A.kosikUprav) { const c = cisloObchod(t.value); if (c != null) A.kosikUprav(d.kcena, { cena: c, chyba: '' }); return; }
     if (d.pz) { st.pracePouzit[d.pz] = t.checked; obnovSouctyBezPrekresleni(); uloz(); return; }
   });
   $k('dlg').addEventListener('click', e => { if (e.target === $k('dlg')) zavriVyber(); });
   $k('dlg').addEventListener('close', () => { R.dlg = null; });
+  $k('dlg-seznam').addEventListener('keydown', e => { if (e.key !== 'Enter') return; if (e.target.dataset.kk === 'obchod-url') { e.preventDefault(); root.querySelector('[data-akce="obchod-odkaz"]')?.click(); } else if (e.target.dataset.kcena) { e.preventDefault(); e.target.closest('.kk-v')?.querySelector('[data-vyber]')?.click(); } });
+  $k('dlg-seznam').addEventListener('click', e => { if (e.target.closest('.kk-zal')) { e.preventDefault(); A.toast('Záložku přetáhni myší na lištu záložek prohlížeče (Ctrl+Shift+B ji zobrazí) a pak ji použij na stránce produktu.'); } });
+  $k('dlg-seznam').addEventListener('paste', e => { if (e.target.dataset.kk === 'obchod-url') setTimeout(() => root.querySelector('[data-akce="obchod-odkaz"]')?.click(), 30); });
   $k('dlg-hledat').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (R.vysledky.length === 1) vybrano(0); } });
 }
 function fokusPosledni() { const r = root.querySelectorAll('[data-kk="useky"] .kk-usek'); const i = r.length ? r[r.length - 1].querySelector('input') : null; if (i) setTimeout(() => i.focus(), 20); }
@@ -2795,6 +2854,15 @@ const CSS = `
 .kk-v-cena{text-align:right;display:flex;flex-direction:column;white-space:nowrap}
 .kk-v-cena small{color:var(--kk-ocel);font-size:.75rem}
 .kk-v-potreba{font-size:.78rem;color:var(--kk-ok);font-weight:600;margin-top:.15rem}
+.kk-obchod-hlava{padding:.75rem .8rem;display:flex;flex-direction:column;gap:.55rem;background:#FFF9E5;border-bottom:1px solid var(--kk-linka)}
+.kk-obchod-t{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;font-size:.9rem}
+.kk-obchod-b{min-height:36px;padding:.35rem .7rem}
+.kk-obchod-odkaz{display:flex;gap:.4rem}.kk-obchod-odkaz .kk-in{flex:1;font-size:.95rem}
+.kk-obchod-tip,.kk-obchod-stav{font-size:.8rem;color:var(--kk-ocel)}.kk-obchod-stav:empty{display:none}.kk-obchod-stav{color:#b3261e}
+.kk-obchod-sez{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--kk-ocel);padding:.5rem .8rem .2rem}
+.kk .kk-dlg .kk-btn:not(.kk-tichy){color:#fff}
+.kk-zal{display:inline-block;padding:.1rem .5rem;border:1px dashed #C99700;border-radius:6px;background:#fff;color:var(--kk-ink);font-weight:700;text-decoration:none;cursor:grab}
+.kk-v-obchod{cursor:default}.kk-v-obchod:hover{background:#fff}.kk-kcena{width:8.5rem;min-height:36px;font-size:.95rem}
 .kk-dlg-pata{display:flex;gap:.5rem;justify-content:flex-end;padding:.7rem 1rem;border-top:1px solid var(--kk-linka);background:#F8F9F6}
 .kk-spinner{display:inline-block;width:.9em;height:.9em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:kk-toc .8s linear infinite;vertical-align:-.1em}
 @keyframes kk-toc{to{transform:rotate(360deg)}}
@@ -2871,7 +2939,10 @@ function ukazano() {
 }
 
 global.YeyKalk = {
-  init, ukazano, STAVIMEX, stavimexHtml, prekresli: () => { try { vykresliListu(); } catch (e) { /* kalkulačka ještě není otevřená */ } },
+  init, ukazano, STAVIMEX, vlozZObchodu,
+  /** Košík z obchodů se změnil – překreslí záložku Hobbymarket, je-li otevřená (nepřekresluje při psaní do ní). */
+  kosikZmena: () => { try { if (R.dlg && R.dlg.zdroj === 'obchod') { const a = document.activeElement; if (a && a.closest && a.closest('[data-kk="dlg-seznam"]') && a.tagName === 'INPUT') return; hledejVDialogu(); } } catch (e) { /* */ } },
+  vyberOtevren: () => !!(R.dlg && !R.dlg.rozmer), stavimexHtml, prekresli: () => { try { vykresliListu(); } catch (e) { /* kalkulačka ještě není otevřená */ } },
   katalogZmena: () => { try { if (!A.katalogDostupny()) { const st = S.d[S.druh]; if (st) Object.keys(st.mat || {}).forEach(k => { if (st.mat[k] && st.mat[k].auto && st.mat[k].src === 'katalog') delete st.mat[k]; }); } vykresliRadky(); naplanujPredvyber(); } catch (e) { /* */ } },
   sklad: { skore: skladSkore, seradit: seraditPodleSkladu, html: skladHtml, filtr: projdeFiltrem, PRODEJNY },
   sortiment: { temata: temataSortimentu, obsahuje: vSortimentu, bezDia },

@@ -2330,7 +2330,11 @@ async function kosikPrijmi() {
           kosikAck(p.id, true, `Vloženo do dokladu ${cil.cislo}: ${fmtN(p.mnozstvi || 1)} ${p.mj || 'ks'} × ${kc(prodej)}`);
           continue;
         }
-        if (p.primo) { p.primo = false; zmena = true; kosikAck(p.id, false, cil ? 'Zboží čeká v košíku – doplňte cenu a vložte ho.' : 'V aplikaci není otevřený doklad. Zboží čeká v košíku z obchodů.'); }
+        if (p.primo && !cil && p.nazev && p.cena != null && trasa().c === 'kalkulacky' && window.YeyKalk?.vyberOtevren?.()) {   // ze záložky rovnou do řádku kalkulačky
+          const t = YeyKalk.vlozZObchodu(p);
+          if (t) { a = a.filter(x => x.id !== p.id); zmena = true; kosikAck(p.id, true, t); continue; }
+        }
+        if (p.primo) { p.primo = false; zmena = true; kosikAck(p.id, false, cil ? 'Zboží čeká v košíku – doplňte cenu a vložte ho.' : trasa().c === 'kalkulacky' ? 'Zboží čeká v kalkulačce – u řádku klikněte na materiál a zvolte Hobbymarket.' : 'V aplikaci není otevřený doklad. Zboží čeká v košíku z obchodů.'); }
         if (nova && (Date.now() - (p.cas || 0)) < 60000) { KOS.nove.add(p.id); UI.kosik = true; UI.kosikSbalen = false; }
         if (!p.nazev && p.odkaz && !p.chyba) kosikDohledej(p.id);
       }
@@ -2339,6 +2343,7 @@ async function kosikPrijmi() {
     if (navigator.locks?.request) await navigator.locks.request('yey-kosik', prace); else prace();   // dvě okna aplikace nesmí vložit totéž dvakrát
   } catch (e) { console.warn('košík', e); }
   finally { KOS.bezi = false; if (KOS.znovu) { KOS.znovu = false; kosikPrijmi(); } else kosikPanel(); }
+  try { window.YeyKalk?.kosikZmena?.(); } catch { }
 }
 /** K odkazu dohledá název a cenu (funkce zbozi-z-odkazu). Když obchod stránku nevydá, zůstane název z adresy a cena k doplnění. */
 async function kosikDohledej(id) {
@@ -2348,7 +2353,7 @@ async function kosikDohledej(id) {
   KOS.hleda.delete(id);
   if (r && r.ok && r.nazev) kosikUprav(id, { nazev: r.nazev, cena: r.cena ?? null, mj: r.mj || 'ks', obchod: r.obchod || p0.obchod, foto: /^https:\/\//.test(r.foto || '') ? r.foto : '', hleda: 0, chyba: r.cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : '' });
   else kosikUprav(id, { nazev: nazevZOdkazu(p0.odkaz) || p0.napoveda || 'Zboží z ' + (p0.obchod || 'obchodu'), hleda: 0, chyba: (r && r.chyba) || 'Obchod stránku nevydal – doplňte cenu ručně, nebo použijte záložku YeY ⇢ vložit.' });
-  kosikPanel(true);
+  kosikPanel(true); try { window.YeyKalk?.kosikZmena?.(); } catch { }
 }
 function kosikPridejOdkaz(u, napoveda) {
   u = odkazZTextu(u); if (!u) return 'Vložte adresu stránky produktu (začíná https://).';
@@ -3395,6 +3400,15 @@ const kalkAdapter = {
   bezStavimexu: true,
   svZKatalogu: true,
   cenaPopis: 'orientační cena',
+  /* hobbymarkety: záložka Hobbymarket ve výběru materiálu – sdílí košík z obchodů s doklady */
+  obchody: () => OBCHODY.map(o => ({ k: o.k, n: o.n })),
+  obchodHledat(k, q) { const o = OBCHODY.find(x => x.k === k) || OBCHODY[0]; const okn = window.open(q ? o.hledat(q) : o.web, '_blank'); if (okn) OBCH.win = okn; },
+  kosik: () => kosikCti(),
+  kosikOdkaz: u => kosikPridejOdkaz(u),
+  kosikUprav: (id, z) => { kosikUprav(id, z); KOS.otisk = ''; },
+  kosikOdeber: id => { kosikPis(kosikCti().filter(p => p.id !== id)); KOS.otisk = ''; },
+  platceDph: () => !!S.firma?.platce_dph,
+  zalozkaHref: () => zalozkaHref(),
   stxDostupne: () => false,
   /** Hledání v katalogu. Se sortimentem se přidá dotaz omezený na jeho témata, bez hledaného slova se vrátí zboží sortimentu. */
   async hledej(q0, pocet, sort) {
