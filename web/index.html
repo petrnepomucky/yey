@@ -1518,7 +1518,7 @@ function poSmlouva() {
   f.addEventListener('change', e => { const n = e.target.name; if (!n) return;
     if (e.target.value === '__novy') { e.target.value = ED.d[n] || ''; return edNovyKontakt(); }
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
-    if (nastav(e.target)) po(); });
+    if (nastav(e.target)) { if (n === 'zakazka_id') edKlientZeZakazky(e.target.value); po(); } });
 }
 AKCE['sod-ulozit-sablonu'] = async () => {
   const t = $('#sodSablona').value.trim(); const nova = t === SOD_SABLONA.trim() ? null : t;
@@ -2074,7 +2074,8 @@ function poEditor() {
     if (e.target.value === '__nova_zak') { e.target.value = ED.d[n] || ''; return edNovaZakazka(); }
     if (n === 'zakazka_id') edZmenaZakazky(e.target.value);
     edNastav(n, hod(e.target)); if (n === 'predmet' || n === 'kontakt_id') edAutoZakazka();
-    edNahled(); edUlozit(); if (n === 'kontakt_id') cenyHistorie().then(oznacCeny).catch(() => { }); });
+    const klient = n === 'zakazka_id' && edKlientZeZakazky(e.target.value);
+    edNahled(); edUlozit(); if (n === 'kontakt_id' || klient) cenyHistorie().then(oznacCeny).catch(() => { }); });
   $('#edPozn').addEventListener('input', e => { ED.d.poznamka = e.target.value; edNahled(); edUlozit(); });
   const tb = $('#edPol');
   tb.addEventListener('input', e => {
@@ -2175,6 +2176,14 @@ async function edZrusAutoZakazku() {
     setTimeout(async () => { try { await q(sb.from('doklady').update({ zakazka_id: null }).eq('id', ED.d.id)); await db.del('zakazky', id); S.zakazky = S.zakazky.filter(x => x.id !== id); } catch { } }, 900);
   }
   toast('Nabídka je bez zakázky');
+}
+/** Po výběru zakázky doplní odběratele (klienta zakázky). Vrátí true, když se odběratel změnil. */
+function edKlientZeZakazky(id) {
+  const z = id && zakazka(id); if (!ED || !z || !z.kontakt_id || z.kontakt_id === ED.d.kontakt_id || !kontakt(z.kontakt_id)) return false;
+  const byl = ED.d.kontakt_id; ED.d.kontakt_id = z.kontakt_id;
+  const sk = $('#fDok [name=kontakt_id]'); if (sk) sk.innerHTML = edKontaktyOpt(z.kontakt_id);
+  toast(`${byl ? 'Odběratel změněn' : 'Doplněn odběratel'} podle zakázky: ${kontakt(z.kontakt_id).nazev}`);
+  return true;
 }
 function edZmenaZakazky(nova) {
   if (!ED?.autoZak) { if (nova === '' && ED) ED.bezAutoZak = true; return; }
