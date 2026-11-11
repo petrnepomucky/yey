@@ -102,6 +102,8 @@ h1{font-size:30px;line-height:1.1}h2{font-size:20px}h3{font-size:17px}
 .filtry button{border:1px solid var(--linka);background:#fff;border-radius:20px;padding:6px 13px;font-size:14px;font-weight:600;cursor:pointer;min-height:36px}
 .filtry button{color:var(--inkoust)}
 .filtry button.akt{background:var(--inkoust);border-color:var(--inkoust);color:#fff}
+.pr-ik{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--linka);border-radius:7px;background:#fff;color:var(--inkoust);cursor:pointer;vertical-align:middle;margin-left:4px;padding:0}
+.pr-ik:hover{border-color:var(--metr);background:var(--metr-bg)}
 .filtry .kon-n{font-weight:500;opacity:.65;margin-left:2px}
 .p-seznam .filtry button{padding:5px 11px;font-size:13px;min-height:34px}
 .prazdno{text-align:center;padding:40px 20px;color:var(--ocel)}
@@ -523,7 +525,10 @@ const TYP_MN = { nabidka: 'Nabídky', faktura: 'Faktury', zalohova: 'Zálohové 
 /* ikona podle typu dokladu a pojmenování tlačítka „nový“ */
 const IK_TYP = { nabidka: 'nabidka', smlouva: 'smlouva', zalohova: 'faktura', faktura: 'faktura', dobropis: 'faktura', protokol: 'protokol' };
 const TYP_NOVY = { nabidka: 'Nová nabídka', smlouva: 'Nová smlouva', faktura: 'Nová faktura', protokol: 'Nový protokol' };
-const DOK_ZALOZKY = ['nabidka', 'smlouva', 'faktura', 'protokol'];
+/* Protokol k faktuře se otevírá z řádku faktury, dílčí ze zakázky. Záložka Protokoly zůstává jen pro starší protokoly, které nemají fakturu ani zakázku. */
+const prDilci = d => d?.typ === 'protokol' && !!d.udaje?.dilci;
+const typNazev = d => prDilci(d) ? 'Dílčí protokol' : TYP[d.typ];
+const dokZalozky = () => ['nabidka', 'smlouva', 'faktura', ...(S.doklady.some(d => d.typ === 'protokol' && !d.zakazka_id && !prFaktura(d)) ? ['protokol'] : [])];
 const STAV = { koncept: 'Koncept', odeslano: 'Odesláno', prijato: 'Přijato', odmitnuto: 'Odmítnuto', zaplaceno: 'Zaplaceno', storno: 'Storno', podepsano: 'Podepsáno' };
 const jeFakt = t => t === 'faktura' || t === 'zalohova' || t === 'dobropis';
 const poSplatnosti = d => jeFakt(d.typ) && d.typ !== 'dobropis' && !['zaplaceno', 'storno'].includes(d.stav) && d.splatnost && dniDo(d.splatnost) < 0;
@@ -615,6 +620,7 @@ function prPrefix() { const v = ((S.firma.cisla || {}).protokol || {}).prefix; r
 function prCisloZFaktury(f) { return prPrefix() + String(f?.cislo || '').replace(/^[A-Za-zÁ-Žá-ž]+/, ''); }
 /** Faktura, ke které protokol patří: vznikl z ní, ona vznikla z něj, mají stejnou nabídku, nebo je v zakázce jediná. */
 function prFaktura(p) {
+  if (p.udaje?.dilci) return null;   // dílčí protokol je volný dokument zakázky s vlastním číslem
   const F = S.doklady.filter(x => x.typ === 'faktura' && x.stav !== 'storno');
   const zdr = p.zdroj_id ? doklad(p.zdroj_id) : null;
   return (zdr?.typ === 'faktura' ? zdr : null) || (p.id && F.find(f => f.zdroj_id === p.id))
@@ -632,8 +638,9 @@ async function prSladCisla(f) {
   if (zm.length) toast('Předávací protokol přečíslován podle faktury: ' + zm.join(', '), { ms: 5000 });
   return zm;
 }
-async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = null, predmet = '' } = {}) {
-  const fPr = typ === 'protokol' && prDleFaktury() ? prFaktura({ id: null, zdroj_id: zdroj?.id || null, zakazka_id: zakazka_id || zdroj?.zakazka_id || null }) : null;
+async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = null, predmet = '', dilci = false, polozky = null } = {}) {
+  // protokol k faktuře vzniká jen z faktury (zdroj = faktura) a přebírá její číslo; dílčí má vlastní číselnou řadu
+  const fPr = typ === 'protokol' && !dilci && zdroj?.typ === 'faktura' && prDleFaktury() ? zdroj : null;
   const c = fPr?.cislo ? prCisloZFaktury(fPr) : await q(sb.rpc('dalsi_cislo', { p_firma: S.firma.id, p_typ: typ }));
   const z = zakazka_id ? zakazka(zakazka_id) : null;
   const o = {
@@ -645,16 +652,17 @@ async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = n
   if (typ === 'nabidka') o.splatnost = plusDni(dnes(), 30); // platnost nabídky
   if (fPr && fPr.datum && fPr.datum < dnes()) o.datum = fPr.datum;   // protokol nejpozději v den vystavení faktury
   if (typ === 'dobropis') { o.udaje = { duvod: '' }; o.pdp = !!zdroj?.pdp; o.forma_uhrady = zdroj?.forma_uhrady || null; o.objednavka = zdroj?.objednavka || null; }
+  if (typ === 'protokol' && dilci) o.udaje = { dilci: true };
   if (typ === 'smlouva') o.udaje = zdroj?.typ === 'smlouva' ? { ...(zdroj.udaje || {}) } : sodVychozi(zdroj, z || (zdroj?.zakazka_id ? zakazka(zdroj.zakazka_id) : null));
   const d = await db.ins('doklady', o); S.doklady.unshift(d);
   if (zdroj && typ !== 'smlouva') {
-    const pol = await nactiPolozky(zdroj.id);
+    const pol = polozky || await nactiPolozky(zdroj.id);
     if (pol.length) {
       const nove = pol.map((p, i) => ({ id: uid(), doklad_id: d.id, firma_id: S.firma.id, poradi: i, nazev: p.nazev, mnozstvi: typ === 'dobropis' ? -Math.abs(Number(p.mnozstvi) || 0) : p.mnozstvi, mj: p.mj, cena: p.cena, dph: p.dph, kat: p.kat || null }));
       await q(sb.from('polozky').insert(nove)); S.polozky[d.id] = nove; await obnovDoklad(d.id);
     } else S.polozky[d.id] = [];
   } else S.polozky[d.id] = [];
-  if (zakazka_id) zapisDenik(zakazka_id, `${TYP[typ]} ${c} vytvořena`).catch(() => {});
+  if (zakazka_id) zapisDenik(zakazka_id, `${dilci ? 'Dílčí předávací protokol' : TYP[typ]} ${c} vytvořena`).catch(() => {});
   if (typ === 'faktura') await prSladCisla(doklad(d.id));
   return doklad(d.id);
 }
@@ -696,7 +704,6 @@ function shell(obsah, opt = {}) {
           ${nov('novy-doklad', 'smlouva', 'Smlouva o dílo', 'data-typ="smlouva"')}
           ${nov('novy-doklad', 'faktura', 'Faktura', 'data-typ="faktura"')}
           ${nov('novy-doklad', 'faktura', 'Zálohová faktura', 'data-typ="zalohova"')}
-          ${nov('novy-doklad', 'protokol', 'Předávací protokol', 'data-typ="protokol"')}
           <hr>
           ${nov('novy-kontakt', 'kontakty', 'Kontakt')}
         </div>
@@ -1099,12 +1106,12 @@ POHLEDY.zakazky = async t => {
   const fi = Math.max(0, FAZE.findIndex(f => f.k === z.faze));
   const dalsi = {
     nabidka: nab ? ['Zahájit práce →', 'prijato'] : ['Vytvořit nabídku', 'nabidka'],
-    realizace: ['Práce hotové → předávací protokol', 'protokol'],
+    realizace: ['Práce hotové → vystavit fakturu', 'faktura'],
     fakturace: fakKZaplaceni ? ['✓ Faktura zaplacena', 'faktura'] : fak ? ['Otevřít fakturu', 'faktura'] : ['Vystavit fakturu', 'faktura'],
     hotovo: null, zruseno: null
   }[z.faze];
 
-  const radDok = d => `<a class="dokl" href="#doklad/${d.id}"><span>${ik(IK_TYP[d.typ])} <b>${TYP[d.typ]}</b> ${esc(d.cislo)}</span><span class="radek">${cipStav(d)}<b class="num">${d.typ === 'protokol' ? '' : kc0(celkem(d))}</b></span></a>`;
+  const radDok = d => `<a class="dokl" href="#doklad/${d.id}"><span>${ik(IK_TYP[d.typ])} <b>${typNazev(d)}</b> ${esc(d.cislo)}</span><span class="radek">${cipStav(d)}<b class="num">${d.typ === 'protokol' ? '' : kc0(celkem(d))}</b></span></a>`;
   const pridDok = (typ, pozn = '') => `<button type="button" role="menuitem" data-a="vytvor-dok" data-z="${z.id}" data-typ="${typ}">${ik(IK_TYP[typ])}${TYP[typ]}${pozn ? ` <span class="tlumene mal">${pozn}</span>` : ''}</button>`;
   const zNab = nab ? 'z nabídky' : '';
 
@@ -1123,7 +1130,7 @@ POHLEDY.zakazky = async t => {
           : `<button class="btn" data-a="upravit-zak" data-id="${z.id}">+ Přiřadit klienta</button>`}</section>
       <section class="karta"><div class="karta-h"><h3>Doklady zakázky</h3>
           <div class="rozb"><button type="button" class="btn mal" data-a="rozb" aria-haspopup="menu">${ik('plus', 16)}Přidat doklad ${ik('dolu', 14)}</button>
-            <div class="rozb-menu" role="menu">${pridDok('nabidka')}${pridDok('smlouva', zNab)}${pridDok('zalohova', zNab)}${pridDok('protokol', zNab)}${pridDok('faktura', zNab)}</div></div></div>
+            <div class="rozb-menu" role="menu">${pridDok('nabidka')}${pridDok('smlouva', zNab)}${pridDok('zalohova', zNab)}${pridDok('faktura', zNab)}<hr><button type="button" role="menuitem" data-a="vytvor-dok" data-z="${z.id}" data-typ="protokol" title="Předání části díla – vlastní číslo, nesouvisí s fakturou. Protokol k faktuře vytvoříte přímo ve faktuře.">${ik('protokol')}Dílčí předávací protokol</button></div></div></div>
         <div style="display:flex;flex-direction:column;gap:8px">${dokS.map(radDok).join('') || `<div class="tlumene mal">Zatím bez dokladů.${dalsi ? ' Pokračujte žlutým tlačítkem nahoře – doklady vznikají jeden z druhého.' : ''}</div>`}</div></section>
     </div>
     <section class="karta"><div class="karta-h"><h3>Deník zakázky</h3></div>
@@ -1159,7 +1166,7 @@ AKCE['vytvor-dok'] = async el => {
   const z = zakazka(el.dataset.z); const typ = el.dataset.typ;
   const zdroj = typ !== 'nabidka' ? S.doklady.find(d => d.zakazka_id === z.id && d.typ === 'nabidka' && d.stav !== 'odmitnuto') : null;
   if (typ === 'faktura' && !(await hlidejDvojiFakturu(zdroj))) return;
-  const d = await novyDoklad(typ, { zakazka_id: z.id, zdroj });
+  const d = await novyDoklad(typ, { zakazka_id: z.id, zdroj, dilci: typ === 'protokol' });
   if (typ === 'faktura' && z.faze === 'realizace') await ulozZakazku(z.id, { faze: 'fakturace' });
   jdi('doklad/' + d.id);
 };
@@ -1194,10 +1201,10 @@ AKCE.krok = async el => {
     toast('Zakázka přešla do realizace 🔨'); return render();
   }
   if (z.faze === 'realizace') {
-    let prot = dok.find(d => d.typ === 'protokol');
-    if (!prot) prot = await novyDoklad('protokol', { zakazka_id: z.id, zdroj: nab });
-    await ulozZakazku(z.id, { faze: 'fakturace', postup: 100 }); zapisDenik(z.id, 'Práce dokončeny – předávací protokol').catch(() => {});
-    return jdi('doklad/' + prot.id);
+    // práce hotové → rovnou faktura; předávací protokol se vytváří z ní (tlačítko Předávací protokol ve faktuře)
+    let f = dok.find(d => d.typ === 'faktura' && d.stav !== 'storno'); if (!f) f = await novyDoklad('faktura', { zakazka_id: z.id, zdroj: nab });
+    await ulozZakazku(z.id, { faze: 'fakturace', postup: 100 }); zapisDenik(z.id, 'Práce dokončeny – fakturace').catch(() => {});
+    return jdi('doklad/' + f.id);
   }
   if (z.faze === 'fakturace') {
     let f = dok.find(d => d.typ === 'faktura' && d.stav !== 'storno'); if (!f) f = await novyDoklad('faktura', { zakazka_id: z.id, zdroj: nab });
@@ -1278,6 +1285,20 @@ POHLEDY.kontakty = t => {
   } };
 };
 AKCE['otevrit-dok'] = el => jdi('doklad/' + el.dataset.id);
+/** Ikona předávacího protokolu v řádku faktury – klik otevře protokol. */
+function prIkona(f) { if (f.typ !== 'faktura') return ''; const p = fakturaProtokoly(f)[0];
+  return p ? ` <button type="button" class="pr-ik" data-a="otevrit-dok" data-id="${p.id}" title="Předávací protokol ${esc(p.cislo)} – otevřít" aria-label="Otevřít předávací protokol ${esc(p.cislo)}">${ik('protokol', 16)}</button>` : ''; }
+/** Protokol k faktuře: otevře existující, jinak ho vytvoří z aktuálních položek faktury (číslo podle faktury). */
+AKCE['fa-protokol'] = async el => {
+  const f = doklad(el.dataset.id); if (!f) return;
+  let p = fakturaProtokoly(f)[0];
+  if (!p) {
+    const pol = ED && ED.d.id === f.id ? ED.pol.filter(x => x.nazev) : null;
+    p = await novyDoklad('protokol', { zakazka_id: f.zakazka_id, zdroj: f, polozky: pol });
+    toast(`Předávací protokol ${p.cislo} vytvořen k faktuře ${f.cislo}`);
+  }
+  jdi('doklad/' + p.id);
+};
 /* kontakty: zákazník / dodavatel / jiný (sloupec typ; starší záznamy bez typu jsou zákazníci) */
 const KON_TYP = { klient: 'Zákazník', dodavatel: 'Dodavatel', jiny: 'Jiný' };
 const konTyp = k => KON_TYP[k?.typ] ? k.typ : 'klient';
@@ -1311,7 +1332,7 @@ AKCE['ulozit-upr-kontakt'] = async el => { const o = dataKontaktu(); if (!o) ret
 AKCE['smazat-kontakt'] = async el => { const k = kontakt(el.dataset.id); if (!confirm(`Smazat kontakt „${k.nazev}“? Zakázky a doklady zůstanou.`)) return; await db.del('kontakty', k.id); S.kontakty = S.kontakty.filter(x => x.id !== k.id); zavriOkno(); toast('Kontakt smazán'); jdi('kontakty'); };
 /* =================== SEZNAM DOKLADŮ =================== */
 POHLEDY.doklady = t => {
-  let typ = t.p.get('typ') || UI.typDok; if (!DOK_ZALOZKY.includes(typ)) typ = 'faktura';
+  let typ = t.p.get('typ') || UI.typDok; const DOK_ZALOZKY = dokZalozky(); if (!DOK_ZALOZKY.includes(typ)) typ = 'faktura';
   UI.typDok = typ;
   const f = t.p.get('f') || UI.filtrDok; const hl = UI.hledatDok.toLowerCase();
   const typyZ = z => z === 'faktura' ? ['faktura', 'zalohova', 'dobropis'] : [z];
@@ -1331,14 +1352,15 @@ POHLEDY.doklady = t => {
     return `<a href="#doklady?typ=${z}" class="${z === typ ? 'akt' : ''}" ${z === typ ? 'aria-current="page"' : ''}>${ik(IK_TYP[z])}${TYP_MN[z]}${z === 'faktura' && poSpl ? `<span class="pocet cerv" title="po splatnosti">${poSpl}</span>` : n ? `<span class="pocet">${n}</span>` : ''}</a>`; }).join('');
   return { html: `
     <div class="uvitani"><div><h1>Doklady</h1><div class="tlumene">${TYP_MN[typ]}: ${s.length}${bezCastky ? '' : ' · celkem <b class="num">' + kc0(suma) + '</b>'}</div></div>
-      <div class="radek">${typ === 'faktura' ? `<button class="btn" data-a="novy-doklad" data-typ="zalohova">Zálohová faktura</button>` : ''}<button class="btn zl" data-a="novy-doklad" data-typ="${typ}">${ik('plus')}${TYP_NOVY[typ]}</button></div></div>
+      <div class="radek">${typ === 'faktura' ? `<button class="btn" data-a="novy-doklad" data-typ="zalohova">Zálohová faktura</button>` : ''}${typ === 'protokol' ? '' : `<button class="btn zl" data-a="novy-doklad" data-typ="${typ}">${ik('plus')}${TYP_NOVY[typ]}</button>`}</div></div>
     <nav class="zalozky" aria-label="Typ dokladu">${zalozky}</nav>
     <div class="karta">
       <div class="radek" style="margin-bottom:12px"><div class="filtry">${filtry.map(([k, n]) => `<a href="#doklady?typ=${typ}&f=${k}" style="text-decoration:none"><button type="button" class="${fAkt === k ? 'akt' : ''}" tabindex="-1">${n}</button></a>`).join('')}</div><span class="mezera"></span>
         <input type="search" id="hledDok" class="vstup" style="max-width:300px" placeholder="Číslo, klient, předmět…" value="${esc(UI.hledatDok)}" aria-label="Hledat doklady"></div>
       ${s.length ? `<div class="obal-tab"><table class="tab tab-dok"><thead><tr><th>Číslo</th><th>Klient / předmět</th><th>Vystaveno</th><th>${sl3}</th><th>Stav</th><th class="r">${bezCastky ? '' : 'Částka'}</th></tr></thead><tbody>
-        ${s.map(d => `<tr class="klik" data-a="otevrit-dok" data-id="${d.id}"><td class="tuc">${esc(d.cislo)}${d.typ === 'zalohova' ? ' <span class="cip c-koncept">záloha</span>' : d.typ === 'dobropis' ? ' <span class="cip c-koncept">dobropis</span>' : ''}</td><td><b>${esc(kontakt(d.kontakt_id)?.nazev || '—')}</b><div class="tlumene mal">${esc(d.predmet || '')}</div></td><td>${datum(d.datum)}</td><td>${sl3 && d.splatnost ? datum(d.splatnost) : ''}</td><td>${cipStav(d)}</td><td class="r num tuc">${bezCastky ? '' : kc(celkem(d))}</td></tr>`).join('')}
+        ${s.map(d => `<tr class="klik" data-a="otevrit-dok" data-id="${d.id}"><td class="tuc">${esc(d.cislo)}${prIkona(d)}${d.typ === 'zalohova' ? ' <span class="cip c-koncept">záloha</span>' : d.typ === 'dobropis' ? ' <span class="cip c-koncept">dobropis</span>' : ''}</td><td><b>${esc(kontakt(d.kontakt_id)?.nazev || '—')}</b><div class="tlumene mal">${esc(d.predmet || '')}</div></td><td>${datum(d.datum)}</td><td>${sl3 && d.splatnost ? datum(d.splatnost) : ''}</td><td>${cipStav(d)}</td><td class="r num tuc">${bezCastky ? '' : kc(celkem(d))}</td></tr>`).join('')}
       </tbody></table></div>` : `<div class="prazdno"><b>${TYP_MN[typ]}: nic tu není</b>${S.doklady.some(d => typy.includes(d.typ)) ? 'Zkuste jiný filtr nebo hledaný výraz.' : 'Nejrychleji vzniknou ze zakázky – žlutým tlačítkem dalšího kroku.'}</div>`}
+      ${typ === 'protokol' ? '<p class="tlumene mal" style="margin:12px 0 0">Starší protokoly bez faktury a zakázky. Nový protokol vytvoříte ve faktuře (tlačítko Předávací protokol), dílčí v zakázce.</p>' : ''}
     </div>`, po: () => { $('.zalozky .akt')?.scrollIntoView({ block: 'nearest', inline: 'center' }); const h = $('#hledDok'); h.oninput = debounce(() => { UI.hledatDok = h.value; const p = h.selectionStart; render().then(() => { const n = $('#hledDok'); n.focus(); n.setSelectionRange(p, p); }); }, 200); } };
 };
 AKCE['novy-doklad'] = async el => { const d = await novyDoklad(el.dataset.typ, { zakazka_id: el.dataset.zak || null }); jdi('doklad/' + d.id); };
@@ -1773,7 +1795,7 @@ function edLista(d) {
   const fPr = d.typ === 'protokol' ? prFaktura(d) : null;
   let hlavni = '', vedle = '', emailZvl = true, fakturaVMenu = false;
   if (storno) { /* stornovaný doklad už žádný další krok nemá */ }
-  else if (d.typ === 'protokol') hlavni = fPr ? `<a class="btn zl" href="#doklad/${fPr.id}">Otevřít fakturu ${esc(fPr.cislo)} ${ik('sipka', 16)}</a>` : `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">Vystavit fakturu ${ik('sipka', 16)}</button>`;
+  else if (d.typ === 'protokol') hlavni = fPr ? `<a class="btn zl" href="#doklad/${fPr.id}">${ik('zpet', 16)}Zpět na fakturu ${esc(fPr.cislo)}</a>` : '';
   else if (zapl) { /* hotovo */ }
   else if (!posl) { hlavni = emailHl; emailZvl = false; fakturaVMenu = d.typ === 'nabidka'; if (fakt) vedle = `<button class="btn" data-a="ed-zaplaceno">✓ ${zaplTxt}</button>`; }
   else if (d.typ === 'nabidka') hlavni = `<button class="btn zl" data-a="prevest" data-id="${d.id}" data-typ="faktura">Převést na fakturu ${ik('sipka', 16)}</button>`;
@@ -1781,11 +1803,12 @@ function edLista(d) {
   const zdr = d.typ === 'smlouva' && d.zdroj_id ? doklad(d.zdroj_id) : null;
   const vytvorit = [
     d.typ === 'nabidka' && fakturaVMenu ? prev('faktura', 'Faktura') : '',
-    d.typ === 'nabidka' ? prev('smlouva', 'Smlouva o dílo') + prev('zalohova', 'Zálohová faktura') + prev('protokol', 'Předávací protokol') : '',
+    d.typ === 'nabidka' ? prev('smlouva', 'Smlouva o dílo') + prev('zalohova', 'Zálohová faktura') : '',
     d.typ === 'faktura' && !storno ? prev('dobropis', 'Dobropis (opravný doklad)') : ''
   ].join('');
   const nebezp = ((d.typ === 'faktura' || d.typ === 'zalohova') && !storno ? m('storno-fa', 'zpet', 'Stornovat', '', 'cerv') : '') + m('smazat-dok', 'smaz', 'Smazat', '', 'cerv');
   return `<div class="ed-lista">${hlavni}${vedle}
+    ${d.typ === 'faktura' && !storno ? (p => `<button class="btn" data-a="fa-protokol" data-id="${d.id}" title="${p ? 'Otevřít předávací protokol k této faktuře' : 'Vytvořit předávací protokol z položek této faktury'}">${ik('protokol', 16)}${p ? 'Protokol ' + esc(p.cislo) : '+ Předávací protokol'}</button>`)(fakturaProtokoly(d)[0]) : ''}
     <button class="btn" data-a="tisk-ed">${ik('tisk', 16)}PDF / Tisk</button>
     ${emailZvl ? `<button class="btn" data-a="email-ed">${ik('mail', 16)}E-mail</button>` : ''}
     <div class="rozb"><button type="button" class="btn" data-a="rozb" aria-haspopup="menu" aria-label="Další akce s dokladem">Více ${ik('dolu', 16)}</button>
@@ -1810,9 +1833,9 @@ POHLEDY.doklad = async t => {
   const z = zakazka(d.zakazka_id);
   return { plna: true, html: `<div class="editor">
     <section class="form">
-      <div class="drobky">${z ? `<a href="#zakazky/${z.id}">← ${esc(z.nazev)}</a>` : `<a href="#doklady?typ=${IK_TYP[d.typ]}">← ${TYP_MN[IK_TYP[d.typ]]}</a>`}</div>
+      <div class="drobky">${(f => f ? `<a href="#doklad/${f.id}">← Faktura ${esc(f.cislo)}</a>` : z ? `<a href="#zakazky/${z.id}">← ${esc(z.nazev)}</a>` : `<a href="#doklady?typ=${IK_TYP[d.typ]}">← ${TYP_MN[IK_TYP[d.typ]]}</a>`)(d.typ === 'protokol' ? prFaktura(d) : null)}</div>
       <div class="radek" style="justify-content:space-between;align-items:flex-end">
-        <div><h1>${TYP[d.typ]} ${esc(d.cislo)}</h1><div class="radek mal" style="margin-top:6px"><span id="edStavCip">${cipStav(d)}</span><span class="ulozeno" id="edUlozeno">✓ Uloženo</span></div></div>
+        <div><h1>${typNazev(d)} ${esc(d.cislo)}</h1><div class="radek mal" style="margin-top:6px"><span id="edStavCip">${cipStav(d)}</span><span class="ulozeno" id="edUlozeno">✓ Uloženo</span></div></div>
         ${edLista(d)}</div>
       ${edNavazne(d)}
       ${!F.ucet && jeFakt(d.typ) ? `<div class="hlaska inf">Na faktuře chybí číslo účtu – doplňte ho v sekci <a href="#firma?tab=banka">Moje firma › Banka a platby</a> a faktura dostane i QR platbu.</div>` : ''}
@@ -2994,15 +3017,12 @@ function emPriprav() {
     .catch(e => { const s = $('#emPdfStav'); if (s) s.textContent = 'PDF se nepodařilo vytvořit – použijte PDF / Tisk.'; return null; });
 }
 /** Předávací protokol patřící k faktuře: vytvořený z ní, ze stejné nabídky, nebo ve stejné zakázce. */
-function emNajdiProtokol(d) {
-  const P = S.doklady.filter(x => x.typ === 'protokol');
-  return P.find(x => x.zdroj_id === d.id || x.id === d.zdroj_id) || (d.zdroj_id && P.find(x => x.zdroj_id === d.zdroj_id)) || (d.zakazka_id && P.find(x => x.zakazka_id === d.zakazka_id)) || null;
-}
+function emNajdiProtokol(d) { return fakturaProtokoly(d)[0] || null; }
 async function emProtokol(zapnout, prot) {
   const tx = $('#emText'), pr = $('#emPredmet');
   if (zapnout) {
     prot = prot || emNajdiProtokol(EM.d);
-    if (!prot) { prot = await novyDoklad('protokol', { zakazka_id: EM.d.zakazka_id, zdroj: doklad(EM.d.id) }); toast(`Vytvořen předávací protokol ${prot.cislo} – zkontrolujte ho později v Dokladech.`); }
+    if (!prot) { prot = await novyDoklad('protokol', { zakazka_id: EM.d.zakazka_id, zdroj: doklad(EM.d.id) }); toast(`Vytvořen předávací protokol ${prot.cislo} – najdete ho u faktury.`); }
     EM.prot = { d: prot, pol: await nactiPolozky(prot.id) };
     const c = EM.d.cislo, pc = prot.cislo;
     if (tx && !tx.value.includes('předávací protokol č.')) tx.value = tx.value.replace(`fakturu č. ${c}`, `fakturu č. ${c} a předávací protokol č. ${pc}`);
@@ -3222,7 +3242,7 @@ AKCE['podpis-ulozit'] = async () => { const c = $('#podpisPlatno'); if (!c || c.
 AKCE.paleta = () => {
   okno('Hledat', `<div class="paleta"><input id="palIn" placeholder="Hledat zakázku, klienta, doklad nebo akci…" autocomplete="off" aria-label="Hledat"><div class="vys" id="palVys"></div></div>`, '', { bezHlavy: true, trida: 'paleta' });
   let akt = 0;
-  const akceZ = [['Nová zakázka', () => AKCE['nova-zakazka']({ dataset: {} })], ['Nová faktura', () => AKCE['novy-doklad']({ dataset: { typ: 'faktura' } })], ['Nová nabídka', () => AKCE['novy-doklad']({ dataset: { typ: 'nabidka' } })], ['Nový kontakt', () => AKCE['novy-kontakt']()], ['Nabídky', () => jdi('doklady?typ=nabidka')], ['Faktury', () => jdi('doklady?typ=faktura')], ['Smlouvy o dílo', () => jdi('doklady?typ=smlouva')], ['Protokoly', () => jdi('doklady?typ=protokol')], ['Kontakty', () => jdi('kontakty')], ['Kalkulačky', () => jdi('kalkulacky')], ['Ceník prací', () => jdi('cenik')], ['Moje firma', () => jdi('firma')]];
+  const akceZ = [['Nová zakázka', () => AKCE['nova-zakazka']({ dataset: {} })], ['Nová faktura', () => AKCE['novy-doklad']({ dataset: { typ: 'faktura' } })], ['Nová nabídka', () => AKCE['novy-doklad']({ dataset: { typ: 'nabidka' } })], ['Nový kontakt', () => AKCE['novy-kontakt']()], ['Nabídky', () => jdi('doklady?typ=nabidka')], ['Faktury', () => jdi('doklady?typ=faktura')], ['Smlouvy o dílo', () => jdi('doklady?typ=smlouva')], ['Kontakty', () => jdi('kontakty')], ['Kalkulačky', () => jdi('kalkulacky')], ['Ceník prací', () => jdi('cenik')], ['Moje firma', () => jdi('firma')]];
   const kresli = () => {
     const h = $('#palIn').value.toLowerCase().trim(); const v = [];
     akceZ.filter(([n]) => !h || n.toLowerCase().includes(h)).forEach(([n, fn]) => v.push({ typ: 'Akce', t: n, fn }));
