@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>YeY – Kancelář pro řemeslníky</title>
 <meta name="theme-color" content="#1D272F">
-<link rel="icon" type="image/png" sizes="32x32" href="/ikony/favicon-32.png">
-<link rel="icon" href="/favicon.ico" sizes="48x48">
-<link rel="apple-touch-icon" href="/ikony/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="ikony/favicon-32.png">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="ikony/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="YeY">
@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="kalk.js"></script>
+<script src="lokal.js"></script>
 <style>
 :root{
   --inkoust:#1D272F;--inkoust-2:#2E3B45;--inkoust-3:#3F4D58;--ocel:#5D6B76;
@@ -463,12 +464,26 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 /* ---------- lišta akcí dokladu ---------- */
 .ed-lista{display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:relative}
 .vice-sez{display:flex;flex-direction:column;gap:8px}.vice-sez .btn{justify-content:flex-start;height:50px}
-@media (max-width:760px){.zalozky a,.zalozky button{padding:0 11px;font-size:14px}.zalozky svg{display:none}.tab-dok th:nth-child(3),.tab-dok td:nth-child(3){display:none}.ed-lista{width:100%}.ed-lista .rozb{position:static;margin-left:auto}.ed-lista .rozb-menu{left:0;right:0}}
+@media (max-width:760px){.zalozky a,.zalozky button{padding:0 11px;font-size:14px}.zalozky svg{display:none}.zalozky .zamek svg{display:block}.tab-dok th:nth-child(3),.tab-dok td:nth-child(3){display:none}.ed-lista{width:100%}.ed-lista .rozb{position:static;margin-left:auto}.ed-lista .rozb-menu{left:0;right:0}}
 .katr{display:grid;grid-template-columns:52px 1fr auto 74px auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--linka-2);border-radius:10px;background:#fff}
 .katr img,.katr .bezfoto{width:52px;height:52px;object-fit:contain;border-radius:6px;background:var(--pod)}
 .katr-c{text-align:right;white-space:nowrap}
 .katr .vstup{height:38px;text-align:right;padding:0 8px}
 @media (max-width:640px){.katr{grid-template-columns:44px 1fr auto}.katr img,.katr .bezfoto{width:44px;height:44px}.katr-c{grid-column:2/3;text-align:left}.katr .vstup{grid-column:2/3}}
+/* ---------- zámek (funkce s licencí), zamčená stránka, bez účtu ---------- */
+.zamek{display:inline-flex;align-items:center;margin-left:auto;padding-left:8px;opacity:.6;flex:none}
+.zalozky .zamek,.btn .zamek{margin-left:2px;padding-left:4px}
+.zamek-str{max-width:640px;margin:6vh auto 40px;padding:0 18px;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center}
+.zamek-str .zamek-ik{width:72px;height:72px;border-radius:20px;background:var(--metr-bg);display:grid;place-items:center;color:var(--inkoust)}
+.zamek-str p{margin:0;font-size:17px;line-height:1.55}
+.zamek-str .karta{text-align:left;display:flex;flex-direction:column;gap:12px;width:100%}
+.zamek-str .karta .radek{flex-wrap:wrap}
+ul.odemkne{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+ul.odemkne li{padding-left:26px;position:relative}
+ul.odemkne li::before{content:"✓";position:absolute;left:0;top:0;font-weight:700;color:var(--ok)}
+.bez-uctu{display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--linka-2);padding-top:14px;margin-top:4px}
+.bez-uctu a{font-weight:700}
+input[readonly]{background:var(--pod);color:var(--ocel)}
 </style>
 </head>
 <body>
@@ -483,11 +498,18 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
    ===================================================================== */
 const SB_URL = 'https://hkzhjoveiqadezmvksdz.supabase.co';
 const SB_KEY = 'sb_publishable_WUy9urfE9n5O2SelitV6FA_mhzCUrM_';
-const sb = window.supabase.createClient(SB_URL, SB_KEY, { db: { schema: 'online_kancelar' }, auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+/* Bez připojení se knihovna Supabase nenačte – místní režim (data v prohlížeči) pak běží dál, jen bez přihlášení k účtu. */
+const BEZ_SITE = !window.supabase;
+const bezSpojeni = async () => ({ data: null, error: { message: 'Bez připojení k internetu.' } });
+const cloud = BEZ_SITE ? { auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange() { }, signOut: bezSpojeni, signInWithPassword: bezSpojeni, signUp: bezSpojeni, resetPasswordForEmail: bezSpojeni, updateUser: bezSpojeni, signInWithOtp: bezSpojeni }, functions: { invoke: bezSpojeni } }
+  : window.supabase.createClient(SB_URL, SB_KEY, { db: { schema: 'online_kancelar' }, auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+/* Dva režimy uložení dat se stejným rozhraním: účet (data v cloudu, klient Supabase) a místní režim bez registrace (data v prohlížeči, lokal.js). */
+let sb = cloud, LOKAL = false;
+const AUTH_ODKAZ = /access_token=|error_description=|type=(recovery|signup|magiclink)/.test(location.hash) || /[?&](code|token_hash)=/.test(location.search);
 /* Katalog materiálu (projekt Stavební materiál). Bez licence vrací jen bezplatnou část, s licencí celý katalog. */
 const KAT_URL = 'https://fvrpuddkarujfttoaavb.supabase.co';
 const KAT_KEY = 'sb_publishable_1Y5nEfLwKmJxlnbkLmZgMg_Rzs7WQQG';
-const kat = window.supabase.createClient(KAT_URL, KAT_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'mk-katalog' } });
+const kat = BEZ_SITE ? null : window.supabase.createClient(KAT_URL, KAT_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'mk-katalog' } });
 
 /* ---------- stav ---------- */
 const S = { user: null, firma: null, kontakty: [], zakazky: [], doklady: [], cenik: [], denik: {}, polozky: {}, nacteno: false };
@@ -528,7 +550,7 @@ const TYP_NOVY = { nabidka: 'Nová nabídka', smlouva: 'Nová smlouva', faktura:
 /* Protokol k faktuře se otevírá z řádku faktury, dílčí ze zakázky. Záložka Protokoly zůstává jen pro starší protokoly, které nemají fakturu ani zakázku. */
 const prDilci = d => d?.typ === 'protokol' && !!d.udaje?.dilci;
 const typNazev = d => prDilci(d) ? 'Dílčí protokol' : TYP[d.typ];
-const dokZalozky = () => ['nabidka', 'smlouva', 'faktura', ...(S.doklady.some(d => d.typ === 'protokol' && !d.zakazka_id && !prFaktura(d)) ? ['protokol'] : [])];
+const dokZalozky = () => [...(ma('zakazky') || S.zakazky.length ? ['nabidka', 'smlouva', 'faktura'] : ['faktura', 'nabidka', 'smlouva']), ...(S.doklady.some(d => d.typ === 'protokol' && !d.zakazka_id && !prFaktura(d)) ? ['protokol'] : [])];
 const STAV = { koncept: 'Koncept', odeslano: 'Odesláno', prijato: 'Přijato', odmitnuto: 'Odmítnuto', zaplaceno: 'Zaplaceno', storno: 'Storno', podepsano: 'Podepsáno' };
 const jeFakt = t => t === 'faktura' || t === 'zalohova' || t === 'dobropis';
 const poSplatnosti = d => jeFakt(d.typ) && d.typ !== 'dobropis' && !['zaplaceno', 'storno'].includes(d.stav) && d.splatnost && dniDo(d.splatnost) < 0;
@@ -568,6 +590,7 @@ const IK = {
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>', odhl: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>',
   smlouva: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 17c1.2-3.4 2.3-3.4 2.9 0 .5-2 1.5-2 3.1 0"/>',
   vice: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>', dolu: '<path d="M6 9l6 6 6-6"/>',
+  zamek: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>', disk: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/>',
   kopie: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/>', sipka: '<path d="M5 12h14M13 6l6 6-6 6"/>'
 };
 const ik = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IK[n] || ''}</svg>`;
@@ -584,7 +607,7 @@ const chyba = (e, kde) => { console.error(kde, e); toast((kde ? kde + ': ' : '')
 /* ---------- databáze ---------- */
 async function q(p, kde) { const { data, error } = await p; if (error) { chyba(error, kde || 'Uložení se nepovedlo'); error.__ukazano = true; throw error; } return data; }
 const db = {
-  async ins(t, o) { const r = await q(sb.from(t).insert({ firma_id: S.firma.id, ...o }).select().single()); return r; },
+  async ins(t, o) { if ((t === 'zakazky' || t === 'cenik') && brana(t)) throw zamcenoChyba(); const r = await q(sb.from(t).insert({ firma_id: S.firma.id, ...o }).select().single()); return r; },
   async upd(t, id, o) { return q(sb.from(t).update(o).eq('id', id).select().single()); },
   async del(t, id) { return q(sb.from(t).delete().eq('id', id)); }
 };
@@ -639,6 +662,9 @@ async function prSladCisla(f) {
   return zm;
 }
 async function novyDoklad(typ, { zakazka_id = null, kontakt_id = null, zdroj = null, predmet = '', dilci = false, polozky = null } = {}) {
+  // bez licence jdou vystavit faktury, dobropisy a protokol k faktuře; ostatní typy dokladů odemyká licence
+  const klic = typ === 'protokol' ? (dilci ? 'dilci' : null) : ROZSAH[typ] ? typ : null;
+  if (klic && brana(klic)) throw zamcenoChyba();
   // protokol k faktuře vzniká jen z faktury (zdroj = faktura) a přebírá její číslo; dílčí má vlastní číselnou řadu
   const fPr = typ === 'protokol' && !dilci && zdroj?.typ === 'faktura' && prDleFaktury() ? zdroj : null;
   const c = fPr?.cislo ? prCisloZFaktury(fPr) : await q(sb.rpc('dalsi_cislo', { p_firma: S.firma.id, p_typ: typ }));
@@ -683,62 +709,85 @@ const metrCisla = () => '<div class="metr-cisla">' + Array.from({ length: 60 }, 
 
 const AKCE_POZDEJI = [];
 function shell(obsah, opt = {}) {
-  const t = trasa();
+  const t = trasa(); if (!POHLEDY[t.c] || (t.c === 'prehled' && vychoziTrasa() !== 'prehled')) t.c = vychoziTrasa();
   const poSpl = S.doklady.filter(poSplatnosti).length;
   const aktivni = S.zakazky.filter(z => !['hotovo', 'zruseno'].includes(z.faze)).length;
   const akt = (...c) => c.includes(t.c) ? 'akt' : '';
-  const pol = (h, cesty, ikona, text, extra = '') => `<a href="#${h}" class="${akt(...cesty)}">${ik(ikona)}${text}${extra}</a>`;
-  const nov = (a, ikona, text, extra = '') => `<button type="button" role="menuitem" data-a="${a}" ${extra}>${ik(ikona)}${text}</button>`;
+  const zam = k => ma(k) ? '' : `<span class="zamek" title="Součást licence">${ik('zamek', 14)}</span>`;
+  const pol = (h, cesty, ikona, text, extra = '', klic = '') => `<a href="#${h}" class="${akt(...cesty)}">${ik(ikona)}${text}${extra}${klic ? zam(klic) : ''}</a>`;
+  const nov = (a, ikona, text, extra = '', klic = '') => `<button type="button" role="menuitem" data-a="${a}" ${extra}>${ik(ikona)}${text}${klic ? zam(klic) : ''}</button>`;
+  const plna = ma('zakazky') || S.zakazky.length > 0;   // celá Kancelář, nebo bezplatná část (faktury)
   return `
   <header class="hlava">
     <div class="hlava-top">
-      <a class="znacka" href="#prehled" title="YeY – Kancelář pro řemeslníky">YeY</a>
-      <div class="firma-jm">${esc(S.firma?.nazev || 'Moje firma')}<small>Kancelář pro řemeslníky</small></div>
-      <button type="button" class="hledani" data-a="paleta" aria-label="Hledat (Ctrl+K)">${ik('hledat')}<span>Hledat zakázku, klienta, doklad…</span><span class="kbd">Ctrl K</span></button>
+      <a class="znacka" href="#${vychoziTrasa()}" title="YeY – Kancelář pro řemeslníky">YeY</a>
+      <div class="firma-jm">${esc(S.firma?.nazev || 'Moje firma')}<small>${LIC.aktivni ? 'Kancelář pro řemeslníky' : 'Faktury zdarma'}</small></div>
+      <button type="button" class="hledani" data-a="paleta" aria-label="Hledat (Ctrl+K)">${ik('hledat')}<span>${plna ? 'Hledat zakázku, klienta, doklad…' : 'Hledat fakturu, klienta…'}</span><span class="kbd">Ctrl K</span></button>
       <div class="rozb">
         <button type="button" class="btn-hl" data-a="rozb" aria-haspopup="menu" aria-label="Vytvořit nový záznam">${ik('plus', 16)}<span class="t">Nový</span></button>
         <div class="rozb-menu" role="menu">
-          ${nov('nova-zakazka', 'zakazky', 'Zakázka')}
+          ${plna ? `${nov('nova-zakazka', 'zakazky', 'Zakázka', '', 'zakazky')}
           <hr>
-          ${nov('novy-doklad', 'nabidka', 'Nabídka', 'data-typ="nabidka"')}
-          ${nov('novy-doklad', 'smlouva', 'Smlouva o dílo', 'data-typ="smlouva"')}
+          ${nov('novy-doklad', 'nabidka', 'Nabídka', 'data-typ="nabidka"', 'nabidka')}
+          ${nov('novy-doklad', 'smlouva', 'Smlouva o dílo', 'data-typ="smlouva"', 'smlouva')}
           ${nov('novy-doklad', 'faktura', 'Faktura', 'data-typ="faktura"')}
-          ${nov('novy-doklad', 'faktura', 'Zálohová faktura', 'data-typ="zalohova"')}
+          ${nov('novy-doklad', 'faktura', 'Zálohová faktura', 'data-typ="zalohova"', 'zalohova')}
           <hr>
+          ${nov('novy-kontakt', 'kontakty', 'Kontakt')}`
+          : `${nov('novy-doklad', 'faktura', 'Faktura', 'data-typ="faktura"')}
           ${nov('novy-kontakt', 'kontakty', 'Kontakt')}
+          <div class="odd">S licencí</div>
+          ${nov('nova-zakazka', 'zakazky', 'Zakázka', '', 'zakazky')}
+          ${nov('novy-doklad', 'nabidka', 'Nabídka', 'data-typ="nabidka"', 'nabidka')}
+          ${nov('novy-doklad', 'smlouva', 'Smlouva o dílo', 'data-typ="smlouva"', 'smlouva')}
+          ${nov('novy-doklad', 'faktura', 'Zálohová faktura', 'data-typ="zalohova"', 'zalohova')}`}
         </div>
       </div>
-      <button type="button" class="ucet-btn" data-a="ucet" title="${esc(S.user?.email)}" aria-label="Účet">${esc(inicialy(S.user?.email))}</button>
+      ${LOKAL ? `<button type="button" class="ucet-btn" data-a="ucet" title="Data jsou uložená v tomto prohlížeči – záloha a účet" aria-label="Data a účet">${ik('disk', 18)}</button>`
+        : `<button type="button" class="ucet-btn" data-a="ucet" title="${esc(S.user?.email)}" aria-label="Účet">${esc(inicialy(S.user?.email))}</button>`}
     </div>
     <div class="metr-pruh" aria-hidden="true">${metrCisla()}</div>
   </header>
   <div class="plocha">
     <nav class="menu" aria-label="Hlavní menu">
-      ${pol('prehled', ['prehled'], 'prehled', 'Přehled')}
+      ${plna ? `${pol('prehled', ['prehled'], 'prehled', 'Přehled')}
       ${pol('zakazky', ['zakazky'], 'zakazky', 'Zakázky', `<span class="pocet">${aktivni || ''}</span>`)}
       ${pol('doklady', ['doklady', 'doklad'], 'faktura', 'Doklady', poSpl ? `<span class="pocet cerv" title="Faktury po splatnosti">${poSpl}</span>` : '')}
       ${pol('kontakty', ['kontakty'], 'kontakty', 'Kontakty', `<span class="pocet">${S.kontakty.length || ''}</span>`)}
       <div class="odd">Nástroje</div>
-      ${pol('kalkulacky', ['kalkulacky'], 'kalk', 'Kalkulačky')}
-      ${pol('cenik', ['cenik'], 'cenik', 'Ceník prací')}
+      ${pol('kalkulacky', ['kalkulacky'], 'kalk', 'Kalkulačky', '', 'kalkulacky')}
+      ${pol('cenik', ['cenik'], 'cenik', 'Ceník prací', '', 'cenik')}`
+      : `${pol('doklady', ['doklady', 'doklad'], 'faktura', 'Faktury', poSpl ? `<span class="pocet cerv" title="Faktury po splatnosti">${poSpl}</span>` : '')}
+      ${pol('kontakty', ['kontakty'], 'kontakty', 'Kontakty', `<span class="pocet">${S.kontakty.length || ''}</span>`)}
+      <div class="odd">Celá Kancelář · s licencí</div>
+      ${pol('zakazky', ['zakazky'], 'zakazky', 'Zakázky', '', 'zakazky')}
+      ${pol('doklady?typ=nabidka', [], 'nabidka', 'Nabídky', '', 'nabidka')}
+      ${pol('kalkulacky', ['kalkulacky'], 'kalk', 'Kalkulačky', '', 'kalkulacky')}
+      ${pol('cenik', ['cenik'], 'cenik', 'Ceník prací', '', 'cenik')}`}
       <div class="spodek">${jeNainstalovano() ? '' : `<a href="#" data-a="instalovat">${ik('instal')}Nainstalovat aplikaci</a>`}${pol('firma', ['firma'], 'firma', 'Moje firma')}</div>
     </nav>
     <main class="obsah ${opt.plna ? 'plna' : ''}" id="obsah">${obsah}</main>
   </div>
   <nav class="spodni" aria-label="Menu">
-    <a href="#prehled" class="${akt('prehled')}">${ik('prehled', 22)}Přehled</a>
+    ${plna ? `<a href="#prehled" class="${akt('prehled')}">${ik('prehled', 22)}Přehled</a>
     <a href="#zakazky" class="${akt('zakazky')}">${ik('zakazky', 22)}Zakázky</a>
     <a href="#doklady" class="${akt('doklady', 'doklad')}">${ik('faktura', 22)}Doklady${poSpl ? '<i class="tecka-c" aria-label="faktury po splatnosti"></i>' : ''}</a>
     <a href="#kalkulacky" class="${akt('kalkulacky')}">${ik('kalk', 22)}Kalkulačky</a>
-    <a href="#" data-a="vice" class="${akt('kontakty', 'cenik', 'firma')}">${ik('vice', 22)}Více</a>
+    <a href="#" data-a="vice" class="${akt('kontakty', 'cenik', 'firma')}">${ik('vice', 22)}Více</a>`
+    : `<a href="#doklady" class="${akt('doklady', 'doklad')}">${ik('faktura', 22)}Faktury${poSpl ? '<i class="tecka-c" aria-label="faktury po splatnosti"></i>' : ''}</a>
+    <a href="#kontakty" class="${akt('kontakty')}">${ik('kontakty', 22)}Kontakty</a>
+    <a href="#firma" class="${akt('firma')}">${ik('firma', 22)}Moje firma</a>
+    <a href="#" data-a="vice" class="${akt('zakazky', 'kalkulacky', 'cenik')}">${ik('vice', 22)}Více</a>`}
   </nav>`;
 }
 /* „Více“ ve spodní liště – všechno, co se do pěti položek nevešlo */
-AKCE_POZDEJI.push(() => { AKCE.vice = () => okno('Více', `<div class="vice-sez">
-  <a class="btn" href="#kontakty" data-a="zavrit-jdi" data-h="kontakty">${ik('kontakty')}Kontakty</a>
-  <a class="btn" href="#cenik" data-a="zavrit-jdi" data-h="cenik">${ik('cenik')}Ceník prací</a>
+AKCE_POZDEJI.push(() => { AKCE.vice = () => { const z = k => ma(k) ? '' : ' ' + ik('zamek', 14); okno('Více', `<div class="vice-sez">
+  ${ma('zakazky') || S.zakazky.length ? `<a class="btn" href="#kontakty" data-a="zavrit-jdi" data-h="kontakty">${ik('kontakty')}Kontakty</a>`
+    : `<a class="btn" href="#zakazky" data-a="zavrit-jdi" data-h="zakazky">${ik('zakazky')}Zakázky${z('zakazky')}</a><a class="btn" href="#doklady?typ=nabidka" data-a="zavrit-jdi" data-h="doklady?typ=nabidka">${ik('nabidka')}Nabídky a smlouvy${z('nabidka')}</a><a class="btn" href="#kalkulacky" data-a="zavrit-jdi" data-h="kalkulacky">${ik('kalk')}Kalkulačky${z('kalkulacky')}</a>`}
+  <a class="btn" href="#cenik" data-a="zavrit-jdi" data-h="cenik">${ik('cenik')}Ceník prací${z('cenik')}</a>
   <a class="btn" href="#firma" data-a="zavrit-jdi" data-h="firma">${ik('firma')}Moje firma</a>
-  ${jeNainstalovano() ? '' : `<button class="btn" type="button" data-a="instalovat">${ik('instal')}Nainstalovat aplikaci</button>`}</div>`); });
+  <button class="btn" type="button" data-a="ucet">${ik(LOKAL ? 'disk' : 'kontakty')}${LOKAL ? 'Data, záloha a účet' : 'Účet'}</button>
+  ${jeNainstalovano() ? '' : `<button class="btn" type="button" data-a="instalovat">${ik('instal')}Nainstalovat aplikaci</button>`}</div>`); }; });
 
 /* ---------- vykreslení ---------- */
 const POHLEDY = {};
@@ -749,7 +798,8 @@ async function render() {
   if (!S.firma) return renderNastaveniFirmy();
   if (!S.nacteno) { app.innerHTML = '<div class="nacitam"><div class="kolo"></div>Načítám data…</div>'; try { await nactiVse(); } catch (e) { return; } }
   const t = trasa();
-  const fn = POHLEDY[t.c] || POHLEDY.prehled;
+  if (!POHLEDY[t.c] || (t.c === 'prehled' && vychoziTrasa() !== 'prehled')) t.c = vychoziTrasa();
+  const fn = zamcenaTrasa(t.c) ? () => zamcenaStranka(t.c) : POHLEDY[t.c];
   try {
     const v = await fn(t);
     app.innerHTML = shell(v.html, v);
@@ -884,9 +934,9 @@ function renderPrihlaseni(zprava) {
       <div><span class="znacka" style="font-size:40px">YeY</span><div style="color:#AEB8BF;letter-spacing:1.6px;font-size:12px;font-weight:600;text-transform:uppercase;margin-top:4px">Kancelář pro řemeslníky</div></div>
       <div>
         <h1>Celá zakázka<br><em>na jednom místě.</em></h1>
-        <p>Od poptávky přes výpočet materiálu a nabídku až po fakturu a předávací protokol. Data máte bezpečně v cloudu – v telefonu na stavbě i v kanceláři.</p>
+        <p>Od poptávky přes výpočet materiálu a nabídku až po fakturu a předávací protokol. S účtem máte data bezpečně v cloudu – v telefonu na stavbě i v kanceláři.</p>
       </div>
-      <div class="vyhody"><div><i>✓</i>Nabídky, faktury s QR platbou, protokoly</div><div><i>✓</i>19 kalkulaček výměr a spotřeby materiálu</div><div><i>✓</i>Přehled, co je po splatnosti a co dnes řešit</div></div>
+      <div class="vyhody"><div><i>✓</i>Faktury s QR platbou a předávací protokoly zdarma, i bez registrace</div><div><i>✓</i>S licencí zakázky, nabídky, smlouvy a 19 kalkulaček materiálu</div><div><i>✓</i>Přehled, co je po splatnosti a co dnes řešit</div></div>
       <div class="metr-pruh" aria-hidden="true">${metrCisla()}</div>
     </section>
     <section class="prav">
@@ -901,6 +951,7 @@ function renderPrihlaseni(zprava) {
         <button class="btn zl" style="height:50px;font-size:17px" type="submit">${{ prihlasit: 'Přihlásit', registrace: 'Založit účet zdarma', zapomenute: 'Poslat odkaz na obnovu', noveheslo: 'Uložit heslo' }[r]}</button>
         ${r === 'prihlasit' ? `<div class="radek mal" style="justify-content:space-between"><a href="#" data-a="prihl-rezim" data-r="zapomenute">Zapomenuté heslo</a><a href="#" data-a="magic">Přihlásit odkazem z e-mailu</a></div>` : ''}
         ${r === 'zapomenute' ? `<a href="#" class="mal" data-a="prihl-rezim" data-r="prihlasit">← Zpět na přihlášení</a>` : ''}
+        ${r === 'noveheslo' ? '' : `<div class="bez-uctu"><a href="#" data-a="bez-uctu">Pokračovat bez účtu →</a><span class="tlumene mal">Faktury zdarma a bez registrace, data zůstanou v tomto prohlížeči.</span></div>`}
       </form>
     </section>
   </div>`;
@@ -908,18 +959,18 @@ function renderPrihlaseni(zprava) {
     e.preventDefault(); const f = formData(e.target); const btn = e.target.querySelector('[type=submit]'); btn.disabled = true;
     try {
       if (r === 'prihlasit') {
-        const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.heslo });
+        const { error } = await cloud.auth.signInWithPassword({ email: f.email, password: f.heslo });
         if (error) throw new Error(error.message.includes('Invalid') ? 'Špatný e-mail nebo heslo.' : error.message.includes('confirmed') ? 'E-mail ještě není potvrzený – klikněte na odkaz, který jsme vám poslali.' : error.message);
       } else if (r === 'registrace') {
         if ((f.heslo || '').length < 8) throw new Error('Heslo musí mít alespoň 8 znaků.');
-        const { data, error } = await sb.auth.signUp({ email: f.email, password: f.heslo, options: { data: { firma: f.firma, ico: f.ico }, emailRedirectTo: location.origin + location.pathname } });
+        const { data, error } = await cloud.auth.signUp({ email: f.email, password: f.heslo, options: { data: { firma: f.firma, ico: f.ico }, emailRedirectTo: location.origin + location.pathname } });
         if (error) throw new Error(error.message.includes('registered') ? 'Tento e-mail už má účet – přihlaste se.' : error.message);
         if (!data.session) { UI.prihlRezim = 'prihlasit'; return renderPrihlaseni({ t: 'ok', m: 'Hotovo! Poslali jsme vám e-mail s potvrzovacím odkazem. Po kliknutí se můžete přihlásit.' }); }
       } else if (r === 'zapomenute') {
-        const { error } = await sb.auth.resetPasswordForEmail(f.email, { redirectTo: location.origin + location.pathname });
+        const { error } = await cloud.auth.resetPasswordForEmail(f.email, { redirectTo: location.origin + location.pathname });
         if (error) throw error; return renderPrihlaseni({ t: 'ok', m: 'Pokud účet existuje, poslali jsme odkaz na nastavení nového hesla.' });
       } else if (r === 'noveheslo') {
-        const { error } = await sb.auth.updateUser({ password: f.heslo }); if (error) throw error;
+        const { error } = await cloud.auth.updateUser({ password: f.heslo }); if (error) throw error;
         UI.prihlRezim = 'prihlasit'; toast('Heslo změněno ✓'); return start();
       }
     } catch (err) { renderPrihlaseni({ t: 'err', m: err.message }); }
@@ -929,7 +980,7 @@ function renderPrihlaseni(zprava) {
 AKCE['prihl-rezim'] = el => { UI.prihlRezim = el.dataset.r; renderPrihlaseni(); };
 AKCE.magic = async () => {
   const email = $('#fPrihl [name=email]').value.trim(); if (!email) return renderPrihlaseni({ t: 'inf', m: 'Napište e-mail a klikněte znovu na „Přihlásit odkazem“.' });
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false } });
+  const { error } = await cloud.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false } });
   renderPrihlaseni(error ? { t: 'err', m: error.message } : { t: 'ok', m: 'Odkaz pro přihlášení je na cestě do vaší schránky.' });
 };
 
@@ -958,9 +1009,11 @@ function renderNastaveniFirmy() {
   if (m.ico) aresDoFormulare($('#fFirma')).then(() => { const f = $('#fFirma'); if (f && !f.nazev.value && f.elements.nazev) {} });
 }
 async function nactiFirmu() {
+  if (LOKAL) return lokalFirma();
   const cl = await q(sb.from('clenove').select('firma_id').eq('user_id', S.user.id).limit(1));
   if (!cl.length) { S.firma = null; return; }
   S.firma = await q(sb.from('firmy').select('*').eq('id', cl[0].firma_id).single());
+  await licNacti();
   doplnZapis();
 }
 /* Chybí-li u firmy zápis v rejstříku, doplní se z ARES a uloží (jednou za relaci, tiše) */
@@ -974,7 +1027,16 @@ async function doplnZapis() {
   } catch { }
 }
 
-AKCE.ucet = () => okno('Účet', `<div><div class="tuc">${esc(S.user.email)}</div><div class="tlumene mal">Data se ukládají automaticky do cloudu.</div></div>
+/* tlačítka zálohy – stejná v okně Data a účet i v Moje firma */
+const zalohaTl = () => `<button class="btn zl" type="button" data-a="zaloha-stahnout">${ik('instal')}Uložit zálohu do souboru</button>
+  <button class="btn" type="button" data-a="zaloha-obnovit">Obnovit ze zálohy…</button>${STARA_JE ? `<button class="btn" type="button" data-a="stara-nacist">Načíst data ze starší verze YeY</button>` : ''}`;
+const LOKAL_POPIS = 'Data jsou uložená jen v tomto prohlížeči. Po vymazání dat prohlížeče nebo na jiném zařízení je mít nebudete – proto si ukládejte zálohu do souboru.';
+AKCE.ucet = () => LOKAL ? okno('Data a účet', `<div><div class="tuc">Pracujete bez registrace</div><div class="tlumene mal">${LOKAL_POPIS}</div></div>
+  ${zalohaTl()}
+  <a class="btn" href="#firma" data-a="zavrit-jdi" data-h="firma">${ik('firma')}Moje firma a údaje na dokladech</a>${jeNainstalovano() ? '' : `<button class="btn" type="button" data-a="instalovat">${ik('instal')}Nainstalovat jako aplikaci</button>`}
+  <div class="tlumene mal" style="border-top:1px solid var(--linka-2);padding-top:12px">Účet ukládá data do cloudu, takže jsou na všech vašich zařízeních. Má vlastní data – ta z tohoto prohlížeče se do něj zatím nepřenášejí.</div>`,
+  `<button class="btn" type="button" data-a="k-prihlaseni">Přihlásit se k účtu</button>`)
+  : okno('Účet', `<div><div class="tuc">${esc(S.user.email)}</div><div class="tlumene mal">Data se ukládají automaticky do cloudu.</div></div>
   <a class="btn" href="#firma" data-a="zavrit-jdi" data-h="firma">${ik('firma')}Moje firma a údaje na dokladech</a>
   <button class="btn" type="button" data-a="zmena-hesla">Změnit heslo</button>${jeNainstalovano() ? '' : `<button class="btn" type="button" data-a="instalovat">${ik('instal')}Nainstalovat jako aplikaci</button>`}`,
   `<button class="btn cerv" type="button" data-a="odhlasit">${ik('odhl')}Odhlásit</button>`);
@@ -983,20 +1045,20 @@ let INSTAL = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTAL = e; });
 window.addEventListener('appinstalled', () => { INSTAL = null; toast('Aplikace YeY je nainstalovaná ✓'); try { render(); } catch { } });
 function jeNainstalovano() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => { });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
 AKCE.instalovat = async () => {
   if (INSTAL) { zavriOkno(); INSTAL.prompt(); const r = await INSTAL.userChoice.catch(() => null); INSTAL = null; if (r && r.outcome === 'accepted') toast('Instaluji aplikaci YeY…'); return; }
   const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const ff = /Firefox\//.test(navigator.userAgent);
-  okno('Nainstalovat aplikaci YeY', `<div class="radek" style="gap:14px;align-items:center"><img src="/ikony/ikona-192.png" alt="" width="64" height="64" style="border-radius:14px"><div>Aplikace se pak otevírá z plochy nebo z nabídky Start jako samostatný program, bez adresního řádku.</div></div>
+  okno('Nainstalovat aplikaci YeY', `<div class="radek" style="gap:14px;align-items:center"><img src="ikony/ikona-192.png" alt="" width="64" height="64" style="border-radius:14px"><div>Aplikace se pak otevírá z plochy nebo z nabídky Start jako samostatný program, bez adresního řádku.</div></div>
     ${ios ? `<ol style="margin:0;padding-left:20px;line-height:1.7"><li>Otevřete tuto stránku v <b>Safari</b>.</li><li>Klepněte na <b>Sdílet</b> (čtvereček se šipkou nahoru).</li><li>Zvolte <b>Přidat na plochu</b> a potvrďte <b>Přidat</b>.</li></ol>`
-    : ff ? `<div>Firefox instalaci aplikací nepodporuje. Otevřete <b>kancelar.yey.cz</b> v prohlížeči <b>Chrome</b> nebo <b>Edge</b> a zvolte instalaci tam.</div>`
+    : ff ? `<div>Firefox instalaci aplikací nepodporuje. Otevřete <b>${esc(location.host + location.pathname.replace(/\/$/, ''))}</b> v prohlížeči <b>Chrome</b> nebo <b>Edge</b> a zvolte instalaci tam.</div>`
     : `<ol style="margin:0;padding-left:20px;line-height:1.7"><li>V adresním řádku klikněte na ikonu <b>Nainstalovat</b> (monitor se šipkou), nebo</li><li>otevřete menu prohlížeče <b>⋮</b> → <b>Uložit a sdílet / Aplikace</b> → <b>Nainstalovat YeY</b>.</li><li>Na Androidu: menu <b>⋮</b> → <b>Přidat na plochu / Instalovat aplikaci</b>.</li></ol>`}`,
     `<button class="btn zl" data-a="zavrit">Rozumím</button>`);
 };
 AKCE['zavrit-jdi'] = el => { zavriOkno(); jdi(el.dataset.h); };
 AKCE['zmena-hesla'] = () => { UI.prihlRezim = 'noveheslo'; zavriOkno(); renderPrihlaseni(); };
-AKCE.odhlasit = async () => { await sb.auth.signOut(); location.hash = ''; location.reload(); };
+AKCE.odhlasit = async () => { await cloud.auth.signOut(); location.hash = ''; location.reload(); };
 
 /* =================== PŘEHLED =================== */
 POHLEDY.prehled = () => {
@@ -1039,7 +1101,7 @@ POHLEDY.prehled = () => {
         <div class="tlumene mal" style="margin-top:10px">Tip: zakázku posunete do další fáze přetažením karty.</div></section>
       <aside class="karta bok"><div class="karta-h"><h2>Co dnes řešit</h2></div>
         ${ukoly.length ? ukoly.slice(0, 8).map(u => `<div class="ukol"><span class="tecka" style="background:${u.b}"></span><div style="flex:1">${u.t}<div class="radek" style="margin-top:7px">${u.a}</div></div></div>`).join('') : '<div class="prazdno" style="padding:20px 0"><b>Nic nehoří 👌</b>Všechno je pod kontrolou.</div>'}
-        <div class="mal tlumene" style="border-top:1px solid var(--linka-2);padding-top:10px;margin-top:6px">✓ Vše se ukládá automaticky do cloudu</div>
+        <div class="mal tlumene" style="border-top:1px solid var(--linka-2);padding-top:10px;margin-top:6px">${ulozenoInfo()}</div>
       </aside>
     </div>`,
     po: () => {
@@ -1163,6 +1225,7 @@ AKCE['filtr-zak'] = el => { UI.filtrZak = el.dataset.f; render(); };
 AKCE['zpet-seznam'] = () => jdi('zakazky');
 AKCE['vyber-dok'] = el => { UI.vybranyDoklad[el.dataset.z] = el.dataset.id; render(); };
 AKCE['vytvor-dok'] = async el => {
+  if (brana('zakazky')) return;
   const z = zakazka(el.dataset.z); const typ = el.dataset.typ;
   const zdroj = typ !== 'nabidka' ? S.doklady.find(d => d.zakazka_id === z.id && d.typ === 'nabidka' && d.stav !== 'odmitnuto') : null;
   if (typ === 'faktura' && !(await hlidejDvojiFakturu(zdroj))) return;
@@ -1193,6 +1256,7 @@ AKCE.prevest = async el => {
 
 /* hlavní tlačítko „další krok“ – průvodce zakázkou */
 AKCE.krok = async el => {
+  if (brana('zakazky')) return;
   const z = zakazka(el.dataset.id); const dok = S.doklady.filter(d => d.zakazka_id === z.id);
   const nab = dok.find(d => d.typ === 'nabidka' && d.stav !== 'odmitnuto');
   if (z.faze === 'nabidka' || z.faze === 'poptavka') {
@@ -1238,6 +1302,7 @@ async function dataZakazky() {
   return { nazev: f.nazev, kontakt_id: f.kontakt_id || null, adresa: f.adresa || null, termin: f.termin || null, faze: f.faze, poznamka: f.poznamka || null };
 }
 AKCE['nova-zakazka'] = (el) => {
+  if (brana('zakazky')) return;
   okno('Nová zakázka', formZakazky({ kontakt_id: el?.dataset?.kontakt }), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-zak">Založit zakázku</button>`);
   poFormZak(AKCE['ulozit-zak']);
 };
@@ -1268,15 +1333,15 @@ POHLEDY.kontakty = t => {
     <div class="filtry" role="group" aria-label="Zobrazit kontakty">${prepinac.map(([v, n]) => `<button type="button" class="${tk === v ? 'akt' : ''}" aria-pressed="${tk === v}" data-a="kon-typ" data-t="${v}">${n} <span class="kon-n">${pocty[v]}</span></button>`).join('')}</div>
     <input type="search" class="vstup" id="hledKon" placeholder="Jméno, město, telefon, IČO…" value="${esc(UI.filtrKon)}" aria-label="Hledat kontakty"></div>
     <div class="polozky">${sez.map(kk => `<a class="p-pol ${kk.id === t.id ? 'akt' : ''}" href="#kontakty/${kk.id}" style="text-decoration:none;color:inherit"><div class="t"><b>${esc(kk.nazev)}</b>${tk === 'vse' && konTyp(kk) !== 'klient' ? `<span class="cip c-koncept">${KON_TYP[konTyp(kk)].toLowerCase()}</span>` : `<span class="mal num tlumene">${obrat(kk) ? kc0(obrat(kk)) : ''}</span>`}</div><div class="s"><span>${esc([kk.osoba, kk.mesto].filter(Boolean).join(' · ') || kk.telefon || '')}</span><span>${S.zakazky.filter(z => z.kontakt_id === kk.id).length || ''} ${S.zakazky.some(z => z.kontakt_id === kk.id) ? 'zak.' : ''}</span></div></a>`).join('')
-      || `<div class="prazdno"><b>${!S.kontakty.length ? 'Zatím žádné kontakty' : hl ? 'Nic nenalezeno' : tk === 'dodavatel' ? 'Zatím žádní dodavatelé' : 'Nic tu není'}</b>${tk === 'dodavatel' && !hl ? 'Přidejte dodavatele tlačítkem nahoře, nebo u existujícího kontaktu přepněte typ.' : 'Zákazníky můžete přidávat i rovnou při zakládání zakázky.'}</div>`}</div></section>`;
+      || `<div class="prazdno"><b>${!S.kontakty.length ? 'Zatím žádné kontakty' : hl ? 'Nic nenalezeno' : tk === 'dodavatel' ? 'Zatím žádní dodavatelé' : 'Nic tu není'}</b>${tk === 'dodavatel' && !hl ? 'Přidejte dodavatele tlačítkem nahoře, nebo u existujícího kontaktu přepněte typ.' : ma('zakazky') ? 'Zákazníky můžete přidávat i rovnou při zakládání zakázky.' : 'Zákazníky můžete přidávat i rovnou při vystavování faktury.'}</div>`}</div></section>`;
   let detail = `<section class="p-detail"><div class="prazdno" style="margin-top:12vh"><b>Vyberte kontakt</b>nebo přidejte nový – s IČO doplníme údaje z ARES.</div></section>`;
   if (k) {
     const zak = S.zakazky.filter(z => z.kontakt_id === k.id); const dok = S.doklady.filter(d => d.kontakt_id === k.id);
     detail = `<section class="p-detail"><div class="drobky"><a href="#kontakty">← Kontakty</a></div>
       <div class="radek" style="justify-content:space-between;align-items:flex-end"><div><h1>${esc(k.nazev)}</h1><div class="filtry" role="group" aria-label="Typ kontaktu" style="margin:6px 0">${Object.entries(KON_TYP).map(([v, n]) => `<button type="button" class="${konTyp(k) === v ? 'akt' : ''}" aria-pressed="${konTyp(k) === v}" data-a="kon-zmen-typ" data-id="${k.id}" data-t="${v}">${n}</button>`).join('')}</div><div class="tlumene">${esc([k.osoba, k.ico ? 'IČO ' + k.ico : '', k.dic ? 'DIČ ' + k.dic : ''].filter(Boolean).join(' · '))}</div></div>
-      <div class="radek">${k.telefon ? `<a class="btn" href="tel:${esc(k.telefon)}">${ik('tel')}Zavolat</a>` : ''}${k.email ? `<a class="btn" href="mailto:${esc(k.email)}">${ik('mail')}E-mail</a>` : ''}<button class="btn" data-a="upravit-kontakt" data-id="${k.id}">Upravit</button>${konTyp(k) === 'dodavatel' ? '' : `<button class="btn zl" data-a="nova-zakazka" data-kontakt="${k.id}">${ik('plus')}Zakázka</button>`}</div></div>
+      <div class="radek">${k.telefon ? `<a class="btn" href="tel:${esc(k.telefon)}">${ik('tel')}Zavolat</a>` : ''}${k.email ? `<a class="btn" href="mailto:${esc(k.email)}">${ik('mail')}E-mail</a>` : ''}<button class="btn" data-a="upravit-kontakt" data-id="${k.id}">Upravit</button>${konTyp(k) === 'dodavatel' ? '' : ma('zakazky') ? `<button class="btn zl" data-a="nova-zakazka" data-kontakt="${k.id}">${ik('plus')}Zakázka</button>` : `<button class="btn zl" data-a="faktura-kontaktu" data-kontakt="${k.id}">${ik('plus')}Faktura</button>`}</div></div>
       <div class="mrizka m3"><div class="karta"><div class="tlumene mal tuc">Telefon</div><div>${esc(k.telefon || '—')}</div></div><div class="karta"><div class="tlumene mal tuc">E-mail</div><div style="word-break:break-all">${esc(k.email || '—')}</div></div><div class="karta"><div class="tlumene mal tuc">Adresa</div><div>${esc([k.ulice, [k.psc, k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '—')}</div></div></div>
-      <section class="karta"><div class="karta-h"><h3>Zakázky (${zak.length})</h3></div>${zak.map(z => `<a class="dokl" href="#zakazky/${z.id}" style="margin-bottom:6px"><b>${esc(z.nazev)}</b><span class="cip c-${z.faze}">${FAZE_N[z.faze]}</span></a>`).join('') || '<div class="tlumene">Žádné zakázky.</div>'}</section>
+      <section class="karta ${ma('zakazky') || zak.length ? '' : 'skryt'}"><div class="karta-h"><h3>Zakázky (${zak.length})</h3></div>${zak.map(z => `<a class="dokl" href="#zakazky/${z.id}" style="margin-bottom:6px"><b>${esc(z.nazev)}</b><span class="cip c-${z.faze}">${FAZE_N[z.faze]}</span></a>`).join('') || '<div class="tlumene">Žádné zakázky.</div>'}</section>
       <section class="karta"><div class="karta-h"><h3>Doklady (${dok.length})</h3></div><div class="obal-tab"><table class="tab"><tbody>${dok.map(d => `<tr class="klik" data-a="otevrit-dok" data-id="${d.id}"><td>${TYP[d.typ]}</td><td class="tuc">${esc(d.cislo)}</td><td>${datum(d.datum)}</td><td>${cipStav(d)}</td><td class="r num tuc">${d.typ === 'protokol' ? '' : kc0(celkem(d))}</td></tr>`).join('') || '<tr><td class="tlumene">Žádné doklady.</td></tr>'}</tbody></table></div></section>
       ${k.poznamka ? `<div class="hlaska inf">${esc(k.poznamka)}</div>` : ''}</section>`;
   }
@@ -1285,6 +1350,7 @@ POHLEDY.kontakty = t => {
   } };
 };
 AKCE['otevrit-dok'] = el => jdi('doklad/' + el.dataset.id);
+AKCE['faktura-kontaktu'] = async el => { const d = await novyDoklad('faktura', { kontakt_id: el.dataset.kontakt }); jdi('doklad/' + d.id); };
 /** Ikona předávacího protokolu v řádku faktury – klik otevře protokol. */
 function prIkona(f) { if (f.typ !== 'faktura') return ''; const p = fakturaProtokoly(f)[0];
   return p ? ` <button type="button" class="pr-ik" data-a="otevrit-dok" data-id="${p.id}" title="Předávací protokol ${esc(p.cislo)} – otevřít" aria-label="Otevřít předávací protokol ${esc(p.cislo)}">${ik('protokol', 16)}</button>` : ''; }
@@ -1349,19 +1415,27 @@ POHLEDY.doklady = t => {
   const poSpl = S.doklady.filter(poSplatnosti).length;
   const bezCastky = typ === 'protokol', sl3 = typ === 'nabidka' ? 'Platnost' : typ === 'faktura' ? 'Splatnost' : '';
   const zalozky = DOK_ZALOZKY.map(z => { const n = S.doklady.filter(d => typyZ(z).includes(d.typ)).length;
-    return `<a href="#doklady?typ=${z}" class="${z === typ ? 'akt' : ''}" ${z === typ ? 'aria-current="page"' : ''}>${ik(IK_TYP[z])}${TYP_MN[z]}${z === 'faktura' && poSpl ? `<span class="pocet cerv" title="po splatnosti">${poSpl}</span>` : n ? `<span class="pocet">${n}</span>` : ''}</a>`; }).join('');
+    return `<a href="#doklady?typ=${z}" class="${z === typ ? 'akt' : ''}" ${z === typ ? 'aria-current="page"' : ''}>${ik(IK_TYP[z])}${TYP_MN[z]}${z === 'faktura' && poSpl ? `<span class="pocet cerv" title="po splatnosti">${poSpl}</span>` : n ? `<span class="pocet">${n}</span>` : ''}${ma(z) ? '' : `<span class="zamek" title="Součást licence">${ik('zamek', 14)}</span>`}</a>`; }).join('');
+  const zamTyp = !ma(typ), bezKanc = !ma('zakazky');
+  const uvod = bezKanc && typ === 'faktura' && !S.doklady.length;   // první spuštění bezplatné verze
   return { html: `
-    <div class="uvitani"><div><h1>Doklady</h1><div class="tlumene">${TYP_MN[typ]}: ${s.length}${bezCastky ? '' : ' · celkem <b class="num">' + kc0(suma) + '</b>'}</div></div>
-      <div class="radek">${typ === 'faktura' ? `<button class="btn" data-a="novy-doklad" data-typ="zalohova">Zálohová faktura</button>` : ''}${typ === 'protokol' ? '' : `<button class="btn zl" data-a="novy-doklad" data-typ="${typ}">${ik('plus')}${TYP_NOVY[typ]}</button>`}</div></div>
+    <div class="uvitani"><div><h1>${bezKanc && typ === 'faktura' ? 'Faktury' : 'Doklady'}</h1><div class="tlumene">${TYP_MN[typ]}: ${s.length}${bezCastky ? '' : ' · celkem <b class="num">' + kc0(suma) + '</b>'}</div></div>
+      <div class="radek">${typ === 'faktura' ? `<button class="btn" data-a="novy-doklad" data-typ="zalohova">Zálohová faktura${ma('zalohova') ? '' : ' ' + ik('zamek', 14)}</button>` : ''}${typ === 'protokol' ? '' : `<button class="btn zl" data-a="novy-doklad" data-typ="${typ}">${ik(zamTyp ? 'zamek' : 'plus')}${TYP_NOVY[typ]}</button>`}</div></div>
+    ${uvod ? `<div class="karta" style="margin-bottom:18px;background:var(--metr-bg);border-color:#F0DFA0"><h2>Vítejte v YeY</h2>
+      <p style="margin:8px 0 14px">Faktury s QR platbou a předávací protokol k faktuře tu vystavíte zdarma a bez registrace. Nejdřív doplňte údaje své firmy – podle IČO je načteme z ARES – a pak vystavte první fakturu.</p>
+      <div class="radek"><a class="btn ${S.firma.ico ? '' : 'zl'}" href="#firma">${ik('firma')}${S.firma.ico ? 'Údaje firmy' : 'Doplnit údaje firmy'}</a><button class="btn ${S.firma.ico ? 'zl' : ''}" data-a="novy-doklad" data-typ="faktura">${ik('plus')}Vystavit první fakturu</button></div></div>` : ''}
     <nav class="zalozky" aria-label="Typ dokladu">${zalozky}</nav>
     <div class="karta">
       <div class="radek" style="margin-bottom:12px"><div class="filtry">${filtry.map(([k, n]) => `<a href="#doklady?typ=${typ}&f=${k}" style="text-decoration:none"><button type="button" class="${fAkt === k ? 'akt' : ''}" tabindex="-1">${n}</button></a>`).join('')}</div><span class="mezera"></span>
         <input type="search" id="hledDok" class="vstup" style="max-width:300px" placeholder="Číslo, klient, předmět…" value="${esc(UI.hledatDok)}" aria-label="Hledat doklady"></div>
       ${s.length ? `<div class="obal-tab"><table class="tab tab-dok"><thead><tr><th>Číslo</th><th>Klient / předmět</th><th>Vystaveno</th><th>${sl3}</th><th>Stav</th><th class="r">${bezCastky ? '' : 'Částka'}</th></tr></thead><tbody>
         ${s.map(d => `<tr class="klik" data-a="otevrit-dok" data-id="${d.id}"><td class="tuc">${esc(d.cislo)}${prIkona(d)}${d.typ === 'zalohova' ? ' <span class="cip c-koncept">záloha</span>' : d.typ === 'dobropis' ? ' <span class="cip c-koncept">dobropis</span>' : ''}</td><td><b>${esc(kontakt(d.kontakt_id)?.nazev || '—')}</b><div class="tlumene mal">${esc(d.predmet || '')}</div></td><td>${datum(d.datum)}</td><td>${sl3 && d.splatnost ? datum(d.splatnost) : ''}</td><td>${cipStav(d)}</td><td class="r num tuc">${bezCastky ? '' : kc(celkem(d))}</td></tr>`).join('')}
-      </tbody></table></div>` : `<div class="prazdno"><b>${TYP_MN[typ]}: nic tu není</b>${S.doklady.some(d => typy.includes(d.typ)) ? 'Zkuste jiný filtr nebo hledaný výraz.' : 'Nejrychleji vzniknou ze zakázky – žlutým tlačítkem dalšího kroku.'}</div>`}
+      </tbody></table></div>` : `<div class="prazdno"><b>${TYP_MN[typ]}: nic tu není</b>${S.doklady.some(d => typy.includes(d.typ)) ? 'Zkuste jiný filtr nebo hledaný výraz.'
+        : zamTyp ? `${TYP_MN[typ]} jsou součástí licence YeY.<div style="margin-top:14px"><button class="btn" data-a="novy-doklad" data-typ="${typ}">${ik('zamek', 16)}Co licence odemkne</button></div>`
+        : bezKanc ? 'Novou fakturu vystavíte žlutým tlačítkem nahoře. Předávací protokol pak vytvoříte přímo z faktury.' : 'Nejrychleji vzniknou ze zakázky – žlutým tlačítkem dalšího kroku.'}</div>`}
       ${typ === 'protokol' ? '<p class="tlumene mal" style="margin:12px 0 0">Starší protokoly bez faktury a zakázky. Nový protokol vytvoříte ve faktuře (tlačítko Předávací protokol), dílčí v zakázce.</p>' : ''}
-    </div>`, po: () => { $('.zalozky .akt')?.scrollIntoView({ block: 'nearest', inline: 'center' }); const h = $('#hledDok'); h.oninput = debounce(() => { UI.hledatDok = h.value; const p = h.selectionStart; render().then(() => { const n = $('#hledDok'); n.focus(); n.setSelectionRange(p, p); }); }, 200); } };
+    </div>
+    <div class="mal tlumene" style="margin-top:12px">${ulozenoInfo()}</div>`, po: () => { $('.zalozky .akt')?.scrollIntoView({ block: 'nearest', inline: 'center' }); const h = $('#hledDok'); h.oninput = debounce(() => { UI.hledatDok = h.value; const p = h.selectionStart; render().then(() => { const n = $('#hledDok'); n.focus(); n.setSelectionRange(p, p); }); }, 200); } };
 };
 AKCE['novy-doklad'] = async el => { const d = await novyDoklad(el.dataset.typ, { zakazka_id: el.dataset.zak || null }); jdi('doklad/' + d.id); };
 
@@ -1496,7 +1570,7 @@ function smlouvaPohled(d) {
       <form id="fDok" class="karta mrizka">
         <h3>Smluvní strany a předmět</h3>
         <div class="mrizka m2"><label class="pole">Objednatel<select name="kontakt_id">${edKontaktyOpt(d.kontakt_id)}</select></label>
-          <label class="pole">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label></div>
+          <label class="pole ${ma('zakazky') || S.zakazky.length ? '' : 'skryt'}">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label></div>
         <label class="pole">Předmět díla<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny v bytě č. 12"></label>
         <label class="pole">Rozsah a specifikace díla<textarea name="u.rozsah" rows="2">${esc(u.rozsah)}</textarea></label>
         <h3>Místo a termíny</h3>
@@ -1842,7 +1916,7 @@ POHLEDY.doklad = async t => {
       <form id="fDok" class="karta mrizka">
         <div class="mrizka m2">
           <label class="pole">Klient<select name="kontakt_id">${edKontaktyOpt(d.kontakt_id)}</select></label>
-          <label class="pole">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label>
+          <label class="pole ${ma('zakazky') || S.zakazky.length ? '' : 'skryt'}">Zakázka<select name="zakazka_id">${zakOpt(d.zakazka_id)}</select></label>
         </div>
         <label class="pole">Předmět<input name="predmet" value="${esc(d.predmet)}" placeholder="např. Rekonstrukce koupelny"></label>
         <div class="mrizka m2">
@@ -1866,11 +1940,11 @@ POHLEDY.doklad = async t => {
         <div class="karta-h"><h3>Položky</h3>
           <div class="rozb"><button type="button" class="btn mal" data-a="rozb" aria-haspopup="menu">${ik('plus', 16)}Vložit položky ${ik('dolu', 14)}</button>
             <div class="rozb-menu" role="menu">
-              ${S.cenik.length ? `<button type="button" role="menuitem" data-a="z-ceniku">${ik('cenik')}Z ceníku prací</button>` : `<a role="menuitem" href="#cenik">${ik('cenik')}Z ceníku prací <span class="tlumene mal">– zatím prázdný</span></a>`}
-              <button type="button" role="menuitem" data-a="z-katalogu">${ik('hledat')}Z katalogu materiálu</button>
-              <button type="button" role="menuitem" data-a="kosik-otevri">${ik('zakazky')}Z obchodu <span class="tlumene mal">– Hornbach, OBI, Bauhaus…</span></button>
-              ${d.typ !== 'protokol' ? `<a role="menuitem" href="#kalkulacky?doklad=${d.id}">${ik('kalk')}Z kalkulačky</a>` : ''}
-              <button type="button" role="menuitem" data-a="z-excelu">${ik('nabidka')}Z Excelu</button>
+              ${(zm => `${S.cenik.length || !ma('cenik') ? `<button type="button" role="menuitem" data-a="z-ceniku">${ik('cenik')}Z ceníku prací${zm('cenik')}</button>` : `<a role="menuitem" href="#cenik">${ik('cenik')}Z ceníku prací <span class="tlumene mal">– zatím prázdný</span></a>`}
+              <button type="button" role="menuitem" data-a="z-katalogu">${ik('hledat')}Z katalogu materiálu${zm('katalog')}</button>
+              <button type="button" role="menuitem" data-a="kosik-otevri">${ik('zakazky')}Z obchodu <span class="tlumene mal">– Hornbach, OBI, Bauhaus…</span>${zm('obchody')}</button>
+              ${d.typ !== 'protokol' ? `<a role="menuitem" href="#kalkulacky?doklad=${d.id}">${ik('kalk')}Z kalkulačky${zm('kalkulacky')}</a>` : ''}
+              <button type="button" role="menuitem" data-a="z-excelu">${ik('nabidka')}Z Excelu${zm('excel')}</button>`)(k => ma(k) ? '' : `<span class="zamek" title="Součást licence">${ik('zamek', 14)}</span>`)}
             </div></div></div>
         <div class="obal-tab"><table class="pol-tab"><thead><tr><th>Název</th><th class="c" style="width:92px">Množství</th><th style="width:70px">MJ</th><th style="width:104px">Kategorie</th>${d.typ === 'protokol' ? '' : `<th class="c" style="width:100px">Cena/MJ</th>${dph ? '<th class="c" style="width:64px">DPH %</th>' : ''}<th class="c" style="width:100px">Celkem</th>`}<th></th></tr></thead>
           <tbody id="edPol"></tbody></table></div>
@@ -2158,6 +2232,7 @@ AKCE['storno-dobropis'] = async () => {
 AKCE['smazat-dok'] = async () => { const d = doklad(ED.d.id); const z = d.zakazka_id; if (await smazDoklad(d.id)) jdi(z ? 'zakazky/' + z : 'doklady?typ=' + d.typ); };
 AKCE['kopie-dok'] = async () => { const d = await novyDoklad(ED.d.typ, { zdroj: doklad(ED.d.id) }); toast('Vytvořena kopie ' + d.cislo); jdi('doklad/' + d.id); };
 AKCE['z-ceniku'] = () => {
+  if (brana('cenik')) return;
   okno('Vybrat z ceníku', `<input class="vstup" id="cenHled" placeholder="Hledat…" autofocus><div id="cenSez" style="max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:6px"></div>`, `<button class="btn" data-a="zavrit">Hotovo</button>`);
   const kresli = () => { const h = $('#cenHled').value.toLowerCase(); $('#cenSez').innerHTML = S.cenik.filter(c => !h || (c.nazev + ' ' + (c.kategorie || '')).toLowerCase().includes(h)).map(c => `<button class="dokl" data-a="vloz-cenik" data-id="${c.id}"><span><b>${esc(c.nazev)}</b> <span class="tlumene mal">${esc(c.kategorie || '')}</span></span><span class="num tuc">${kc(c.cena)}/${esc(c.mj)}</span></button>`).join('') || '<div class="tlumene">Nic nenalezeno.</div>'; };
   $('#cenHled').oninput = kresli; kresli();
@@ -2167,7 +2242,7 @@ AKCE['vloz-cenik'] = el => { const c = S.cenik.find(x => x.id === el.dataset.id)
 /* ---- nabídka bez zakázky: zakázka se založí sama a pojmenuje podle nabídky ---- */
 function edNazevZakazky(d) { const k = kontakt(d.kontakt_id); return [String(d.predmet || '').trim(), k?.nazev].filter(Boolean).join(' – '); }
 async function edAutoZakazka() {
-  const d = ED?.d; if (!d || d.typ !== 'nabidka' || ED.bezAutoZak || ED.autoBezi) return;
+  const d = ED?.d; if (!d || d.typ !== 'nabidka' || ED.bezAutoZak || ED.autoBezi || !ma('zakazky')) return;
   const nazev = edNazevZakazky(d); if (!nazev) return;
   const k = kontakt(d.kontakt_id);
   if (d.zakazka_id) {
@@ -2217,6 +2292,7 @@ function edZmenaZakazky(nova) {
 /* ---- nová zakázka přímo z dokladu ---- */
 function zakOpt(vyb) { return `<option value="">— bez zakázky —</option><option value="__nova_zak">+ Nová zakázka…</option>${S.zakazky.map(zz => `<option value="${zz.id}" ${zz.id === vyb ? 'selected' : ''}>${esc(zz.nazev)}</option>`).join('')}`; }
 function edNovaZakazka() {
+  if (brana('zakazky')) return;
   const faze = ED.d.typ === 'nabidka' ? 'nabidka' : jeFakt(ED.d.typ) ? 'fakturace' : 'realizace';
   okno('Nová zakázka', formZakazky({ nazev: ED.d.predmet || '', kontakt_id: ED.d.kontakt_id, faze }), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="ulozit-zak-dok">Založit a přiřadit</button>`);
   poFormZak(AKCE['ulozit-zak-dok']);
@@ -2239,6 +2315,7 @@ function katNakup(p) { return p.cena == null ? null : S.firma.platce_dph ? p.cen
 function katProdej(p) { const n = katNakup(p); return n == null ? 0 : Math.round(n * (1 + katPrirazka() / 100) * 100) / 100; }
 function katDotaz() { return ($('#katHled')?.value || '').split(/\s+/).filter(w => w && w[0] !== '-').join(' '); }
 AKCE['z-katalogu'] = async () => {
+  if (brana('katalog')) return;
   const dphTxt = S.firma.platce_dph ? 'bez DPH' : 's DPH';
   okno('Vybrat z katalogu', `
     <div class="radek" style="gap:8px;flex-wrap:wrap">
@@ -2326,9 +2403,9 @@ AKCE['ext-hledat'] = el => {
   obchodOtevri(url);
 };
 /* ---- obchod v okně vedle aplikace + záložka „YeY ⇢ vložit“ s plovoucím okénkem přímo na stránce obchodu ---- */
-const ZALOZKA_SRC = "(function () {var APP = '__APP__';var old = document.getElementById('yey-vlozit'); if (old) { old.remove(); return; }var q = function (s) { return document.querySelector(s); };var meta = function (k) { var e = q('meta[property=\"' + k + '\"],meta[name=\"' + k + '\"],meta[itemprop=\"' + k + '\"]'); return e ? e.getAttribute('content') : ''; };var num = function (v) { if (v == null || v === '') return null; v = String(v).replace(/\\s| |Kč|CZK|,-/gi, ''); if (v.indexOf(',') > -1 && v.indexOf('.') > -1) v = v.replace(/\\./g, '').replace(',', '.'); else v = v.replace(',', '.'); var n = parseFloat(v); return isFinite(n) ? n : null; };var prod = function (x) {if (!x || typeof x !== 'object') return null;if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) { var r = prod(x[i]); if (r) return r; } return null; }var t = [].concat(x['@type'] || []).join(' ');if (/Product/i.test(t)) return x;return prod(x['@graph']) || prod(x.mainEntity);};var nazev = '', cena = null, foto = '', kod = '';document.querySelectorAll('script[type=\"application/ld+json\"]').forEach(function (s) {if (nazev && cena != null) return;try {var p = prod(JSON.parse(s.textContent)); if (!p) return;nazev = nazev || p.name || '';var o = p.offers; if (Array.isArray(o)) o = o[0];if (o && cena == null) cena = num(o.price != null ? o.price : (o.lowPrice != null ? o.lowPrice : (o.priceSpecification && o.priceSpecification.price)));foto = foto || [].concat(p.image || [])[0] || ''; if (foto && typeof foto === 'object') foto = foto.url || '';kod = kod || p.sku || p.gtin13 || p.mpn || '';} catch (e) { }});if (!nazev) nazev = meta('og:title') || ((q('h1') || {}).innerText || document.title || '').trim();if (cena == null) cena = num(meta('product:price:amount') || meta('og:price:amount') || meta('price') || ((q('[itemprop=price]') || {}).getAttribute ? (q('[itemprop=price]').getAttribute('content') || q('[itemprop=price]').textContent) : ''));nazev = String(nazev).replace(/\\s*[|–-]\\s*(HORNBACH|BAUHAUS|OBI|UNI HOBBY)[^|]*$/i, '').replace(/\\s+/g, ' ').trim().slice(0, 300);var TOKEN = '__TOKEN__';var d = document.createElement('div'); d.id = 'yey-vlozit';d.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:2147483647;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#15233c;border:2px solid #F5B800;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);font:14px/1.4 Arial,Helvetica,sans-serif;padding:14px;text-align:left');var inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #cfd6dc;border-radius:8px;padding:0 10px;font:inherit;color:#15233c;background:#fff;margin:3px 0 8px';var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>\"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]; }); };d.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:8px\"><b style=\"font-size:15px\">YeY – vložit do dokladu</b><button type=\"button\" data-x style=\"border:0;background:none;font-size:20px;cursor:pointer;color:#5d6b76;line-height:1\">×</button></div>' + (foto ? '<img src=\"' + esc(foto) + '\" alt=\"\" style=\"width:56px;height:56px;object-fit:contain;float:right;margin:0 0 6px 8px\">' : '') + '<label style=\"font-size:12px;color:#5d6b76\">Název<input data-n style=\"' + inp + '\" value=\"' + esc(nazev) + '\"></label>' + '<div style=\"display:flex;gap:8px\"><label style=\"flex:1.3;font-size:12px;color:#5d6b76\">Cena s DPH<input data-c inputmode=\"decimal\" style=\"' + inp + '\" value=\"' + (cena != null ? String(cena).replace('.', ',') : '') + '\"></label>' + '<label style=\"flex:.8;font-size:12px;color:#5d6b76\">MJ<input data-j style=\"' + inp + '\" value=\"ks\"></label>' + '<label style=\"flex:1;font-size:12px;color:#5d6b76\">Množství<input data-m inputmode=\"decimal\" style=\"' + inp + '\" value=\"1\"></label></div>' + '<button type=\"button\" data-v style=\"width:100%;height:40px;border:0;border-radius:9px;background:#F5B800;color:#15233c;font:inherit;font-weight:700;cursor:pointer\">Vložit do YeY</button>' + '<div data-s style=\"font-size:12px;color:#5d6b76;margin-top:8px\">' + (cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : 'Zkontrolujte údaje a vložte.') + '</div>';document.body.appendChild(d);var st = d.querySelector('[data-s]');d.querySelector('[data-x]').onclick = function () { d.remove(); };d.querySelector('[data-v]').onclick = function () {var data = { typ: 'yey-produkt', v: 1, nazev: d.querySelector('[data-n]').value.trim(), cena: num(d.querySelector('[data-c]').value), mj: d.querySelector('[data-j]').value.trim() || 'ks',mnozstvi: num(d.querySelector('[data-m]').value) || 1, odkaz: location.href, obchod: location.hostname.replace(/^www\\./, ''), kod: String(kod || '') };if (!data.nazev) { st.textContent = 'Vyplňte název.'; return; }if (data.cena == null) { st.textContent = 'Vyplňte cenu.'; return; }data.foto = /^https:/.test(foto) ? String(foto).slice(0, 500) : ''; data.token = TOKEN; data.odkaz = String(data.odkaz).slice(0, 600);var u = APP + '/vloz.html#d=' + encodeURIComponent(JSON.stringify(data));var w = window.open(u, 'yey-prijem', 'popup=yes,width=440,height=320,top=60,left=' + Math.max(0, (screen.availWidth || 1200) - 470));st.innerHTML = w ? '<b style=\"color:#1e7a3c\">✓ Odesláno do YeY.</b> Můžete pokračovat dalším zbožím.' : '<a href=\"' + esc(u) + '\" target=\"_blank\" style=\"color:#b3261e;font-weight:700\">Prohlížeč zablokoval okno – klikněte sem a zboží se odešle do YeY.</a>';};window.addEventListener('message', function (e) {if (e.origin !== APP || !e.data || e.data.typ !== 'yey-ok') return;st.innerHTML = e.data.ok ? '<b style=\"color:#1e7a3c\">✓ ' + esc(e.data.text) + '</b>' : '<b style=\"color:#b3261e\">' + esc(e.data.text) + '</b>';});})();";
+const ZALOZKA_SRC = "(function () {var APP = '__APP__';var old = document.getElementById('yey-vlozit'); if (old) { old.remove(); return; }var q = function (s) { return document.querySelector(s); };var meta = function (k) { var e = q('meta[property=\"' + k + '\"],meta[name=\"' + k + '\"],meta[itemprop=\"' + k + '\"]'); return e ? e.getAttribute('content') : ''; };var num = function (v) { if (v == null || v === '') return null; v = String(v).replace(/\\s| |Kč|CZK|,-/gi, ''); if (v.indexOf(',') > -1 && v.indexOf('.') > -1) v = v.replace(/\\./g, '').replace(',', '.'); else v = v.replace(',', '.'); var n = parseFloat(v); return isFinite(n) ? n : null; };var prod = function (x) {if (!x || typeof x !== 'object') return null;if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) { var r = prod(x[i]); if (r) return r; } return null; }var t = [].concat(x['@type'] || []).join(' ');if (/Product/i.test(t)) return x;return prod(x['@graph']) || prod(x.mainEntity);};var nazev = '', cena = null, foto = '', kod = '';document.querySelectorAll('script[type=\"application/ld+json\"]').forEach(function (s) {if (nazev && cena != null) return;try {var p = prod(JSON.parse(s.textContent)); if (!p) return;nazev = nazev || p.name || '';var o = p.offers; if (Array.isArray(o)) o = o[0];if (o && cena == null) cena = num(o.price != null ? o.price : (o.lowPrice != null ? o.lowPrice : (o.priceSpecification && o.priceSpecification.price)));foto = foto || [].concat(p.image || [])[0] || ''; if (foto && typeof foto === 'object') foto = foto.url || '';kod = kod || p.sku || p.gtin13 || p.mpn || '';} catch (e) { }});if (!nazev) nazev = meta('og:title') || ((q('h1') || {}).innerText || document.title || '').trim();if (cena == null) cena = num(meta('product:price:amount') || meta('og:price:amount') || meta('price') || ((q('[itemprop=price]') || {}).getAttribute ? (q('[itemprop=price]').getAttribute('content') || q('[itemprop=price]').textContent) : ''));nazev = String(nazev).replace(/\\s*[|–-]\\s*(HORNBACH|BAUHAUS|OBI|UNI HOBBY)[^|]*$/i, '').replace(/\\s+/g, ' ').trim().slice(0, 300);var TOKEN = '__TOKEN__';var d = document.createElement('div'); d.id = 'yey-vlozit';d.setAttribute('style', 'position:fixed;right:16px;bottom:16px;z-index:2147483647;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#15233c;border:2px solid #F5B800;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);font:14px/1.4 Arial,Helvetica,sans-serif;padding:14px;text-align:left');var inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #cfd6dc;border-radius:8px;padding:0 10px;font:inherit;color:#15233c;background:#fff;margin:3px 0 8px';var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>\"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]; }); };d.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:8px\"><b style=\"font-size:15px\">YeY – vložit do dokladu</b><button type=\"button\" data-x style=\"border:0;background:none;font-size:20px;cursor:pointer;color:#5d6b76;line-height:1\">×</button></div>' + (foto ? '<img src=\"' + esc(foto) + '\" alt=\"\" style=\"width:56px;height:56px;object-fit:contain;float:right;margin:0 0 6px 8px\">' : '') + '<label style=\"font-size:12px;color:#5d6b76\">Název<input data-n style=\"' + inp + '\" value=\"' + esc(nazev) + '\"></label>' + '<div style=\"display:flex;gap:8px\"><label style=\"flex:1.3;font-size:12px;color:#5d6b76\">Cena s DPH<input data-c inputmode=\"decimal\" style=\"' + inp + '\" value=\"' + (cena != null ? String(cena).replace('.', ',') : '') + '\"></label>' + '<label style=\"flex:.8;font-size:12px;color:#5d6b76\">MJ<input data-j style=\"' + inp + '\" value=\"ks\"></label>' + '<label style=\"flex:1;font-size:12px;color:#5d6b76\">Množství<input data-m inputmode=\"decimal\" style=\"' + inp + '\" value=\"1\"></label></div>' + '<button type=\"button\" data-v style=\"width:100%;height:40px;border:0;border-radius:9px;background:#F5B800;color:#15233c;font:inherit;font-weight:700;cursor:pointer\">Vložit do YeY</button>' + '<div data-s style=\"font-size:12px;color:#5d6b76;margin-top:8px\">' + (cena == null ? 'Cenu jsem na stránce nenašel – doplňte ji.' : 'Zkontrolujte údaje a vložte.') + '</div>';document.body.appendChild(d);var st = d.querySelector('[data-s]');d.querySelector('[data-x]').onclick = function () { d.remove(); };d.querySelector('[data-v]').onclick = function () {var data = { typ: 'yey-produkt', v: 1, nazev: d.querySelector('[data-n]').value.trim(), cena: num(d.querySelector('[data-c]').value), mj: d.querySelector('[data-j]').value.trim() || 'ks',mnozstvi: num(d.querySelector('[data-m]').value) || 1, odkaz: location.href, obchod: location.hostname.replace(/^www\\./, ''), kod: String(kod || '') };if (!data.nazev) { st.textContent = 'Vyplňte název.'; return; }if (data.cena == null) { st.textContent = 'Vyplňte cenu.'; return; }data.foto = /^https:/.test(foto) ? String(foto).slice(0, 500) : ''; data.token = TOKEN; data.odkaz = String(data.odkaz).slice(0, 600);var u = APP + '__CESTA__vloz.html#d=' + encodeURIComponent(JSON.stringify(data));var w = window.open(u, 'yey-prijem', 'popup=yes,width=440,height=320,top=60,left=' + Math.max(0, (screen.availWidth || 1200) - 470));st.innerHTML = w ? '<b style=\"color:#1e7a3c\">✓ Odesláno do YeY.</b> Můžete pokračovat dalším zbožím.' : '<a href=\"' + esc(u) + '\" target=\"_blank\" style=\"color:#b3261e;font-weight:700\">Prohlížeč zablokoval okno – klikněte sem a zboží se odešle do YeY.</a>';};window.addEventListener('message', function (e) {if (e.origin !== APP || !e.data || e.data.typ !== 'yey-ok') return;st.innerHTML = e.data.ok ? '<b style=\"color:#1e7a3c\">✓ ' + esc(e.data.text) + '</b>' : '<b style=\"color:#b3261e\">' + esc(e.data.text) + '</b>';});})();";
 function zalToken() { try { let t = localStorage.getItem('yey-zal-token'); if (!t) { t = uid() + uid(); localStorage.setItem('yey-zal-token', t); } return t; } catch { return ''; } }
-const zalozkaHref = () => 'javascript:' + encodeURIComponent(ZALOZKA_SRC.replace('__APP__', location.origin).replace('__TOKEN__', zalToken()));
+const zalozkaHref = () => 'javascript:' + encodeURIComponent(ZALOZKA_SRC.replace('__APP__', location.origin).replace('__CESTA__', location.pathname.replace(/[^/]*$/, '')).replace('__TOKEN__', zalToken()));
 let OBCH = { win: null };
 /* ================= KOŠÍK Z OBCHODŮ =================
    Zboží z e-shopů se sbírá do košíku v úložišti prohlížeče (localStorage), odkud ho vidí každé okno aplikace –
@@ -2475,7 +2552,7 @@ function kosikPanel(vynutit) {
   if (KOS.nove.size) setTimeout(() => { KOS.nove.clear(); }, 4000);
 }
 function zalozkaMa() { try { return localStorage.getItem('yey-zalozka') === '1'; } catch { return false; } }
-AKCE['kosik-otevri'] = () => { UI.kosik = true; UI.kosikSbalen = false; kosikPanel(true); };
+AKCE['kosik-otevri'] = () => { if (brana('obchody')) return; UI.kosik = true; UI.kosikSbalen = false; kosikPanel(true); };
 AKCE['kosik-sbal'] = () => { UI.kosikSbalen = !UI.kosikSbalen; kosikPanel(true); };
 AKCE['kosik-zavrit'] = () => { if (kosikCti().length) UI.kosikSbalen = !UI.kosikSbalen; else UI.kosik = false; kosikPanel(true); };
 AKCE['kosik-obchod'] = el => { const o = OBCHODY.find(x => x.k === el.dataset.kde) || OBCHODY[0]; obchodOtevri(o.web); };
@@ -2778,6 +2855,7 @@ function xlsAnalyzuj(wb){
 /* ---- okno „Z Excelu“ v editoru dokladu ---- */
 let XL = { pol: [], X: null };
 AKCE['z-excelu'] = () => {
+  if (brana('excel')) return;
   XL = { pol: [], X: null };
   okno('Načíst položky z Excelu', `
     <div class="mal tlumene">Vyberte soubor – projdou se všechny listy a najdou se tabulky se záhlavím Popis / Množství / MJ / Cena (i rozpočty s rekapitulací). Nebo v Excelu označte řádky, dejte Ctrl+C a vložte je níže. Položky se nejdřív jen zobrazí, přidají se po potvrzení.</div>
@@ -3075,12 +3153,13 @@ const formCenik = (c = {}) => `<form id="fCen" class="mrizka"><label class="pole
   <div class="mrizka m3"><label class="pole">Cena za MJ<input name="cena" inputmode="decimal" value="${esc(c.cena != null ? fmtN(c.cena) : '')}"></label><label class="pole">MJ<input name="mj" list="mjList" value="${esc(c.mj || 'm²')}"></label>${S.firma.platce_dph ? `<label class="pole">DPH %<input name="dph" value="${esc(c.dph ?? 21)}"></label>` : ''}</div>
   <label class="pole">Kategorie<input name="kategorie" value="${esc(c.kategorie)}" placeholder="např. Sádrokarton"></label></form>`;
 const dataCenik = () => { const f = formData($('#fCen')); if (!f.nazev) { toast('Vyplňte název', { chyba: true }); return null; } return { nazev: f.nazev, cena: cislo(f.cena), mj: f.mj || 'ks', dph: S.firma.platce_dph ? cislo(f.dph) : 21, kategorie: f.kategorie || null }; };
-AKCE['cenik-novy'] = () => { okno('Nová položka ceníku', formCenik(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="cenik-ulozit">Uložit</button>`); };
+AKCE['cenik-novy'] = () => { if (brana('cenik')) return; okno('Nová položka ceníku', formCenik(), `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="cenik-ulozit">Uložit</button>`); };
 AKCE['cenik-ulozit'] = async () => { const o = dataCenik(); if (!o) return; S.cenik.push(await db.ins('cenik', o)); S.cenik.sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs')); zavriOkno(); render(); };
 AKCE['cenik-upr'] = el => { const c = S.cenik.find(x => x.id === el.dataset.id); okno('Upravit položku', formCenik(c), `<button class="btn cerv" data-a="cenik-smaz" data-id="${c.id}" style="margin-right:auto">Smazat</button><button class="btn" data-a="zavrit">Zrušit</button><button class="btn zl" data-a="cenik-ulozit-upr" data-id="${c.id}">Uložit</button>`); };
 AKCE['cenik-ulozit-upr'] = async el => { const o = dataCenik(); if (!o) return; const i = S.cenik.findIndex(x => x.id === el.dataset.id); S.cenik[i] = await db.upd('cenik', el.dataset.id, o); zavriOkno(); render(); };
 AKCE['cenik-smaz'] = async el => { if (!confirm('Smazat položku ceníku?')) return; await db.del('cenik', el.dataset.id); S.cenik = S.cenik.filter(x => x.id !== el.dataset.id); zavriOkno(); render(); };
 AKCE['cenik-vzor'] = async () => {
+  if (brana('cenik')) return;
   const vz = [['Montáž SDK příčky', 'm²', 'Sádrokarton'], ['Montáž SDK podhledu', 'm²', 'Sádrokarton'], ['Malba 2× bílá', 'm²', 'Malby'], ['Pokládka dlažby', 'm²', 'Obklady a dlažby'], ['Obklad stěn', 'm²', 'Obklady a dlažby'], ['Vyzdění příčky', 'm²', 'Zednické práce'], ['Hodinová sazba', 'hod', 'Ostatní'], ['Doprava', 'km', 'Ostatní'], ['Odvoz suti', 'kpl', 'Ostatní']];
   const rows = vz.map(([nazev, mj, kategorie]) => ({ firma_id: S.firma.id, nazev, mj, kategorie, cena: 0, dph: 21 }));
   S.cenik = await q(sb.from('cenik').insert(rows).select()); S.cenik.sort((a, b) => a.nazev.localeCompare(b.nazev, 'cs'));
@@ -3088,7 +3167,7 @@ AKCE['cenik-vzor'] = async () => {
 };
 
 /* =================== MOJE FIRMA =================== */
-const FIRMA_TABY = [['udaje', 'Firma'], ['banka', 'Banka a platby'], ['doklady', 'Doklady'], ['licence', 'Licence a účet']];
+const FIRMA_TABY = [['udaje', 'Firma'], ['banka', 'Banka a platby'], ['doklady', 'Doklady'], ['licence', 'Licence a data']];
 POHLEDY.firma = t => { const F = S.firma;
   const chci = t?.p?.get('tab'); if (chci && FIRMA_TABY.some(x => x[0] === chci)) UI.firmaTab = chci;
   const tab = UI.firmaTab, sk = k => k === tab ? '' : 'skryt';
@@ -3115,13 +3194,15 @@ POHLEDY.firma = t => { const F = S.firma;
       <label class="pole">Text u loga <span class="napoveda">(obor nebo claim, tiskne se vedle loga v hlavičce dokladů)</span><input name="logo_text" value="${esc(F.logo_text)}" placeholder="např. Instalatérské práce · Praha"></label>
       <div class="pole">Číselné řady dokladů <span class="napoveda">Značky: {RRRR} rok (2026), {RR} rok (26), {MM} měsíc, {NNN} pořadí (počet N = počet míst). „Další číslo“ prázdné = pokračuje za posledním dokladem. Při změně roku začne řada od 1.</span>
         <div class="obal-tab"><table class="cis-tab"><thead><tr><th>Doklad</th><th>Tvar čísla</th><th style="width:110px">Další číslo</th><th style="width:120px">Náhled</th></tr></thead><tbody>
-        ${CIS_TYPY.map(([t, n]) => { const c = (F.cisla || {})[t] || {}; return `<tr><td>${n}</td><td><input data-cis-fmt="${t}" value="${esc(c.fmt || CIS_VYCHOZI[t])}"></td><td><input data-cis-n="${t}" inputmode="numeric" value="${esc(c.dalsi ?? '')}" placeholder="auto"></td><td class="nahl" data-cis-nahl="${t}"></td></tr>`; }).join('')}
+        ${CIS_TYPY.map(([t, n]) => { const c = (F.cisla || {})[t] || {}; return `<tr><td>${n}</td><td><input data-cis-fmt="${t}" value="${esc(c.fmt || CIS_VYCHOZI[t])}" ${ma('cisla') ? '' : 'readonly title="Vlastní tvar čísla je součástí licence"'}></td><td><input data-cis-n="${t}" inputmode="numeric" value="${esc(c.dalsi ?? '')}" placeholder="auto"></td><td class="nahl" data-cis-nahl="${t}"></td></tr>`; }).join('')}
         </tbody></table></div>
+        ${ma('cisla') ? '' : `<span class="napoveda">${ik('zamek', 13)} Vlastní tvar čísel dokladů je součástí licence. „Další číslo“ nastavit můžete a číslo jde přepsat i přímo na dokladu.</span>`}
         <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin-top:10px"><input type="checkbox" data-pr-dle ${prDleFaktury() ? 'checked' : ''} style="width:20px;height:20px;flex:none;margin-top:6px;accent-color:var(--inkoust)"> <span><b>Předávací protokol číslovat podle faktury</b> – předpona <input data-pr-prefix value="${esc(prPrefix())}" style="width:56px;height:34px;border:1px solid var(--linka);border-radius:7px;padding:0 8px"> → faktura F2026010 = protokol <span data-pr-nahl>${esc(prPrefix())}2026010</span>. Při změně čísla faktury se protokol přečísluje sám.</span></label></div>
       <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" name="hlidat_ceny" ${F.hlidat_ceny !== false ? 'checked' : ''} style="width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--inkoust)"> <span><b>Hlídat ceny</b> – cena položky nesmí být nižší než v ceníku ani než naposledy u stejného zákazníka. Nižší cenu je potřeba odsouhlasit.</span></label>
     </div>
     <div class="karta mrizka ${sk('licence')}" data-ftab="licence">
-      <label class="pole">Licenční klíč YeY <span class="napoveda">(odemkne celý katalog materiálu v kalkulačkách)</span><textarea name="licence" rows="2" style="font-family:monospace;font-size:12px" placeholder="Vložte licenční klíč">${esc(F.licence)}</textarea><span class="napoveda" id="licStav"></span></label>
+      <label class="pole">Licenční klíč YeY <span class="napoveda">(odemkne celou Kancelář – zakázky, nabídky, smlouvy, kalkulačky a katalog materiálu)</span><textarea name="licence" rows="3" style="font-family:monospace;font-size:12px" placeholder="Vložte licenční klíč z e-mailu">${esc(F.licence)}</textarea><span class="napoveda" id="licStav"></span></label>
+      <div class="radek" id="licKoupit" style="align-items:center"></div>
     </div>
   </form>
   <div class="mrizka m2 ${sk('doklady')}" data-ftab="doklady" style="max-width:880px;margin-top:18px">
@@ -3135,8 +3216,10 @@ POHLEDY.firma = t => { const F = S.firma;
     <div class="radek" style="flex-wrap:wrap;gap:6px"><button class="btn mal zl" data-a="podpis-kreslit">✍ Nakreslit</button><button class="btn mal" data-a="obr-nahrat" data-co="podpis">Nahrát foto</button>${F.podpis ? `<button class="btn mal" data-a="obr-pozadi" data-co="podpis">Odebrat pozadí</button>` : ''}${OBR_PUV.podpis ? `<button class="btn mal" data-a="obr-vratit" data-co="podpis">Vrátit původní</button>` : ''}${F.podpis ? `<button class="btn mal cerv" data-a="obr-smaz" data-co="podpis">Odebrat</button>` : ''}</div>
     <p class="napoveda" style="margin-top:8px">Podepište se myší, prstem nebo perem, případně nahrajte fotku podpisu na bílém papíře. Tiskne se na doklady.</p>
   </section></div>
-  <section class="karta ${sk('licence')}" data-ftab="licence" style="max-width:880px;margin-top:18px"><h3>Účet</h3><p class="tlumene" style="margin:6px 0 12px">${esc(S.user.email)}</p>
-    <div class="radek"><button class="btn" data-a="zmena-hesla">Změnit heslo</button>${jeNainstalovano() ? '' : `<button class="btn" data-a="instalovat">${ik('instal', 16)}Nainstalovat aplikaci</button>`}<button class="btn cerv" data-a="odhlasit">${ik('odhl', 16)}Odhlásit</button></div></section>`,
+  ${LOKAL ? `<section class="karta ${sk('licence')}" data-ftab="licence" style="max-width:880px;margin-top:18px"><h3>Data a záloha</h3><p class="tlumene" style="margin:6px 0 12px">Pracujete bez registrace. ${LOKAL_POPIS}</p>
+    <div class="radek" style="flex-wrap:wrap">${zalohaTl()}${jeNainstalovano() ? '' : `<button class="btn" data-a="instalovat">${ik('instal', 16)}Nainstalovat aplikaci</button>`}<button class="btn" data-a="k-prihlaseni">Přihlásit se k účtu</button></div></section>`
+  : `<section class="karta ${sk('licence')}" data-ftab="licence" style="max-width:880px;margin-top:18px"><h3>Účet</h3><p class="tlumene" style="margin:6px 0 12px">${esc(S.user.email)}</p>
+    <div class="radek"><button class="btn" data-a="zmena-hesla">Změnit heslo</button>${jeNainstalovano() ? '' : `<button class="btn" data-a="instalovat">${ik('instal', 16)}Nainstalovat aplikaci</button>`}<button class="btn cerv" data-a="odhlasit">${ik('odhl', 16)}Odhlásit</button></div></section>`}`,
   po: () => { cisNahled(); const form = $('#fNast'), ok = $('#nastOk');
     form.addEventListener('input', e => { if (e.target.closest('.cis-tab')) cisNahled(); });
     /* automatické ukládání – po opuštění pole (change), stejně jako u dokladů */
@@ -3147,9 +3230,12 @@ POHLEDY.firma = t => { const F = S.firma;
         if (!f.nazev) { ok.classList.remove('skryt'); ok.textContent = '⚠ Vyplňte název firmy – neuloženo'; ok.style.color = 'var(--pozor)'; return; }
         const licZmena = (f.licence || null) !== (S.firma.licence || null) || (f.ico || null) !== (S.firma.ico || null);
         ok.classList.remove('skryt'); ok.style.color = ''; ok.textContent = 'Ukládám…';
+        if (licZmena && f.licence && !f.ico) { const r = await licOver(f.licence); if (r.ok && r.obsah.ico) f.ico = icoCiste(r.obsah.ico); }   // licence je vázaná na IČO – doplní se z ní
         S.firma = await q(sb.from('firmy').update(f).eq('id', S.firma.id).select().single());
         ok.textContent = '✓ Uloženo'; const jm = $('.firma-jm'); if (jm) jm.firstChild.textContent = S.firma.nazev;
-        if (licZmena) { katTokenZrus(); licStav(); }
+        if (licZmena) { const byla = LIC.aktivni; await licNacti(); katTokenZrus();
+          if (byla !== LIC.aktivni) { toast(LIC.aktivni ? 'Licence aktivována ✓ – celá Kancelář je odemčená' : 'Licence není aktivní', { chyba: !LIC.aktivni, ms: 5000 }); return render(); }
+          licStav(); }
       } catch (e) { ok.classList.remove('skryt'); ok.textContent = '⚠ Neuloženo'; ok.style.color = 'var(--pozor)'; }
       finally { bezi = false; if (znovu) { znovu = false; uloz(); } }
     };
@@ -3160,10 +3246,16 @@ AKCE['firma-tab'] = el => { UI.firmaTab = el.dataset.t;
   $$('.zalozky [data-a="firma-tab"]').forEach(b => { const a = b.dataset.t === UI.firmaTab; b.classList.toggle('akt', a); b.setAttribute('aria-selected', a); });
   $$('[data-ftab]').forEach(p => p.classList.toggle('skryt', p.dataset.ftab !== UI.firmaTab)); };
 async function licStav() { const el = $('#licStav'); if (!el) return;
-  if (!S.firma?.licence) { el.textContent = 'Bez licence vidíte v kalkulačkách jen bezplatnou část katalogu.'; return; }
-  el.textContent = 'Ověřuji licenci…'; const t = await katToken();
-  if (t) try { YeyKalk.katalogZmena(); } catch { }
-  el.textContent = t ? `✓ Licence platná${KATT.exp ? ' – katalog odemčen do ' + new Date(KATT.exp * 1000).toLocaleDateString('cs-CZ') : ''}` : '✗ ' + (KATT.chyba || 'Licenci se nepodařilo ověřit.'); }
+  const kp = $('#licKoupit'); if (kp) kp.innerHTML = LIC.aktivni ? '' : `<a class="btn zl" href="${PRODEJ_URL}" target="_blank" rel="noopener">Koupit licenci</a>${cenaLicTxt() ? `<span class="tlumene mal">${esc(cenaLicTxt())}</span>` : ''}`;
+  if (!S.firma?.licence) { el.textContent = 'Bez licence: faktury a předávací protokol k faktuře zdarma. Licence odemkne celou Kancelář.'; return; }
+  if (!LIC.aktivni) { el.textContent = '✗ ' + (LIC.duvod || 'Licence není platná.'); el.style.color = 'var(--pozor)'; return; }
+  const o = LIC.obsah, mod = Array.isArray(o.moduly) ? (o.moduly.length ? ' · doplňky: ' + o.moduly.map(m => MODULY[m] || m).join(', ') : ' · bez doplňků') : '';
+  const zaklad = `✓ Licence platná · IČO ${o.ico || '—'} · ${o.exp ? 'do ' + datum(o.exp) : 'trvalá'}${mod}`;
+  el.style.color = ''; el.textContent = zaklad;
+  if (!ma('katalog')) return;
+  const t = await katToken(); if (t) try { YeyKalk.katalogZmena(); } catch { }
+  if ($('#licStav') === el) el.textContent = zaklad + (t ? ' · katalog materiálu odemčen' : ' · katalog materiálu: ' + (KATT.chyba || 'nepodařilo se ověřit'));
+}
 
 /* ---------- číselné řady ---------- */
 const CIS_TYPY = [['faktura', 'Faktura'], ['zalohova', 'Zálohová faktura'], ['nabidka', 'Nabídka'], ['protokol', 'Protokol'], ['smlouva', 'Smlouva o dílo'], ['dobropis', 'Dobropis']];
@@ -3289,7 +3381,7 @@ async function katToken() {
 /* ---- katalogové funkce převzaté z yey.cz ---- */
 function katCfg() { return { url: KAT_URL, key: KAT_KEY }; }
 function katOn() { return true; }
-function katPristup() { return !!(KATT.token && KATT.exp > Date.now() / 1000 + 60); }
+function katPristup() { return ma('katalog') && !!(KATT.token && KATT.exp > Date.now() / 1000 + 60); }
 function norm(t) { return (t == null ? '' : ('' + t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
 /** Hledané výrazy a kategorie kalkulaček z tabulky yey_kalk_hledani – když se nenačtou, platí hodnoty z kódu. */
 async function nactiKalkHledani() {
@@ -3389,8 +3481,8 @@ function katProKalk(r) {
 /* ---- adaptér pro modul kalkulaček ---- */
 const KALK_SCH = {};
 const kalkAdapter = {
-  katalogDostupny: () => katPristup(),
-  katalogZamceny: () => !katPristup(),
+  katalogDostupny: () => katPristup() && ma('katalog'),
+  katalogZamceny: () => !(katPristup() && ma('katalog')),
   katalogOmezeny: () => false,
   prevodyNacti: () => katRpcSurove('prevody_schvalene', {}),
   prevodNavrh(o) {
@@ -3505,20 +3597,210 @@ POHLEDY.kalkulacky = t => {
   } };
 };
 
+/* =================== LICENCE A ROZSAH FUNKCÍ =================== */
+/* Zdarma a bez registrace: faktury (včetně dobropisu), předávací protokol k faktuře, kontakty a údaje firmy.
+   Licence odemyká celou Kancelář (zakázky, nabídky, smlouvy, zálohové faktury, kalkulačky, ceník prací, Excel, vlastní číselné řady).
+   Doplňky se kupují k licenci zvlášť; licence vydané před zavedením doplňků (bez seznamu „moduly“) mají všechno.
+   Rozsah bezplatné verze se mění jen tady. */
+const ROZSAH = {
+  zakazky: ['kancelar', 'Zakázky'], nabidka: ['kancelar', 'Nabídky'], smlouva: ['kancelar', 'Smlouvy o dílo'], zalohova: ['kancelar', 'Zálohové faktury'],
+  dilci: ['kancelar', 'Dílčí předávací protokoly'], kalkulacky: ['kancelar', 'Kalkulačky materiálu'], cenik: ['kancelar', 'Ceník prací'],
+  excel: ['kancelar', 'Načtení položek z Excelu'], cisla: ['kancelar', 'Vlastní číselné řady dokladů'],
+  katalog: ['material', 'Katalog materiálu'], obchody: ['material', 'Zboží z hobbymarketů']
+};
+const MODULY = { material: 'Materiál', ucetnictvi: 'Daně a účetnictví' };
+const PRODEJ_URL = 'https://yey.cz/#koupit';
+/* Licence je podepsaný klíč (ECDSA P-256) – stejný formát i veřejný klíč jako ve starší verzi YeY, takže dříve vydané licence platí dál. */
+const LIC_PUBKEY = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEL5LUA37HwSKoueGOCGG19ik+DxRR3BzAm4xuYlnofT4M1VwHrLGYZNxZRvq+5Mw3FQmDufiEEGYP+24treAS0w==';
+let LIC = { aktivni: false, obsah: {}, duvod: '' };
+let licKlicP = null;
+const b64uBajty = t => { t = String(t || '').replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return Uint8Array.from(atob(t), c => c.charCodeAt(0)); };
+const icoCiste = v => { const c = String(v || '').replace(/\D/g, ''); return c ? c.padStart(8, '0') : ''; };
+async function licOver(klic) {
+  try {
+    klic = String(klic || '').trim().replace(/\s+/g, '');
+    const casti = klic.split('.'); if (casti.length !== 2 || !casti[0] || !casti[1]) return { ok: false, duvod: 'Klíč není úplný – zkopírujte ho celý.' };
+    if (!licKlicP) licKlicP = crypto.subtle.importKey('spki', Uint8Array.from(atob(LIC_PUBKEY), c => c.charCodeAt(0)), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, await licKlicP, b64uBajty(casti[1]), new TextEncoder().encode(casti[0]));
+    if (!ok) return { ok: false, duvod: 'Licenční klíč není platný.' };
+    const obsah = JSON.parse(new TextDecoder().decode(b64uBajty(casti[0])));
+    if (obsah.exp) { const t = new Date(obsah.exp + 'T23:59:59'); if (!isNaN(t.getTime()) && t < new Date()) return { ok: false, obsah, duvod: `Licence vypršela ${datum(obsah.exp)}.` }; }
+    return { ok: true, obsah };
+  } catch { return { ok: false, duvod: 'Licenční klíč se nepodařilo přečíst.' }; }
+}
+/** Ověří licenci uloženou u firmy. Licence je vázaná na IČO. */
+async function licNacti() {
+  const klic = (S.firma?.licence || '').trim();
+  if (!klic) { LIC = { aktivni: false, obsah: {}, duvod: '' }; return LIC; }
+  let r = await licOver(klic);
+  if (r.ok) { const a = icoCiste(S.firma.ico), b = icoCiste(r.obsah.ico); if (a && b && a !== b) r = { ok: false, obsah: r.obsah, duvod: `Licence je vystavená na IČO ${b}, u firmy je vyplněné IČO ${a}.` }; }
+  LIC = { aktivni: !!r.ok, obsah: r.obsah || {}, duvod: r.duvod || '' };
+  return LIC;
+}
+/** Je funkce dostupná? Bez záznamu v ROZSAH je zdarma. */
+function ma(k) {
+  const r = ROZSAH[k]; if (!r) return true;
+  if (!LIC.aktivni) return false;
+  if (r[0] === 'kancelar') return true;
+  const m = LIC.obsah.moduly; return !Array.isArray(m) || m.includes(r[0]);
+}
+const zamcenoChyba = () => Object.assign(new Error('Funkce je součástí licence'), { __ukazano: true });
+/* cena licence – čte se ze serveru (stejné nastavení jako prodej na yey.cz), bez připojení platí poslední známá */
+let CENA_LIC = null;
+try { const c = JSON.parse(localStorage.getItem('yey-funkce') || 'null'); if (c && c.rok) CENA_LIC = c.rok; } catch { }
+async function nactiCenuLicence() {
+  try {
+    const r = await fetch(SB_URL + '/functions/v1/licence', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ akce: 'funkce' }) });
+    const d = await r.json(); const t = d && d.ok && d.tarify && (d.tarify.start || d.tarify.rok); if (!t) return;
+    CENA_LIC = t; try { localStorage.setItem('yey-funkce', JSON.stringify({ funkce: d.funkce || {}, rok: t })); } catch { }
+  } catch { }
+}
+const cenaLicTxt = () => CENA_LIC && Number(CENA_LIC.cena) > 0 ? (Number(CENA_LIC.cena) <= 1 ? 'První rok za 1 Kč, potom 990 Kč ročně.' : `Roční licence za ${kc0(CENA_LIC.cena)}.`) : '';
+const CO_ODEMKNE = ['Zakázky – klient, nabídka, smlouva, faktury a protokoly pohromadě', 'Nabídky, smlouvy o dílo a zálohové faktury', '19 kalkulaček výměr a spotřeby materiálu', 'Ceník prací, načtení položek z Excelu, vlastní číselné řady'];
+/** Vrátí true, když je funkce zamčená – a ukáže, co licence odemyká. */
+function brana(k) {
+  if (ma(k)) return false;
+  const [uroven, nazev] = ROZSAH[k], doplnek = uroven !== 'kancelar' && LIC.aktivni;
+  okno(doplnek ? `Doplněk ${MODULY[uroven]}` : 'Součást licence YeY', `
+    <p style="margin:0"><b>${esc(nazev)}</b> ${doplnek ? `patří do doplňku <b>${esc(MODULY[uroven])}</b>, který vaše licence neobsahuje.` : 'odemyká licence. Faktury a předávací protokol k faktuře zůstávají zdarma a bez registrace.'}</p>
+    ${doplnek ? '' : `<ul class="odemkne">${CO_ODEMKNE.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    ${LIC.duvod ? `<div class="hlaska err">${esc(LIC.duvod)}</div>` : ''}
+    ${cenaLicTxt() ? `<p class="tuc" style="margin:0">${esc(cenaLicTxt())}</p>` : ''}`}`,
+    `<button class="btn" data-a="zavrit">Teď ne</button><button class="btn" data-a="zavrit-jdi" data-h="firma?tab=licence">Mám licenční klíč</button><a class="btn zl" href="${PRODEJ_URL}" target="_blank" rel="noopener">${doplnek ? 'Dokoupit doplněk' : 'Koupit licenci'}</a>`);
+  return true;
+}
+/* ---- výchozí stránka a zamčené části ---- */
+function vychoziTrasa() { return ma('zakazky') || S.zakazky.length ? 'prehled' : 'doklady'; }
+/* Co uživatel už má (např. po vypršení licence nebo po převodu ze starší verze), zůstává přístupné – zamčené je jen zakládání nového. */
+function zamcenaTrasa(c) {
+  if (c === 'zakazky') return !ma('zakazky') && !S.zakazky.length;
+  if (c === 'kalkulacky') return !ma('kalkulacky');
+  if (c === 'cenik') return !ma('cenik') && !S.cenik.length;
+  return false;
+}
+const ZAMEK_POPIS = {
+  zakazky: ['Zakázky', 'zakazky', 'Zakázka drží pohromadě klienta, nabídku, smlouvu, faktury i předávací protokoly. Vidíte, v jaké je fázi a co je potřeba udělat dál, a doklady vznikají jeden z druhého, takže nic nepíšete dvakrát.'],
+  kalkulacky: ['Kalkulačky materiálu', 'kalk', '19 kalkulaček výměr a spotřeby materiálu – sádrokarton, obklady, podlahy, zdivo, malby a další. Spočítaný materiál vložíte jedním klikem do nabídky nebo faktury.'],
+  cenik: ['Ceník prací', 'cenik', 'Vlastní ceník prací a služeb. Položky vkládáte do dokladů jedním klikem a aplikace hlídá, abyste nešli pod svou cenu.']
+};
+function zamcenaStranka(c) {
+  const [nazev, ikona, popis] = ZAMEK_POPIS[c];
+  return { html: `<div class="zamek-str"><div class="zamek-ik">${ik(ikona, 34)}</div>
+    <h1>${esc(nazev)}</h1><p>${esc(popis)}</p>
+    <div class="karta"><div class="tuc">Licence YeY odemkne celou Kancelář:</div><ul class="odemkne">${CO_ODEMKNE.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      ${LIC.duvod ? `<div class="hlaska err">${esc(LIC.duvod)}</div>` : ''}
+      ${cenaLicTxt() ? `<div class="tuc">${esc(cenaLicTxt())}</div>` : ''}
+      <div class="radek"><a class="btn zl" href="${PRODEJ_URL}" target="_blank" rel="noopener">Koupit licenci</a><a class="btn" href="#firma?tab=licence">Mám licenční klíč</a></div></div>
+    <p class="tlumene mal">Faktury a předávací protokol k faktuře zůstávají zdarma a bez registrace. <a href="#doklady">Zpět na faktury</a></p></div>` };
+}
+/* ---- licenční klíč z odkazu v e-mailu (…#licence=KLÍČ): uloží se k firmě hned po načtení ---- */
+(function licZOdkazu() {
+  try { const m = /[#&?]licence=([A-Za-z0-9_.\-]+)/.exec(location.hash || ''); if (!m) return; sessionStorage.setItem('yey-lic-odkaz', m[1]); history.replaceState(null, '', location.pathname + location.search + '#firma?tab=licence'); } catch { }
+})();
+async function licPrevezmiZOdkazu() {
+  let klic = ''; try { klic = sessionStorage.getItem('yey-lic-odkaz') || ''; sessionStorage.removeItem('yey-lic-odkaz'); } catch { }
+  if (!klic || !S.firma) return;
+  const r = await licOver(klic); if (!r.ok) { toast('Licence z odkazu: ' + (r.duvod || 'neplatný klíč'), { chyba: true, ms: 6000 }); return; }
+  const a = icoCiste(S.firma.ico), b = icoCiste(r.obsah.ico);
+  if (a && b && a !== b) { toast(`Licence z odkazu je vystavená na IČO ${b}, u firmy je vyplněné IČO ${a}.`, { chyba: true, ms: 7000 }); return; }
+  try { S.firma = await q(sb.from('firmy').update({ licence: klic, ...(!a && b ? { ico: b } : {}) }).eq('id', S.firma.id).select().single()); await licNacti(); katTokenZrus(); toast('Licence aktivována ✓ – celá Kancelář je odemčená', { ms: 5000 }); } catch { }
+}
+
+/* =================== MÍSTNÍ REŽIM: data v prohlížeči, záloha, převod ze starší verze =================== */
+const MEL_UCET = 'yey-ucet';   // v tomto prohlížeči se už někdo přihlašoval k účtu → po odhlášení nabídnout přihlášení, ne prázdnou místní verzi
+const melUcet = () => { try { return localStorage.getItem(MEL_UCET) === '1'; } catch { return false; } };
+async function lokalStart() {
+  await YeyLokal.init({ naZmenu: () => { if (!LOKAL) return; S.nacteno = false; S.polozky = {}; S.denik = {}; lokalFirma().then(() => { if (!ED) render(); }); },
+    naChybu: () => toast('Data se nepodařilo uložit do prohlížeče – uložte si zálohu do souboru.', { chyba: true, ms: 8000 }) });
+  sb = YeyLokal.klient(cloud); LOKAL = true;
+  S.user = { id: 'lokal', email: '', user_metadata: {}, lokal: true }; S.nacteno = false;
+  YeyLokal.firma();
+  await prevodStarych(false);
+  await lokalFirma();
+}
+async function lokalFirma() { S.firma = (await q(sb.from('firmy').select('*').limit(1)))[0] || null; await licNacti(); }
+const pluralCz = (n, a, b, c) => `${n} ${n === 1 ? a : n >= 2 && n <= 4 ? b : c}`;
+const prevodText = p => [p.faktury && pluralCz(p.faktury, 'faktura', 'faktury', 'faktur'), p.nabidky && pluralCz(p.nabidky, 'nabídka', 'nabídky', 'nabídek'), p.protokoly && pluralCz(p.protokoly, 'protokol', 'protokoly', 'protokolů'),
+  p.kontakty && pluralCz(p.kontakty, 'kontakt', 'kontakty', 'kontaktů'), p.cenik && pluralCz(p.cenik, 'položka ceníku', 'položky ceníku', 'položek ceníku')].filter(Boolean).join(', ');
+let PREVOD_INFO = null, STARA_NOVEJSI = false, STARA_JE = false;
+/** Data ze starší verze YeY ve stejném prohlížeči: poprvé se převezmou sama, později jen na vyžádání. Stará data se nemění. */
+async function prevodStarych(rucne) {
+  let o = null; try { o = await YeyLokal.stara.nacti(); } catch { }
+  STARA_JE = !!(o && YeyLokal.stara.maData(o));
+  if (!STARA_JE) { if (rucne) toast('V tomto prohlížeči nejsou žádná data ze starší verze YeY.'); return null; }
+  const m = YeyLokal.meta();
+  if (!rucne && m.prevedeno) { STARA_NOVEJSI = String(o._ulozeno || '') > String(m.stareCas || ''); return null; }
+  try { const p = YeyLokal.stara.preved(o); STARA_NOVEJSI = false; PREVOD_INFO = p; return p; }
+  catch (e) { console.error('Převod ze starší verze', e); if (rucne) chyba(e, 'Převod dat'); return null; }
+}
+function prevodOznam() {
+  const p = PREVOD_INFO; PREVOD_INFO = null; if (!p) return;
+  const t = prevodText(p);
+  okno('Vaše data jsou tady', `<p style="margin:0">Z dosavadní verze YeY jsme do nové převzali ${t ? `<b>${esc(t)}</b>` : 'údaje vaší firmy'}${S.firma?.licence ? ' včetně licence' : ''}.</p>
+    <p class="tlumene" style="margin:0">Původní data zůstala beze změny. Zkontrolujte prosím údaje firmy a číselné řady v sekci Moje firma.</p>`,
+    `<a class="btn" href="#firma" data-a="zavrit-jdi" data-h="firma">Moje firma</a><button class="btn zl" data-a="zavrit">Pokračovat</button>`);
+}
+/* ---- záloha do souboru a obnova ---- */
+function stahni(nazev, text, typ = 'application/json') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: typ })); a.download = nazev; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+AKCE['zaloha-stahnout'] = () => {
+  const z = YeyLokal.zaloha(); const jm = bezDia(S.firma?.nazev || 'firma').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'firma';
+  stahni(`YeY-zaloha-${jm}-${dnes()}.json`, JSON.stringify(z, null, 1)); YeyLokal.zapisMeta('zalohaCas', new Date().toISOString());
+  toast('Záloha stažena ✓ – uložte ji mimo tento počítač (disk, e-mail).', { ms: 5000 }); zavriOkno();
+};
+AKCE['zaloha-obnovit'] = () => {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return; let o = null;
+    try { o = JSON.parse(await f.text()); } catch { return toast('Soubor se nepodařilo přečíst – není to záloha YeY.', { chyba: true, ms: 5000 }); }
+    if (YeyLokal.jeStara(o)) {            // datový soubor / záloha starší verze YeY – přidá se, co tu ještě není
+      try { const p = YeyLokal.stara.preved(o); await poObnove(); const t = prevodText(p); toast(t ? `Ze starší verze přidáno: ${t}.` : 'Všechno ze souboru už tu je – nic nového se nepřidalo.', { ms: 6000 }); } catch (e) { chyba(e, 'Obnova'); }
+      return;
+    }
+    if (!YeyLokal.jeZaloha(o)) return toast('Soubor není záloha YeY.', { chyba: true, ms: 5000 });
+    const n = o.data || {}, poc = k => (n[k] || []).length;
+    okno('Obnovit ze zálohy', `<p style="margin:0">Záloha <b>${esc(o.firma || '')}</b> z ${esc(new Date(o.exportovano || Date.now()).toLocaleString('cs-CZ'))}: ${poc('doklady')} dokladů, ${poc('kontakty')} kontaktů${poc('zakazky') ? `, ${poc('zakazky')} zakázek` : ''}.</p>
+      <p class="tlumene" style="margin:0">„Přidat“ doplní jen to, co tu chybí. „Nahradit“ smaže současná data v tomto prohlížeči a vloží zálohu.</p>`,
+      `<button class="btn" data-a="zavrit">Zrušit</button><button class="btn cerv" data-a="zaloha-nahradit">Nahradit vše</button><button class="btn zl" data-a="zaloha-pridat">Přidat, co chybí</button>`);
+    const proved = async nahradit => { if (nahradit && YeyLokal.maData() && !confirm('Opravdu nahradit všechna současná data zálohou? Současná data v tomto prohlížeči se smažou.')) return;
+      try { const p = YeyLokal.obnov(o, nahradit); zavriOkno(); await poObnove(); toast(nahradit ? 'Data obnovena ze zálohy ✓' : `Přidáno ze zálohy: ${p.doklady || 0} dokladů, ${p.kontakty || 0} kontaktů.`, { ms: 5000 }); } catch (e) { chyba(e, 'Obnova'); } };
+    AKCE['zaloha-nahradit'] = () => proved(true); AKCE['zaloha-pridat'] = () => proved(false);
+  };
+  inp.click();
+};
+async function poObnove() { S.nacteno = false; S.polozky = {}; S.denik = {}; ED = null; await lokalFirma(); katTokenZrus(); zavriOkno(); if (trasa().c === 'doklad') jdi('doklady'); else render(); }
+AKCE['stara-nacist'] = async () => { const p = await prevodStarych(true); if (!p) return; await poObnove(); const t = prevodText(p); toast(t ? `Ze starší verze přidáno: ${t}.` : 'Ve starší verzi není nic, co by tu chybělo.', { ms: 6000 }); };
+AKCE['k-prihlaseni'] = el => { zavriOkno(); UI.prihlRezim = el?.dataset?.r || 'prihlasit'; UI.chcePrihlaseni = true; renderPrihlaseni(); };
+AKCE['bez-uctu'] = async () => { UI.chcePrihlaseni = false; try { localStorage.removeItem(MEL_UCET); } catch { } if (!LOKAL) await lokalStart(); render(); prevodOznam(); };
+/** Řádek o uložení dat (pata přehledu a seznamu dokladů). */
+function ulozenoInfo() {
+  if (!LOKAL) return '✓ Vše se ukládá automaticky do cloudu';
+  const z = YeyLokal.meta().zalohaCas, dni = z ? Math.floor((Date.now() - new Date(z)) / 864e5) : null;
+  return `✓ Uloženo v tomto prohlížeči · záloha do souboru: ${z ? (dni === 0 ? 'dnes' : dni === 1 ? 'včera' : `před ${dni} dny`) : '<b>zatím žádná</b>'} · <a href="#" data-a="zaloha-stahnout">Uložit zálohu</a>`;
+}
+
 /* =================== START =================== */
 let startBezi = false;
+/* Přihlášený uživatel pracuje s daty v cloudu. Kdo se nepřihlásil, pracuje rovnou bez registrace s daty v prohlížeči;
+   přihlašovací obrazovka se ukáže jen na vyžádání, po odhlášení a po návratu z odkazu v e-mailu. */
 async function start() {
   startBezi = true;
-  const { data: { session } } = await sb.auth.getSession();
-  S.user = session?.user || null; S.nacteno = false;
-  if (S.user) { try { await nactiFirmu(); } catch { } }
-  nactiKalkHledani(); if (S.firma?.licence) katToken().then(t => { if (t) try { YeyKalk.katalogZmena(); } catch { } });
-  startBezi = false; render();
+  let session = null; try { session = (await cloud.auth.getSession()).data.session; } catch { }
+  if (session?.user) {
+    sb = cloud; LOKAL = false; S.user = session.user; S.firma = null; S.nacteno = false; S.polozky = {}; S.denik = {}; UI.chcePrihlaseni = false;
+    try { localStorage.setItem(MEL_UCET, '1'); } catch { }
+    try { await nactiFirmu(); } catch { }
+  } else if (UI.chcePrihlaseni || melUcet() || AUTH_ODKAZ) { sb = cloud; LOKAL = false; Object.assign(S, { user: null, firma: null, nacteno: false }); }
+  else { try { await lokalStart(); } catch (e) { console.error(e); $('#app').innerHTML = '<div class="nacitam">Data v prohlížeči se nepodařilo načíst. Zkuste stránku obnovit.</div>'; startBezi = false; return; } }
+  if (S.firma) await licPrevezmiZOdkazu();
+  nactiKalkHledani(); nactiCenuLicence();
+  if (S.firma?.licence && LIC.aktivni) katToken().then(t => { if (t) try { YeyKalk.katalogZmena(); } catch { } });
+  startBezi = false; await render(); prevodOznam();
+  if (LOKAL && STARA_NOVEJSI) toast('Ve starší verzi YeY máte novější data.', { akce: 'Načíst', fn: () => AKCE['stara-nacist'](), ms: 9000 });
 }
-sb.auth.onAuthStateChange((ev, session) => {
-  if (ev === 'PASSWORD_RECOVERY') { S.user = session?.user; UI.prihlRezim = 'noveheslo'; return setTimeout(() => renderPrihlaseni({ t: 'inf', m: 'Zadejte nové heslo.' }), 0); }
-  if (ev === 'SIGNED_IN' && !S.user && !startBezi) setTimeout(start, 0);
-  if (ev === 'SIGNED_OUT') { Object.assign(S, { user: null, firma: null, nacteno: false }); render(); }
+cloud.auth.onAuthStateChange((ev, session) => {
+  if (ev === 'PASSWORD_RECOVERY') { sb = cloud; LOKAL = false; S.user = session?.user; UI.prihlRezim = 'noveheslo'; return setTimeout(() => renderPrihlaseni({ t: 'inf', m: 'Zadejte nové heslo.' }), 0); }
+  if (ev === 'SIGNED_IN' && (!S.user || LOKAL) && !startBezi) setTimeout(start, 0);
+  if (ev === 'SIGNED_OUT' && !LOKAL) { Object.assign(S, { user: null, firma: null, nacteno: false }); render(); }
 });
 /* Při vstupu do číselného pole se celý obsah označí, takže počáteční 0 (nebo jakákoli hodnota) se rovnou přepíše */
 document.addEventListener('focusin', e => { const t = e.target; if (t.matches?.('input[inputmode=decimal], input[type=number], input[name=dph]')) setTimeout(() => { try { t.select(); } catch { } }, 0); });
