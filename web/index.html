@@ -16,7 +16,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="i18n.js"></script>
 <script src="kalk.js"></script>
+<script src="ucto.js"></script>
 <script src="lokal.js"></script>
 <style>
 :root{
@@ -49,7 +51,16 @@ h1{font-size:30px;line-height:1.1}h2{font-size:20px}h3{font-size:17px}
 .hledani span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kbd{font-size:12px;border:1px solid #5C6B76;border-radius:5px;padding:1px 6px}
 .btn-hl{height:40px;border:0;border-radius:10px;background:var(--metr);color:var(--inkoust);font-weight:700;padding:0 16px;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .btn-hl:hover{background:var(--metr-2)}
-.ucet-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--inkoust-3);background:var(--inkoust-2);color:#fff;font-weight:700;cursor:pointer}
+.ucet-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--inkoust-3);background:var(--inkoust-2);color:#fff;font-weight:700;cursor:pointer;flex:none}
+.hl-ik{width:40px;height:40px;border-radius:10px;border:1px solid var(--inkoust-3);background:var(--inkoust-2);color:#fff;display:grid;place-items:center;flex:none;position:relative}
+.hl-ik:hover,.hl-ik.akt{border-color:var(--metr);color:var(--metr)}
+.hl-ik .tecka-c{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--pozor);border:2px solid var(--inkoust)}
+.jazyk{height:40px;border-radius:10px;border:1px solid var(--inkoust-3);background:var(--inkoust-2);color:#fff;font-weight:700;font-size:13px;padding:0 6px;cursor:pointer;flex:none}
+.jazyk option{color:var(--inkoust);background:#fff}
+.jazyk.svetly{background:#fff;color:var(--inkoust);border-color:var(--linka)}
+.svatek{color:var(--ocel);font-size:14px}.svatek b{color:var(--inkoust)}
+.kh-tab td.r,.kh-tab th.r{text-align:right}.kh-tab select{height:34px;border:1px solid var(--linka);border-radius:7px;padding:0 6px;background:#fff}
+.kh-odd{font-size:15px;margin:18px 0 6px}.kh-odd:first-child{margin-top:0}
 .metr-pruh{height:14px;background:var(--metr);position:relative;overflow:hidden}
 .metr-pruh::after{content:"";position:absolute;inset:0;opacity:.65;
   background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 60px) 0 100%/100% 12px no-repeat,
@@ -119,11 +130,11 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 /* ---------- přehled ---------- */
 .uvitani{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
-.kpi a{background:#fff;border:1px solid var(--linka);border-radius:var(--r);padding:16px 18px;text-decoration:none;color:inherit;display:block;transition:border-color .15s}
+.kpi a,.kpi .kd{background:#fff;border:1px solid var(--linka);border-radius:var(--r);padding:16px 18px;text-decoration:none;color:inherit;display:block;transition:border-color .15s}
 .kpi a:hover{border-color:var(--ocel)}
 .kpi .l{font-size:14px;color:var(--ocel);font-weight:600}.kpi .v{font-family:var(--font-c);font-size:32px;font-weight:700;margin-top:4px;line-height:1.1}
 .kpi .p{font-size:13px;color:var(--ocel);margin-top:2px}
-.kpi a.alarm{background:var(--pozor-bg);border-color:#EDBDB8}.kpi a.alarm .l,.kpi a.alarm .v,.kpi a.alarm .p{color:var(--pozor)}
+.kpi a.alarm,.kpi .kd.alarm{background:var(--pozor-bg);border-color:#EDBDB8}.kpi a.alarm .l,.kpi a.alarm .v,.kpi a.alarm .p,.kpi .kd.alarm .l,.kpi .kd.alarm .v,.kpi .kd.alarm .p{color:var(--pozor)}
 .dva-sl{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
 .dva-sl>.hl{flex:999 1 560px;min-width:0}.dva-sl>.bok{flex:1 1 300px}
 .tabule{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;overflow-x:auto;padding-bottom:4px}
@@ -393,7 +404,7 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 .prihl .vyhody div{display:flex;gap:12px;align-items:center}
 .prihl .vyhody i{width:28px;height:28px;border-radius:7px;background:var(--metr);color:var(--inkoust);font-style:normal;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
 .prihl .lev .metr-pruh{position:absolute;left:0;right:0;bottom:0}
-.prihl .prav{flex:1 1 50%;display:flex;align-items:center;justify-content:center;padding:40px 16px}
+.prihl .prav{position:relative;flex:1 1 50%;display:flex;align-items:center;justify-content:center;padding:40px 16px}
 .prihl form{width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px}
 .prihl .prep{display:grid;grid-template-columns:1fr 1fr;background:var(--pod);border-radius:10px;padding:4px}
 .prihl .prep button{border:0;background:transparent;border-radius:8px;height:40px;font-weight:700;cursor:pointer;color:var(--ocel)}
@@ -417,7 +428,7 @@ table.tab tr.klik{cursor:pointer}table.tab tr.klik:hover td{background:#FAFBF8}
 @media (max-width:760px){
   body{font-size:15px}
   .obsah{padding:16px 14px 90px}.hledani span,.hledani .kbd,.firma-jm{display:none}.hledani{flex:0 0 40px;justify-content:center;padding:0;margin-left:auto}
-  .btn-hl .t{display:none}.btn-hl{width:40px;padding:0;justify-content:center}
+  .btn-hl .t{display:none}.btn-hl{width:40px;padding:0;justify-content:center}.hlava-top{gap:8px;padding:8px 12px}
   .m2,.m3,.m4{grid-template-columns:minmax(0,1fr)}
   .panely{flex-direction:column}.p-seznam{position:static;width:auto;height:auto;border-right:0}
   .panely.s-detailem .p-seznam{display:none}.panely:not(.s-detailem) .p-detail{display:none}
@@ -590,6 +601,7 @@ const IK = {
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>', odhl: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>',
   smlouva: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 17c1.2-3.4 2.3-3.4 2.9 0 .5-2 1.5-2 3.1 0"/>',
   vice: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>', dolu: '<path d="M6 9l6 6 6-6"/>',
+  ucto: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9.5 14.5l5-6"/><circle cx="9.6" cy="9" r="1"/><circle cx="14.4" cy="14" r="1"/>',
   zamek: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>', disk: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/>',
   kopie: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/>', sipka: '<path d="M5 12h14M13 6l6 6-6 6"/>'
 };
@@ -743,6 +755,8 @@ function shell(obsah, opt = {}) {
           ${nov('novy-doklad', 'faktura', 'Zálohová faktura', 'data-typ="zalohova"', 'zalohova')}`}
         </div>
       </div>
+      <a class="hl-ik ${akt('ucetnictvi')}" href="#ucetnictvi" title="Účetnictví – kontrolní hlášení DPH" aria-label="Účetnictví">${ik('ucto', 20)}${khStav()?.nalehave ? '<i class="tecka-c"></i>' : ''}</a>
+      ${jazykVyber()}
       ${LOKAL ? `<button type="button" class="ucet-btn" data-a="ucet" title="Data jsou uložená v tomto prohlížeči – záloha a účet" aria-label="Data a účet">${ik('disk', 18)}</button>`
         : `<button type="button" class="ucet-btn" data-a="ucet" title="${esc(S.user?.email)}" aria-label="Účet">${esc(inicialy(S.user?.email))}</button>`}
     </div>
@@ -940,6 +954,7 @@ function renderPrihlaseni(zprava) {
       <div class="metr-pruh" aria-hidden="true">${metrCisla()}</div>
     </section>
     <section class="prav">
+      <div style="position:absolute;top:14px;right:14px">${jazykVyber(true)}</div>
       <form id="fPrihl" novalidate>
         ${r === 'prihlasit' || r === 'registrace' ? `<div class="prep" role="tablist"><button type="button" class="${r === 'prihlasit' ? 'akt' : ''}" data-a="prihl-rezim" data-r="prihlasit">Přihlášení</button><button type="button" class="${r === 'registrace' ? 'akt' : ''}" data-a="prihl-rezim" data-r="registrace">Registrace</button></div>` : ''}
         <h2 style="font-size:28px">${nadpis}</h2>
@@ -1068,9 +1083,10 @@ POHLEDY.prehled = () => {
   const bezi = S.zakazky.filter(z => z.faze === 'realizace');
   const terminy = S.zakazky.filter(z => z.termin && !['hotovo', 'zruseno'].includes(z.faze)).sort((a, b) => a.termin.localeCompare(b.termin));
   const h = new Date().getHours(); const pozdrav = h < 10 ? 'Dobré ráno' : h < 18 ? 'Dobrý den' : 'Dobrý večer';
-  const dnesTxt = new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dnesTxt = dnesSlovy();
 
   const ukoly = [];
+  const kh = khStav(); if (kh) ukoly.push({ b: kh.nalehave ? 'var(--pozor)' : 'var(--metr)', t: kh.html, a: `<a class="btn mal" href="#ucetnictvi">Otevřít</a> <button class="btn mal" data-a="kh-podano" data-k="${kh.klic}">Podáno</button>` });
   poSpl.forEach(d => ukoly.push({ b: 'var(--pozor)', t: `<b>${esc(d.cislo)}</b> – ${esc(kontakt(d.kontakt_id)?.nazev || '')} je <b>${-dniDo(d.splatnost)} dní po splatnosti</b> (${kc0(celkem(d))})`, a: `<button class="btn mal" data-a="zaplaceno" data-id="${d.id}">Zaplaceno</button> <a class="btn mal" href="#doklad/${d.id}">Otevřít</a>` }));
   nab.filter(d => (Date.now() - new Date(d.datum)) / 864e5 >= 3).forEach(d => ukoly.push({ b: 'var(--metr)', t: `Nabídka <b>${esc(d.predmet || d.cislo)}</b> bez odpovědi ${Math.round((Date.now() - new Date(d.datum)) / 864e5)} dní`, a: `<button class="btn mal" data-a="nab-prijata" data-id="${d.id}">Přijata</button> <a class="btn mal" href="#doklad/${d.id}">Otevřít</a>` }));
   terminy.filter(z => dniDo(z.termin) <= 7).slice(0, 5).forEach(z => ukoly.push({ b: 'var(--info)', t: `<b>${esc(z.nazev)}</b> – termín ${dniDo(z.termin) === 0 ? '<b>dnes</b>' : dniDo(z.termin) < 0 ? `<b>prošel ${datumK(z.termin)}</b>` : datum(z.termin)}`, a: `<a class="btn mal" href="#zakazky/${z.id}">Otevřít</a>` }));
@@ -1086,7 +1102,7 @@ POHLEDY.prehled = () => {
   const prazdny = !S.zakazky.length && !S.doklady.length;
   return { html: `
     <div class="uvitani"><div><h1>${pozdrav}${S.user.user_metadata?.jmeno ? ', ' + esc(S.user.user_metadata.jmeno) : ''}</h1>
-      <div class="tlumene" style="margin-top:4px;first-letter:uppercase">${dnesTxt.charAt(0).toUpperCase() + dnesTxt.slice(1)}${poSpl.length ? ` · <b style="color:var(--pozor)">${poSpl.length} ${poSpl.length === 1 ? 'faktura' : 'faktury'} po splatnosti</b>` : ''}${nab.length ? ` · ${nab.length} ${nab.length === 1 ? 'nabídka čeká' : 'nabídky čekají'} na odpověď` : ''}</div></div></div>
+      <div class="tlumene" style="margin-top:4px;first-letter:uppercase">${dnesTxt.charAt(0).toUpperCase() + dnesTxt.slice(1)}${svatekTxt(' · ')}${poSpl.length ? ` · <b style="color:var(--pozor)">${poSpl.length} ${poSpl.length === 1 ? 'faktura' : 'faktury'} po splatnosti</b>` : ''}${nab.length ? ` · ${nab.length} ${nab.length === 1 ? 'nabídka čeká' : 'nabídky čekají'} na odpověď` : ''}</div></div></div>
     ${prazdny ? `<div class="karta" style="margin-bottom:18px;background:var(--metr-bg);border-color:#F0DFA0"><h2>Začněte první zakázkou</h2><p style="margin:8px 0 14px">Zakázka je u YeY středem všeho: k ní patří klient, nabídka, faktura i protokol. Doklady vznikají jeden z druhého, takže nic nepřepisujete dvakrát.</p>
       <div class="radek"><button class="btn zl" data-a="nova-zakazka">${ik('plus')}Založit první zakázku</button><a class="btn" href="#firma">Doplnit údaje firmy</a><a class="btn" href="#kalkulacky">Vyzkoušet kalkulačky</a></div></div>` : ''}
     <section class="kpi" aria-label="Souhrn">
@@ -1419,11 +1435,12 @@ POHLEDY.doklady = t => {
   const zamTyp = !ma(typ), bezKanc = !ma('zakazky');
   const uvod = bezKanc && typ === 'faktura' && !S.doklady.length;   // první spuštění bezplatné verze
   return { html: `
-    <div class="uvitani"><div><h1>${bezKanc && typ === 'faktura' ? 'Faktury' : 'Doklady'}</h1><div class="tlumene">${TYP_MN[typ]}: ${s.length}${bezCastky ? '' : ' · celkem <b class="num">' + kc0(suma) + '</b>'}</div></div>
+    <div class="uvitani"><div><h1>${bezKanc && typ === 'faktura' ? 'Faktury' : 'Doklady'}</h1><div class="tlumene">${TYP_MN[typ]}: ${s.length}${bezCastky ? '' : ' · celkem <b class="num">' + kc0(suma) + '</b>'}</div>${bezKanc ? `<div class="svatek" style="margin-top:2px">${(t => t.charAt(0).toUpperCase() + t.slice(1))(dnesSlovy())}${svatekTxt(' · ')}</div>` : ''}</div>
       <div class="radek">${typ === 'faktura' ? `<button class="btn" data-a="novy-doklad" data-typ="zalohova">Zálohová faktura${ma('zalohova') ? '' : ' ' + ik('zamek', 14)}</button>` : ''}${typ === 'protokol' ? '' : `<button class="btn zl" data-a="novy-doklad" data-typ="${typ}">${ik(zamTyp ? 'zamek' : 'plus')}${TYP_NOVY[typ]}</button>`}</div></div>
     ${uvod ? `<div class="karta" style="margin-bottom:18px;background:var(--metr-bg);border-color:#F0DFA0"><h2>Vítejte v YeY</h2>
       <p style="margin:8px 0 14px">Faktury s QR platbou a předávací protokol k faktuře tu vystavíte zdarma a bez registrace. Nejdřív doplňte údaje své firmy – podle IČO je načteme z ARES – a pak vystavte první fakturu.</p>
       <div class="radek"><a class="btn ${S.firma.ico ? '' : 'zl'}" href="#firma">${ik('firma')}${S.firma.ico ? 'Údaje firmy' : 'Doplnit údaje firmy'}</a><button class="btn ${S.firma.ico ? 'zl' : ''}" data-a="novy-doklad" data-typ="faktura">${ik('plus')}Vystavit první fakturu</button></div></div>` : ''}
+    ${bezKanc ? `${(kh => kh ? `<div class="hlaska ${kh.nalehave ? 'err' : 'inf'}" style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px">${kh.html}</span><a class="btn mal" href="#ucetnictvi">Otevřít</a><button class="btn mal" data-a="kh-podano" data-k="${kh.klic}">Podáno</button></div>` : '')(khStav())}` : ''}
     <nav class="zalozky" aria-label="Typ dokladu">${zalozky}</nav>
     <div class="karta">
       <div class="radek" style="margin-bottom:12px"><div class="filtry">${filtry.map(([k, n]) => `<a href="#doklady?typ=${typ}&f=${k}" style="text-decoration:none"><button type="button" class="${fAkt === k ? 'akt' : ''}" tabindex="-1">${n}</button></a>`).join('')}</div><span class="mezera"></span>
@@ -3263,6 +3280,7 @@ const CIS_VYCHOZI = { faktura: 'F{RRRR}{NNN}', zalohova: 'Z{RRRR}{NNN}', nabidka
 function formatCislo(mask, n) { const d = new Date(), rrrr = String(d.getFullYear()), mm = String(d.getMonth() + 1).padStart(2, '0');
   return (mask || '{NNN}').replace(/\{RRRR\}/g, rrrr).replace(/\{RR\}/g, rrrr.slice(2)).replace(/\{MM\}/g, mm).replace(/\{(N+)\}/g, (m, g) => String(n).padStart(g.length, '0')); }
 function cisZFormulare() { const puv = S.firma.cisla || {}, o = {};
+  Object.keys(puv).forEach(k => { if (k[0] === '_') o[k] = puv[k]; });
   CIS_TYPY.forEach(([t]) => { const fmt = ($(`[data-cis-fmt="${t}"]`)?.value || '').trim() || CIS_VYCHOZI[t]; const n = parseInt($(`[data-cis-n="${t}"]`)?.value, 10);
     o[t] = { ...(puv[t] || {}), fmt }; if (n > 0) { o[t].dalsi = n; o[t].rok = new Date().getFullYear(); } else delete o[t].dalsi; if (!/\{N+\}/.test(fmt)) o[t].fmt = fmt + '{NNN}'; });
   const dle = $('[data-pr-dle]'); if (dle) { o.protokol.dle_faktury = dle.checked; o.protokol.prefix = ($('[data-pr-prefix]')?.value || '').trim(); }
@@ -3597,6 +3615,134 @@ POHLEDY.kalkulacky = t => {
   } };
 };
 
+/* =================== JAZYK, SVÁTEK DNE =================== */
+/* Rozhraní je česky; ukrajinština a angličtina se doplňují za běhu ze slovníků (i18n.js, lang/). Doklady zůstávají česky. */
+const JAZYK = (window.YeyI18n && YeyI18n.lang) || 'cs';
+function jazykVyber(svetly) {
+  return `<select class="jazyk ${svetly ? 'svetly' : ''}" data-jazyk translate="no" aria-label="Jazyk / Мова / Language" title="Jazyk / Мова / Language">${[['cs', 'CZ'], ['uk', 'UA'], ['en', 'EN']].map(([k, n]) => `<option value="${k}" ${k === JAZYK ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+}
+document.addEventListener('change', e => { if (e.target.matches?.('[data-jazyk]') && window.YeyI18n) YeyI18n.set(e.target.value); });
+const dnesSlovy = () => new Date().toLocaleDateString({ cs: 'cs-CZ', uk: 'uk-UA', en: 'en-GB' }[JAZYK] || 'cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' });
+/** „svátek má Martin, zítra Benedikt“ – český kalendář jmenin; ve státní svátek jeho název. */
+function svatekTxt(pred = '') {
+  const d = new Date(), z = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), a = YeyUcto.jmeniny(d), b = YeyUcto.jmeniny(z);
+  const jm = x => `<b translate="no">${esc(x)}</b>`;
+  const dnesT = [a.svatek ? jm(a.svatek) : '', a.jmeno ? `<span>svátek má</span> ${jm(a.jmeno)}` : ''].filter(Boolean).join(' · ');
+  const zitra = b.jmeno || b.svatek;
+  return dnesT ? `${pred}<span class="svatek-r">${dnesT}${zitra ? `<span>, zítra</span> <span translate="no">${esc(zitra)}</span>` : ''}</span>` : '';
+}
+
+/* =================== ÚČETNICTVÍ – KONTROLNÍ HLÁŠENÍ DPH =================== */
+/* Výpočet a soubor pro EPO jsou v ucto.js. Údaje pro podání a značky „podáno“ se ukládají k firmě (cisla._dph),
+   kód předmětu plnění u přenesené daňové povinnosti k dokladu (udaje.pdp_kod). */
+const dphNast = () => ({ typ: 'F', per: 'mesic', ...((S.firma?.cisla || {})._dph || {}) });
+async function dphUloz(zmena) {
+  const n = { ...dphNast(), ...zmena };
+  S.firma = await q(sb.from('firmy').update({ cisla: { ...(S.firma.cisla || {}), _dph: n } }).eq('id', S.firma.id).select().single());
+  return n;
+}
+const khKlic = (rok, o) => rok + '-' + o;
+const khDoklady = (rok, o) => { const { od, do: dd } = YeyUcto.rozsah(rok, o); return S.doklady.filter(d => (d.typ === 'faktura' || d.typ === 'dobropis') && d.stav !== 'storno' && (x => x >= od && x <= dd)(String(d.duzp || d.datum || '').slice(0, 10))); };
+const dniSlovy = n => n === 0 ? '(dnes)' : n > 0 ? `(za ${n} ${n === 1 ? 'den' : n < 5 ? 'dny' : 'dní'})` : `(${-n} ${n === -1 ? 'den' : -n < 5 ? 'dny' : 'dní'} po termínu)`;
+/** Upozornění na kontrolní hlášení za naposledy skončené období – jen plátcům DPH, dokud ho neoznačí jako podané. */
+function khStav() {
+  if (!S.firma?.platce_dph || !S.nacteno) return null;
+  const n = dphNast(), { rok, o } = YeyUcto.minuleObdobi(n.per === 'ctvrtleti'), klic = khKlic(rok, o);
+  if ((n.podano || {})[klic]) return null;
+  const pocet = khDoklady(rok, o).length; if (!pocet) return null;
+  const t = YeyUcto.termin(rok, o), dni = dniDo(t);
+  if (dni < -45) return null;
+  return { klic, rok, o, pocet, termin: t, dni, nalehave: dni <= 5,
+    html: `<span>Kontrolní hlášení za</span> <b>${esc(YeyUcto.nazevObdobi(rok, o))}</b> · <span>dokladů: ${pocet}</span> · <span>termín ${datum(t)}</span> <b>${dniSlovy(dni)}</b>` };
+}
+AKCE['kh-podano'] = async el => { const n = dphNast(); await dphUloz({ podano: { ...(n.podano || {}), [el.dataset.k]: dnes() } }); toast('Kontrolní hlášení označeno jako podané ✓'); render(); };
+AKCE['kh-nepodano'] = async el => { const p = { ...(dphNast().podano || {}) }; delete p[el.dataset.k]; await dphUloz({ podano: p }); render(); };
+async function khVstup(rok, o) {
+  const dok = khDoklady(rok, o), chybi = dok.filter(d => !S.polozky[d.id]).map(d => d.id);
+  if (chybi.length) { const r = await q(sb.from('polozky').select('*').in('doklad_id', chybi).order('poradi')); chybi.forEach(id => { S.polozky[id] = []; }); r.forEach(p => S.polozky[p.doklad_id]?.push(p)); }
+  return { firma: S.firma, nast: dphNast(), rok, o, doklady: S.doklady, polozky: S.polozky, kontakty: S.kontakty };
+}
+function uctoObdobi() {
+  const q4 = dphNast().per === 'ctvrtleti';
+  if (!UI.ucto || (String(UI.ucto.o)[0] === 'Q') !== q4) UI.ucto = { ...YeyUcto.minuleObdobi(q4), forma: 'B' };
+  return UI.ucto;
+}
+POHLEDY.ucetnictvi = async () => {
+  const F = S.firma, hlava = pod => `<div class="uvitani"><div><h1>Účetnictví</h1><div class="tlumene">${pod}</div></div>`;
+  if (!F.platce_dph) return { html: `${hlava('Kontrolní hlášení DPH')}</div>
+    <div class="karta" style="max-width:720px;display:flex;flex-direction:column;gap:12px"><h3>Kontrolní hlášení se vás netýká</h3>
+      <p style="margin:0">Podávají ho jen plátci DPH. V údajích firmy máte nastaveno, že plátcem nejste. Jakmile se plátcem stanete, přepněte to v sekci Moje firma a tady se objeví podklady pro kontrolní hlášení.</p>
+      <div class="radek"><a class="btn" href="#firma">${ik('firma')}Moje firma</a></div></div>` };
+  const n = dphNast(), U = uctoObdobi(), q4 = n.per === 'ctvrtleti', fo = n.typ !== 'P';
+  const v = await khVstup(U.rok, U.o), K = YeyUcto.spocitej(v), klic = khKlic(U.rok, U.o), podano = (n.podano || {})[klic];
+  const t = YeyUcto.termin(U.rok, U.o), dni = dniDo(t), chyb = K.ch.filter(x => x[0] === 'err').length;
+  const roky = [...new Set([new Date().getFullYear(), U.rok, ...S.doklady.map(d => Number(String(d.duzp || d.datum || '').slice(0, 4))).filter(Boolean)])].sort((a, b) => b - a);
+  const obd = q4 ? [1, 2, 3, 4].map(i => ['Q' + i, i + '. čtvrtletí']) : YeyUcto.MESICE.map((m, i) => [String(i + 1), m]);
+  const cz = YeyUcto.czDatum, r = x => `<td class="r num">${kc(x)}</td>`;
+  const prazdne = '<p class="tlumene" style="margin:2px 0">Bez záznamů.</p>';
+  const tab = (hl, radky) => `<div class="obal-tab"><table class="tab kh-tab"><thead><tr>${hl.map(h => `<th${h[1] ? ' class="r"' : ''}>${h[0]}</th>`).join('')}</tr></thead><tbody>${radky.join('')}</tbody></table></div>`;
+  const dok = x => `<td class="tuc"><a href="#doklad/${x.id}">${esc(x.c_evid_dd)}</a></td>`;
+  const pole = (k, popis, extra = '') => `<label class="pole">${popis}<input data-dph="${k}" value="${esc(n[k] || '')}" ${extra}></label>`;
+  return { html: `${hlava(`Kontrolní hlášení DPH · <b>${esc(YeyUcto.nazevObdobi(U.rok, U.o))}</b>`)}
+      <div class="radek"><select class="vstup" id="khRok" style="width:auto" aria-label="Rok">${roky.map(x => `<option ${x === U.rok ? 'selected' : ''}>${x}</option>`).join('')}</select>
+        <select class="vstup" id="khObd" style="width:auto" aria-label="Období">${obd.map(([k, p]) => `<option value="${k}" ${k === String(U.o) ? 'selected' : ''}>${p}</option>`).join('')}</select></div></div>
+    <section class="kpi" aria-label="Souhrn období">
+      <div class="kd"><div class="l">Doklady v období</div><div class="v">${K.pocet}</div><div class="p">faktury a dobropisy</div></div>
+      <div class="kd"><div class="l">Základ daně</div><div class="v num">${kc0(K.zaklad)}</div><div class="p">${K.A1.length ? 'včetně přenesené daňové povinnosti' : 'uskutečněná plnění'}</div></div>
+      <div class="kd"><div class="l">DPH na výstupu</div><div class="v num">${kc0(K.dan)}</div><div class="p">z vydaných dokladů</div></div>
+      <div class="kd ${!podano && dni <= 5 ? 'alarm' : ''}"><div class="l">Termín podání</div><div class="v num">${datum(t)}</div><div class="p">${podano ? `podáno ${datum(podano)} ✓` : dniSlovy(dni)}</div></div>
+    </section>
+    <div class="mrizka" style="max-width:1100px">
+      <section class="karta" style="display:flex;flex-direction:column;gap:10px">
+        <div class="karta-h"><h3>Soubor pro podání</h3></div>
+        ${K.ch.length ? K.ch.map(x => `<div class="hlaska ${x[0] === 'err' ? 'err' : 'inf'}">${esc(x[1])}</div>`).join('') : '<div class="hlaska ok">Kontroly v pořádku ✓</div>'}
+        <div class="radek" style="flex-wrap:wrap;align-items:flex-end">
+          <label class="pole" style="min-width:210px">Druh hlášení<select id="khForma"><option value="B" ${U.forma === 'B' ? 'selected' : ''}>řádné</option><option value="O" ${U.forma === 'O' ? 'selected' : ''}>opravné</option><option value="N" ${U.forma === 'N' ? 'selected' : ''}>následné</option></select></label>
+          <button class="btn zl" type="button" data-a="kh-xml">${ik(ma('kh') ? 'instal' : 'zamek')}Stáhnout soubor pro EPO (XML)</button>
+          <a class="btn" href="https://adisspr.mfcr.cz/pmd/home" target="_blank" rel="noopener">Portál Moje daně</a>
+          ${podano ? `<button class="btn" type="button" data-a="kh-nepodano" data-k="${klic}">Zrušit označení „podáno“</button>` : `<button class="btn" type="button" data-a="kh-podano" data-k="${klic}">Označit jako podané</button>`}
+        </div>
+        <div class="hlaska inf">Aplikace eviduje jen vydané doklady, soubor proto obsahuje oddíl A. Přijaté faktury, ze kterých uplatňujete odpočet (oddíl B), doplňte na portálu Moje daně po načtení souboru – a před odesláním hlášení tam zkontrolujte.</div>
+      </section>
+      <section class="karta">
+        <div class="karta-h"><h3>Oddíl A – vydané doklady</h3></div>
+        <h4 class="kh-odd">A.1 – přenesená daňová povinnost (daň přiznává odběratel)</h4>
+        ${K.A1.length ? tab([['Doklad'], ['DIČ odběratele'], ['Odběratel'], ['DUZP'], ['Kód plnění'], ['Základ', 1]], K.A1.map(x => `<tr>${dok(x)}<td>${esc(x.dic_odb || '—')}</td><td>${esc(x.odb)}</td><td>${cz(x.duzp)}</td><td><select data-pdpkod="${x.id}" aria-label="Kód předmětu plnění">${YeyUcto.PDP_KODY.map(k => `<option value="${k[0]}" ${k[0] === x.kod_pred_pl ? 'selected' : ''}>${esc(k[1])}</option>`).join('')}</select></td>${r(x.zakl_dane1)}</tr>`)) : prazdne}
+        <h4 class="kh-odd">A.4 – plnění nad 10 000 Kč včetně DPH pro plátce</h4>
+        ${K.A4.length ? tab([['Doklad'], ['DIČ odběratele'], ['Odběratel'], ['Datum plnění'], ['Základ 21 %', 1], ['DPH 21 %', 1], ['Základ 12 %', 1], ['DPH 12 %', 1]], K.A4.map(x => `<tr>${dok(x)}<td>${esc(x.dic_odb)}</td><td>${esc(x.odb)}</td><td>${cz(x.dppd)}</td>${r(x.z1)}${r(x.d1)}${r(x.z2)}${r(x.d2)}</tr>`)) : prazdne}
+        <h4 class="kh-odd">A.5 – ostatní plnění souhrnně (do 10 000 Kč, odběratelé bez DIČ)</h4>
+        ${tab([[''], ['Základ 21 %', 1], ['DPH 21 %', 1], ['Základ 12 %', 1], ['DPH 12 %', 1]], [`<tr><td>Celkem</td>${r(K.A5.z1)}${r(K.A5.d1)}${r(K.A5.z2)}${r(K.A5.d2)}</tr>`])}
+      </section>
+      <section class="karta" style="display:flex;flex-direction:column;gap:12px">
+        <div class="karta-h"><h3>Údaje pro podání</h3><span class="ulozeno skryt" id="dphOk">✓ Uloženo</span></div>
+        <div class="mrizka m2">
+          <label class="pole">Typ subjektu<select data-dph="typ"><option value="F" ${fo ? 'selected' : ''}>Fyzická osoba (OSVČ)</option><option value="P" ${fo ? '' : 'selected'}>Právnická osoba (s.r.o., a.s.)</option></select></label>
+          <label class="pole">Kontrolní hlášení podávám<select data-dph="per"><option value="mesic" ${q4 ? '' : 'selected'}>měsíčně</option><option value="ctvrtleti" ${q4 ? 'selected' : ''}>čtvrtletně</option></select></label>
+          ${pole('ufo', 'Kód finančního úřadu <span class="napoveda">(3 číslice, např. 451 = FÚ pro hl. m. Prahu)</span>', 'inputmode="numeric" maxlength="3"')}
+          ${pole('pracufo', 'Kód územního pracoviště <span class="napoveda">(4 číslice)</span>', 'inputmode="numeric" maxlength="4"')}
+          ${fo ? pole('jmeno', 'Jméno') + pole('prijmeni', 'Příjmení') + pole('titul', 'Titul') : pole('oprJmeno', 'Oprávněná osoba – jméno') + pole('oprPrijmeni', 'Oprávněná osoba – příjmení') + pole('oprPost', 'Postavení <span class="napoveda">(např. jednatel)</span>')}
+        </div>
+        <p class="napoveda" style="margin:0">Kódy úřadu najdete na portálu Moje daně nebo v dřívějším podání. DIČ, adresa, telefon a e-mail se berou z údajů firmy.</p>
+      </section>
+    </div>`,
+    po: () => {
+      $('#khRok').onchange = e => { UI.ucto.rok = Number(e.target.value); render(); };
+      $('#khObd').onchange = e => { UI.ucto.o = e.target.value; render(); };
+      $('#khForma').onchange = e => { UI.ucto.forma = e.target.value; };
+      $$('[data-pdpkod]').forEach(s => s.onchange = async () => { const d = doklad(s.dataset.pdpkod); const u = { ...(d.udaje || {}), pdp_kod: s.value }; Object.assign(d, await db.upd('doklady', d.id, { udaje: u })); render(); });
+      $$('[data-dph]').forEach(el => el.onchange = async () => { try { await dphUloz({ [el.dataset.dph]: el.value.trim() }); } catch { return; }
+        if (el.tagName === 'SELECT') return render();
+        const ok = $('#dphOk'); if (ok) { ok.classList.remove('skryt'); setTimeout(() => ok.classList.add('skryt'), 1800); } });
+    } };
+};
+AKCE['kh-xml'] = async () => {
+  if (brana('kh')) return;
+  const U = uctoObdobi(), v = await khVstup(U.rok, U.o), K = YeyUcto.spocitej(v), e = K.ch.filter(x => x[0] === 'err');
+  if (e.length && !confirm('Hlášení má chyby a portál ho nejspíš odmítne:\n\n' + e.map(x => '• ' + x[1]).join('\n') + '\n\nPřesto stáhnout?')) return;
+  stahni(YeyUcto.soubor(S.firma, U.rok, U.o), YeyUcto.xml(v, K, U.forma), 'application/xml');
+  toast('Soubor stažen ✓ – na portálu Moje daně zvolte „Načíst ze souboru“.', { ms: 6000 });
+};
+
 /* =================== LICENCE A ROZSAH FUNKCÍ =================== */
 /* Zdarma a bez registrace: faktury (včetně dobropisu), předávací protokol k faktuře, kontakty a údaje firmy.
    Licence odemyká celou Kancelář (zakázky, nabídky, smlouvy, zálohové faktury, kalkulačky, ceník prací, Excel, vlastní číselné řady).
@@ -3606,7 +3752,8 @@ const ROZSAH = {
   zakazky: ['kancelar', 'Zakázky'], nabidka: ['kancelar', 'Nabídky'], smlouva: ['kancelar', 'Smlouvy o dílo'], zalohova: ['kancelar', 'Zálohové faktury'],
   dilci: ['kancelar', 'Dílčí předávací protokoly'], kalkulacky: ['kancelar', 'Kalkulačky materiálu'], cenik: ['kancelar', 'Ceník prací'],
   excel: ['kancelar', 'Načtení položek z Excelu'], cisla: ['kancelar', 'Vlastní číselné řady dokladů'],
-  katalog: ['material', 'Katalog materiálu'], obchody: ['material', 'Zboží z hobbymarketů']
+  katalog: ['material', 'Katalog materiálu'], obchody: ['material', 'Zboží z hobbymarketů'],
+  kh: ['ucetnictvi', 'Soubor kontrolního hlášení pro EPO']
 };
 const MODULY = { material: 'Materiál', ucetnictvi: 'Daně a účetnictví' };
 const PRODEJ_URL = 'https://yey.cz/#koupit';

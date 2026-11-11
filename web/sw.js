@@ -2,8 +2,8 @@
    Soubory aplikace: nejdřív síť (vždy nejnovější verze), bez sítě poslední uložená kopie.
    Supabase, katalog a jiné domény jdou rovnou na síť (necachují se).
    Cesty jsou relativní – aplikace běží v kořeni domény i v podsložce (yey.cz/app/). */
-const CACHE = 'mk-v2';
-const ZAKLAD = ['./', 'kalk.js', 'lokal.js', 'manifest.webmanifest', 'ikony/ikona-192.png', 'ikony/ikona-512.png'];
+const CACHE = 'mk-v3';
+const ZAKLAD = ['./', 'kalk.js', 'lokal.js', 'ucto.js', 'i18n.js', 'manifest.webmanifest', 'ikony/ikona-192.png', 'ikony/ikona-512.png'];
 const KOREN = new URL('./', self.location).href;
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ZAKLAD)).catch(() => {}).then(() => self.skipWaiting()));

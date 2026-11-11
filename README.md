@@ -12,6 +12,12 @@ Jedna aplikace pro všechny: nahrazuje původní YeY (repo `YeY-WEB`, soubor `ye
 
 Co je zdarma a co s licencí, určuje jediná tabulka `ROZSAH` v `web/index.html`. Licenční klíč má stejný formát i podpis jako v původní YeY, dříve vydané licence platí.
 
+## Účetnictví, svátek a jazyky
+
+- **Účetnictví** (ikona vpravo nahoře, `#ucetnictvi`): kontrolní hlášení DPH z vydaných faktur – oddíly A.1, A.4, A.5 a soubor XML pro EPO (`web/ucto.js`). Přijaté doklady aplikace neeviduje, oddíl B se doplňuje na portálu. Přehled a bezplatná stránka faktur plátce na hlášení upozorní. Stažení souboru patří do doplňku Daně a účetnictví (`ROZSAH.kh`). Údaje pro podání jsou u firmy v `cisla._dph`.
+- **Svátek dne**: český kalendář jmenin v `web/ucto.js`.
+- **Jazyky** (přepínač vpravo nahoře): čeština, ukrajinština, angličtina. `web/i18n.js` překládá rozhraní za běhu ze slovníků `web/lang/<kód>.js` (společný s původní YeY) a `web/lang/<kód>-app.js` (texty této aplikace; klíč = český text). Doklady zůstávají česky.
+
 ## Dva režimy uložení
 
 - **Bez účtu**: data v prohlížeči (localStorage + IndexedDB, klíč `yey_kancelar_v2`). `lokal.js` napodobuje rozhraní supabase-js, takže zbytek aplikace je stejný.
