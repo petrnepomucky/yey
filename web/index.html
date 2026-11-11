@@ -3647,12 +3647,12 @@ function ma(k) {
 const zamcenoChyba = () => Object.assign(new Error('Funkce je součástí licence'), { __ukazano: true });
 /* cena licence – čte se ze serveru (stejné nastavení jako prodej na yey.cz), bez připojení platí poslední známá */
 let CENA_LIC = null;
-try { const c = JSON.parse(localStorage.getItem('yey-funkce') || 'null'); if (c && c.rok) CENA_LIC = c.rok; } catch { }
+try { const c = JSON.parse(localStorage.getItem('yey-cena-lic') || 'null'); if (c && c.cena != null) CENA_LIC = c; } catch { }   // vlastní klíč – 'yey-funkce' patří původní verzi
 async function nactiCenuLicence() {
   try {
     const r = await fetch(SB_URL + '/functions/v1/licence', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ akce: 'funkce' }) });
     const d = await r.json(); const t = d && d.ok && d.tarify && (d.tarify.start || d.tarify.rok); if (!t) return;
-    CENA_LIC = t; try { localStorage.setItem('yey-funkce', JSON.stringify({ funkce: d.funkce || {}, rok: t })); } catch { }
+    CENA_LIC = t; try { localStorage.setItem('yey-cena-lic', JSON.stringify(t)); } catch { }
   } catch { }
 }
 const cenaLicTxt = () => CENA_LIC && Number(CENA_LIC.cena) > 0 ? (Number(CENA_LIC.cena) <= 1 ? 'První rok za 1 Kč, potom 990 Kč ročně.' : `Roční licence za ${kc0(CENA_LIC.cena)}.`) : '';
